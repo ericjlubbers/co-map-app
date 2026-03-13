@@ -88,6 +88,7 @@ export default function MapView({ points, selectedId, onSelectPoint }: Props) {
       maxBoundsViscosity={0.8}
       className="h-full w-full"
       zoomControl={true}
+      attributionControl={false}
     >
       <TileLayer url={TILE_CONFIG.url} attribution={TILE_CONFIG.attribution} maxZoom={TILE_CONFIG.maxZoom} />
       <FlyToSelected point={selectedPoint} mapRef={mapRef} />

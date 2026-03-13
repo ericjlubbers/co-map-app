@@ -31,6 +31,11 @@ body {
   height: 100%;
 }
 
+/* Hide Leaflet attribution badge */
+.leaflet-control-attribution {
+  display: none !important;
+}
+
 .leaflet-popup-content-wrapper {
   border-radius: 12px !important;
   font-family: var(--font-sans) !important;
@@ -44,6 +49,33 @@ body {
 
 .leaflet-popup-tip {
   box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08) !important;
+}
+
+/* ── CO150 Triple Border ────────────────────────────────────── */
+.co150 {
+  --co150-color-outer:   #083176;
+  --co150-color-primary: #E4062C;
+  --co150-color-inner:   #FCD232;
+
+  --co150-base:          4px;
+  --co150-ratio-outer:   1.0;
+  --co150-ratio-primary: 2.0;
+  --co150-ratio-inner:   1.0;
+
+  --co150-w-outer:   calc(var(--co150-base) * var(--co150-ratio-outer));
+  --co150-w-primary: calc(var(--co150-base) * var(--co150-ratio-primary));
+  --co150-w-inner:   calc(var(--co150-base) * var(--co150-ratio-inner));
+
+  position: relative;
+  border-radius: 10px;
+  border:     var(--co150-w-inner)   solid var(--co150-color-inner);
+  outline:    var(--co150-w-primary) solid var(--co150-color-primary);
+  box-shadow: 0 0 0 calc(var(--co150-w-primary) + var(--co150-w-outer)) var(--co150-color-outer);
+  overflow: hidden;
+}
+
+@media (max-width: 768px) {
+  .co150 { --co150-base: 3px; }
 }
 
 /* ── Cluster Animations ─────────────────────────────────────── */

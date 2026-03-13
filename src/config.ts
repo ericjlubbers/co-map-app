@@ -40,6 +40,26 @@ const TILE_PRESETS: Record<TilePreset, { url: string; attribution: string; maxZo
 
 export const TILE_CONFIG = TILE_PRESETS[TILE_PRESET];
 
+// ── Layout & Appearance ─────────────────────────────────────────────
+export const LAYOUT = {
+  /** CSS grid columns for map vs table on desktop (e.g. "3fr 2fr") */
+  mapTableRatio: "3fr 2fr",
+  /** Viewport-height % the map gets on mobile (rest goes to table) */
+  mobileMapHeight: "60vh",
+  /** Breakpoint (px) below which layout stacks vertically */
+  mobileBreakpoint: 768,
+  /** Global border radius token */
+  borderRadius: "12px",
+  /** Background for the table / sidebar panel */
+  panelBg: "#ffffff",
+  /** Background for loading / error screens */
+  pageBg: "#f9fafb",
+  /** Primary text color */
+  textColor: "#1f2937",
+  /** Muted / secondary text color */
+  textMuted: "#6b7280",
+};
+
 // ── Clustering Settings ─────────────────────────────────────────────
 export const CLUSTER_SETTINGS = {
   maxClusterRadius: 50,

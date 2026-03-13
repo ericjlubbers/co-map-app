@@ -54,9 +54,8 @@ export function createMarkerIcon(
          style="filter: drop-shadow(0 2px 4px rgba(0,0,0,0.3));${isSelected ? " transform: scale(1.15);" : ""}">
       <path d="M20 0C9 0 0 9 0 20c0 15 20 32 20 32s20-17 20-32C40 9 31 0 20 0z"
             fill="${pinColor}" />
-      <circle cx="20" cy="18" r="12" fill="white" opacity="0.9" />
       <svg x="8" y="6" width="24" height="24" viewBox="${viewBox}">
-        <path d="${iconPath}" fill="${pinColor}" />
+        <path d="${iconPath}" fill="white" />
       </svg>
     </svg>`;
 

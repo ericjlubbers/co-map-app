@@ -121,34 +121,36 @@ export default function App() {
 
   // ── Main layout ────────────────────────────────────────────
   return (
-    <div className="grid h-dvh grid-rows-[60vh_1fr] lg:grid-cols-[3fr_2fr] lg:grid-rows-1">
-      {/* Map panel */}
-      <div className="relative min-h-0">
-        <MapView
-          points={filteredPoints}
-          selectedId={selectedId}
-          onSelectPoint={handleSelectPoint}
-        />
-      </div>
-
-      {/* Table panel */}
-      <div className="flex min-h-0 flex-col overflow-hidden border-t border-gray-200 lg:border-l lg:border-t-0">
-        <FilterBar
-          categories={categories}
-          activeCategories={activeCategories}
-          onToggleCategory={handleToggleCategory}
-          onResetCategories={handleResetCategories}
-          searchQuery={searchQuery}
-          onSearchChange={handleSearchChange}
-          resultCount={filteredPoints.length}
-          totalCount={data.length}
-        />
-        <div className="min-h-0 flex-1">
-          <DataTable
+    <div className="co150 h-dvh">
+      <div className="grid h-full grid-rows-[60vh_1fr] lg:grid-cols-[3fr_2fr] lg:grid-rows-1">
+        {/* Map panel */}
+        <div className="relative min-h-0">
+          <MapView
             points={filteredPoints}
             selectedId={selectedId}
             onSelectPoint={handleSelectPoint}
           />
+        </div>
+
+        {/* Table panel */}
+        <div className="flex min-h-0 flex-col overflow-hidden border-t border-gray-200 lg:border-l lg:border-t-0">
+          <FilterBar
+            categories={categories}
+            activeCategories={activeCategories}
+            onToggleCategory={handleToggleCategory}
+            onResetCategories={handleResetCategories}
+            searchQuery={searchQuery}
+            onSearchChange={handleSearchChange}
+            resultCount={filteredPoints.length}
+            totalCount={data.length}
+          />
+          <div className="min-h-0 flex-1">
+            <DataTable
+              points={filteredPoints}
+              selectedId={selectedId}
+              onSelectPoint={handleSelectPoint}
+            />
+          </div>
         </div>
       </div>
     </div>
