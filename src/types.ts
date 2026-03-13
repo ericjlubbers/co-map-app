@@ -27,7 +27,8 @@ export type TilePreset =
   | "stadia-toner"
   | "stadia-toner-lite"
   | "stadia-smooth"
-  | "stadia-outdoors";
+  | "stadia-outdoors"
+  | "stadia-terrain";
 
 export interface DesignState {
   fontFamily: FontFamily;

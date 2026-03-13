@@ -89,6 +89,12 @@ const TILE_PRESETS: Record<TilePreset, TileConfig> = {
       '&copy; <a href="https://stadiamaps.com/">Stadia Maps</a> &middot; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
     maxZoom: 20,
   },
+  "stadia-terrain": {
+    url: `https://tiles.stadiamaps.com/tiles/stamen_terrain/{z}/{x}/{y}{r}.png${stadiaQ}`,
+    attribution:
+      '&copy; <a href="https://stadiamaps.com/">Stadia Maps</a> &middot; <a href="https://stamen.com/">Stamen Design</a>',
+    maxZoom: 18,
+  },
 };
 
 export const TILE_CONFIG = TILE_PRESETS[TILE_PRESET];

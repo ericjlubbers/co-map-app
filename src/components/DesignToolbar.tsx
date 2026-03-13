@@ -34,6 +34,7 @@ const TILE_PRESETS: { value: TilePreset; label: string }[] = [
   { value: "stadia-toner-lite", label: "Toner Lite" },
   { value: "stadia-smooth", label: "Alidade Smooth" },
   { value: "stadia-outdoors", label: "Outdoors" },
+  { value: "stadia-terrain", label: "Terrain" },
 ];
 
 const RATIOS = ["3fr 2fr", "1fr 1fr", "2fr 3fr", "2fr 1fr", "4fr 1fr"];

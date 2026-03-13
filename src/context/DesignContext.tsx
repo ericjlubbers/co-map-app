@@ -54,7 +54,7 @@ function parseFromURL(): Partial<DesignState> {
   const VALID_TILES: string[] = [
     "carto-light", "carto-dark", "carto-voyager", "osm-standard",
     "stadia-watercolor", "stadia-toner", "stadia-toner-lite",
-    "stadia-smooth", "stadia-outdoors",
+    "stadia-smooth", "stadia-outdoors", "stadia-terrain",
   ];
   if (tiles && VALID_TILES.includes(tiles))
     partial.tilePreset = tiles as TilePreset;
