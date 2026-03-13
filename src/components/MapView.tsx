@@ -13,8 +13,7 @@ import {
   MAP_CENTER,
   MAP_ZOOM,
   MAP_MAX_BOUNDS,
-  TILE_URL,
-  TILE_ATTRIBUTION,
+  TILE_CONFIG,
   CLUSTER_SETTINGS,
 } from "../config";
 import { createMarkerIcon } from "./MarkerIcon";
@@ -90,7 +89,7 @@ export default function MapView({ points, selectedId, onSelectPoint }: Props) {
       className="h-full w-full"
       zoomControl={true}
     >
-      <TileLayer url={TILE_URL} attribution={TILE_ATTRIBUTION} />
+      <TileLayer url={TILE_CONFIG.url} attribution={TILE_CONFIG.attribution} maxZoom={TILE_CONFIG.maxZoom} />
       <FlyToSelected point={selectedPoint} mapRef={mapRef} />
 
       <MarkerClusterGroup

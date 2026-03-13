@@ -1,4 +1,4 @@
-import type { ClusterStyle, FontFamily, CategoryInfo } from "./types";
+import type { ClusterStyle, FontFamily, CategoryInfo, TilePreset } from "./types";
 
 // ── Font Configuration ──────────────────────────────────────────────
 // Change this one value to swap the entire app's font:
@@ -18,10 +18,27 @@ export const MAP_MAX_BOUNDS: [[number, number], [number, number]] = [
   [36.5, -109.5],
   [41.5, -101.5],
 ];
-export const TILE_URL =
-  "https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png";
-export const TILE_ATTRIBUTION =
-  '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> &copy; <a href="https://carto.com/">CARTO</a>';
+// "carto-light" = clean light basemap
+// "stadia-watercolor" = Stamen Watercolor via Stadia Maps (default)
+export const TILE_PRESET: TilePreset = "stadia-watercolor";
+
+const STADIA_API_KEY = import.meta.env.VITE_STADIA_API_KEY ?? "";
+
+const TILE_PRESETS: Record<TilePreset, { url: string; attribution: string; maxZoom?: number }> = {
+  "carto-light": {
+    url: "https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png",
+    attribution:
+      '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> &copy; <a href="https://carto.com/">CARTO</a>',
+  },
+  "stadia-watercolor": {
+    url: `https://tiles.stadiamaps.com/tiles/stamen_watercolor/{z}/{x}/{y}.jpg${STADIA_API_KEY ? `?api_key=${STADIA_API_KEY}` : ""}`,
+    attribution:
+      '&copy; <a href="https://stadiamaps.com/">Stadia Maps</a> &middot; <a href="https://stamen.com/">Stamen Design</a>',
+    maxZoom: 18,
+  },
+};
+
+export const TILE_CONFIG = TILE_PRESETS[TILE_PRESET];
 
 // ── Clustering Settings ─────────────────────────────────────────────
 export const CLUSTER_SETTINGS = {

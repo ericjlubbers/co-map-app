@@ -18,3 +18,4 @@ export interface CategoryInfo {
 
 export type ClusterStyle = "donut" | "gradient" | "minimal";
 export type FontFamily = "Libre Franklin" | "Atkinson Hyperlegible" | "Plus Jakarta Sans";
+export type TilePreset = "carto-light" | "stadia-watercolor";
