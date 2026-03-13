@@ -138,6 +138,15 @@ export const DEFAULT_DESIGN: DesignState = {
   showLabels: true,
   showBorder: true,
   markerSize: 34,
+  showCountyLines: false,
+  countyLineColor: "#6b7280",
+  countyLineWeight: 1,
+  countyLineOpacity: 0.5,
+  showStateBorder: false,
+  stateBorderColor: "#1f2937",
+  stateBorderWeight: 3,
+  showOutsideFade: false,
+  outsideFadeOpacity: 0.3,
 };
 
 // ── Clustering Settings ─────────────────────────────────────────────

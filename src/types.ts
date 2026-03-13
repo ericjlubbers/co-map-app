@@ -44,4 +44,16 @@ export interface DesignState {
   showLabels: boolean;
   showBorder: boolean;
   markerSize: number;
+  // County lines
+  showCountyLines: boolean;
+  countyLineColor: string;
+  countyLineWeight: number;
+  countyLineOpacity: number;
+  // State border
+  showStateBorder: boolean;
+  stateBorderColor: string;
+  stateBorderWeight: number;
+  // Outside-state fade/mask
+  showOutsideFade: boolean;
+  outsideFadeOpacity: number;
 }

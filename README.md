@@ -1,6 +1,6 @@
 # Colorado Map App
 
-An interactive map of Colorado locations built with React, Leaflet, and Tailwind CSS. Features categorized markers with clustering, filtering, text search, a synced data table, and a live **Design Mode** for collaboratively tweaking every visual option.
+An interactive map of Colorado locations built with React, Leaflet, and Tailwind CSS. Features categorized markers with clustering, filtering, text search, a synced data table, geographic overlays (county boundaries, state border, outside-state fade), and a live **Design Mode** for collaboratively tweaking every visual option.
 
 Deployed automatically to GitHub Pages on push to `main`.
 
@@ -37,17 +37,20 @@ A live toolbar for adjusting every visual option without touching code. Changes 
 
 ### Controls
 
-| Control       | Options                                                                 |
-| ------------- | ----------------------------------------------------------------------- |
-| **Tiles**     | 9 basemap presets (see below)                                           |
-| **Labels**    | Toggle labels overlay (auto-added for tiles that lack built-in labels)  |
-| **Font**      | Libre Franklin, Atkinson Hyperlegible, Plus Jakarta Sans                |
-| **Clusters**  | Donut, Gradient, Minimal                                                |
-| **Map/Table** | Grid ratio (3fr 2fr, 1fr 1fr, 2fr 3fr, 2fr 1fr, 4fr 1fr)              |
-| **Radius**    | Global border-radius slider (0–24px)                                    |
-| **Markers**   | Marker pin size slider (20–60px)                                        |
-| **Border**    | Toggle CO150 triple border frame                                        |
-| **Colors**    | Panel background, page background, text color, muted text color pickers |
+| Control            | Options                                                                 |
+| ------------------ | ----------------------------------------------------------------------- |
+| **Tiles**          | 10 basemap presets (see below)                                          |
+| **Labels**         | Toggle labels overlay (auto-added for tiles that lack built-in labels)  |
+| **Font**           | Libre Franklin, Atkinson Hyperlegible, Plus Jakarta Sans                |
+| **Clusters**       | Donut, Gradient, Minimal                                                |
+| **Map/Table**      | Grid ratio (3fr 2fr, 1fr 1fr, 2fr 3fr, 2fr 1fr, 4fr 1fr)              |
+| **Radius**         | Global border-radius slider (0–24px)                                    |
+| **Markers**        | Marker pin size slider (20–60px)                                        |
+| **Border**         | Toggle CO150 triple border frame                                        |
+| **Colors**         | Panel background, page background, text color, muted text color pickers |
+| **Counties**       | Toggle county boundary lines + color, width, opacity controls           |
+| **State Border**   | Toggle thick Colorado state border + color and width controls           |
+| **Outside Fade**   | Toggle a dark mask outside Colorado + opacity control                   |
 
 ### Sharing
 
@@ -74,6 +77,7 @@ Static defaults live in `src/config.ts`. Design Mode overrides these at runtime.
 | `"stadia-toner-lite"` | Lighter black & white                           |
 | `"stadia-smooth"`     | Soft muted tones (Alidade Smooth)               |
 | `"stadia-outdoors"`   | Topographic / trails                            |
+| `"stadia-terrain"`    | Stamen Terrain with elevation shading           |
 
 Tiles that lack built-in labels (e.g. Watercolor) automatically get a labels overlay from Stadia terrain labels, controllable via the Labels toggle.
 
@@ -143,6 +147,8 @@ src/
     PointPopup.tsx        Map popup content
   data/
     seedLocations.ts     Static location dataset
+    coloradoCounties.ts  64 Colorado county boundary polygons (GeoJSON)
+    coloradoBorder.ts    State border polygon + outside-state fade mask
   hooks/
     useLocationData.ts   Data-fetching hook
   styles/

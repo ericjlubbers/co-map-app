@@ -4,6 +4,7 @@ import {
   TileLayer,
   Marker,
   Popup,
+  GeoJSON,
   useMap,
 } from "react-leaflet";
 import MarkerClusterGroup from "react-leaflet-cluster";
@@ -20,6 +21,8 @@ import { useDesign } from "../context/DesignContext";
 import { createMarkerIcon } from "./MarkerIcon";
 import { createClusterIcon } from "./ClusterIcon";
 import PointPopup from "./PointPopup";
+import { COLORADO_COUNTIES } from "../data/coloradoCounties";
+import { COLORADO_BORDER, COLORADO_MASK } from "../data/coloradoBorder";
 import type { Map as LeafletMap } from "leaflet";
 
 interface Props {
@@ -102,6 +105,47 @@ export default function MapView({ points, selectedId, onSelectPoint }: Props) {
           pane="shadowPane"
         />
       )}
+
+      {/* Outside-state fade mask */}
+      {design.showOutsideFade && (
+        <GeoJSON
+          key={`mask-${design.outsideFadeOpacity}`}
+          data={COLORADO_MASK}
+          style={{
+            fillColor: "#000000",
+            fillOpacity: design.outsideFadeOpacity,
+            stroke: false,
+          }}
+        />
+      )}
+
+      {/* State border */}
+      {design.showStateBorder && (
+        <GeoJSON
+          key={`state-border-${design.stateBorderColor}-${design.stateBorderWeight}`}
+          data={COLORADO_BORDER}
+          style={{
+            color: design.stateBorderColor,
+            weight: design.stateBorderWeight,
+            fill: false,
+          }}
+        />
+      )}
+
+      {/* County lines */}
+      {design.showCountyLines && (
+        <GeoJSON
+          key={`counties-${design.countyLineColor}-${design.countyLineWeight}-${design.countyLineOpacity}`}
+          data={COLORADO_COUNTIES}
+          style={{
+            color: design.countyLineColor,
+            weight: design.countyLineWeight,
+            opacity: design.countyLineOpacity,
+            fill: false,
+          }}
+        />
+      )}
+
       <FlyToSelected point={selectedPoint} mapRef={mapRef} />
 
       <MarkerClusterGroup

@@ -24,6 +24,15 @@ const PARAM_MAP: Record<keyof DesignState, string> = {
   showLabels: "labels",
   showBorder: "border",
   markerSize: "marker",
+  showCountyLines: "county",
+  countyLineColor: "countyColor",
+  countyLineWeight: "countyW",
+  countyLineOpacity: "countyOp",
+  showStateBorder: "stateBorder",
+  stateBorderColor: "stateColor",
+  stateBorderWeight: "stateW",
+  showOutsideFade: "fade",
+  outsideFadeOpacity: "fadeOp",
 };
 
 // ── Font shorthand mapping ──────────────────────────────────
@@ -80,6 +89,42 @@ function parseFromURL(): Partial<DesignState> {
   const textMuted = params.get(PARAM_MAP.textMuted);
   if (textMuted) partial.textMuted = `#${textMuted}`;
 
+  const showLabels = params.get(PARAM_MAP.showLabels);
+  if (showLabels) partial.showLabels = showLabels === "1";
+
+  const showBorder = params.get(PARAM_MAP.showBorder);
+  if (showBorder) partial.showBorder = showBorder === "1";
+
+  const markerSize = params.get(PARAM_MAP.markerSize);
+  if (markerSize) partial.markerSize = parseInt(markerSize, 10);
+
+  const showCounty = params.get(PARAM_MAP.showCountyLines);
+  if (showCounty) partial.showCountyLines = showCounty === "1";
+
+  const countyColor = params.get(PARAM_MAP.countyLineColor);
+  if (countyColor) partial.countyLineColor = `#${countyColor}`;
+
+  const countyW = params.get(PARAM_MAP.countyLineWeight);
+  if (countyW) partial.countyLineWeight = parseFloat(countyW);
+
+  const countyOp = params.get(PARAM_MAP.countyLineOpacity);
+  if (countyOp) partial.countyLineOpacity = parseFloat(countyOp);
+
+  const showState = params.get(PARAM_MAP.showStateBorder);
+  if (showState) partial.showStateBorder = showState === "1";
+
+  const stateColor = params.get(PARAM_MAP.stateBorderColor);
+  if (stateColor) partial.stateBorderColor = `#${stateColor}`;
+
+  const stateW = params.get(PARAM_MAP.stateBorderWeight);
+  if (stateW) partial.stateBorderWeight = parseFloat(stateW);
+
+  const showFade = params.get(PARAM_MAP.showOutsideFade);
+  if (showFade) partial.showOutsideFade = showFade === "1";
+
+  const fadeOp = params.get(PARAM_MAP.outsideFadeOpacity);
+  if (fadeOp) partial.outsideFadeOpacity = parseFloat(fadeOp);
+
   return partial;
 }
 
@@ -114,6 +159,27 @@ function serializeToURL(state: DesignState, includeDesignMode: boolean): string 
     params.set(PARAM_MAP.showBorder, state.showBorder ? "1" : "0");
   if (state.markerSize !== DEFAULT_DESIGN.markerSize)
     params.set(PARAM_MAP.markerSize, String(state.markerSize));
+
+  if (state.showCountyLines !== DEFAULT_DESIGN.showCountyLines)
+    params.set(PARAM_MAP.showCountyLines, state.showCountyLines ? "1" : "0");
+  if (state.countyLineColor !== DEFAULT_DESIGN.countyLineColor)
+    params.set(PARAM_MAP.countyLineColor, state.countyLineColor.replace("#", ""));
+  if (state.countyLineWeight !== DEFAULT_DESIGN.countyLineWeight)
+    params.set(PARAM_MAP.countyLineWeight, String(state.countyLineWeight));
+  if (state.countyLineOpacity !== DEFAULT_DESIGN.countyLineOpacity)
+    params.set(PARAM_MAP.countyLineOpacity, String(state.countyLineOpacity));
+
+  if (state.showStateBorder !== DEFAULT_DESIGN.showStateBorder)
+    params.set(PARAM_MAP.showStateBorder, state.showStateBorder ? "1" : "0");
+  if (state.stateBorderColor !== DEFAULT_DESIGN.stateBorderColor)
+    params.set(PARAM_MAP.stateBorderColor, state.stateBorderColor.replace("#", ""));
+  if (state.stateBorderWeight !== DEFAULT_DESIGN.stateBorderWeight)
+    params.set(PARAM_MAP.stateBorderWeight, String(state.stateBorderWeight));
+
+  if (state.showOutsideFade !== DEFAULT_DESIGN.showOutsideFade)
+    params.set(PARAM_MAP.showOutsideFade, state.showOutsideFade ? "1" : "0");
+  if (state.outsideFadeOpacity !== DEFAULT_DESIGN.outsideFadeOpacity)
+    params.set(PARAM_MAP.outsideFadeOpacity, String(state.outsideFadeOpacity));
 
   if (includeDesignMode) params.set("design", "1");
 

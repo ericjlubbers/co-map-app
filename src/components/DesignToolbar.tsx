@@ -227,6 +227,117 @@ export default function DesignToolbar() {
               onChange={(v) => set("textMuted", v)}
             />
           </ControlGroup>
+
+          {/* Divider */}
+          <div className="w-px self-stretch bg-gray-700" />
+
+          {/* County Lines */}
+          <ControlGroup label="Counties">
+            <ToggleSwitch
+              checked={design.showCountyLines}
+              onChange={(v) => set("showCountyLines", v)}
+            />
+          </ControlGroup>
+
+          {design.showCountyLines && (
+            <>
+              <ControlGroup label="County Color">
+                <ColorInput
+                  value={design.countyLineColor}
+                  onChange={(v) => set("countyLineColor", v)}
+                />
+              </ControlGroup>
+
+              <ControlGroup label="County Width">
+                <div className="flex items-center gap-2">
+                  <input
+                    type="range"
+                    min={0.5}
+                    max={4}
+                    step={0.5}
+                    value={design.countyLineWeight}
+                    onChange={(e) => set("countyLineWeight", parseFloat(e.target.value))}
+                    className="h-1 w-16 accent-blue-500"
+                  />
+                  <span className="w-6 text-right text-gray-400">{design.countyLineWeight}</span>
+                </div>
+              </ControlGroup>
+
+              <ControlGroup label="County Opacity">
+                <div className="flex items-center gap-2">
+                  <input
+                    type="range"
+                    min={0.1}
+                    max={1}
+                    step={0.1}
+                    value={design.countyLineOpacity}
+                    onChange={(e) => set("countyLineOpacity", parseFloat(e.target.value))}
+                    className="h-1 w-16 accent-blue-500"
+                  />
+                  <span className="w-6 text-right text-gray-400">{design.countyLineOpacity.toFixed(1)}</span>
+                </div>
+              </ControlGroup>
+            </>
+          )}
+
+          {/* State Border */}
+          <ControlGroup label="State Border">
+            <ToggleSwitch
+              checked={design.showStateBorder}
+              onChange={(v) => set("showStateBorder", v)}
+            />
+          </ControlGroup>
+
+          {design.showStateBorder && (
+            <>
+              <ControlGroup label="Border Color">
+                <ColorInput
+                  value={design.stateBorderColor}
+                  onChange={(v) => set("stateBorderColor", v)}
+                />
+              </ControlGroup>
+
+              <ControlGroup label="Border Width">
+                <div className="flex items-center gap-2">
+                  <input
+                    type="range"
+                    min={1}
+                    max={8}
+                    step={1}
+                    value={design.stateBorderWeight}
+                    onChange={(e) => set("stateBorderWeight", parseInt(e.target.value))}
+                    className="h-1 w-16 accent-blue-500"
+                  />
+                  <span className="w-6 text-right text-gray-400">{design.stateBorderWeight}px</span>
+                </div>
+              </ControlGroup>
+            </>
+          )}
+
+          {/* Outside Fade */}
+          <ControlGroup label="Outside Fade">
+            <ToggleSwitch
+              checked={design.showOutsideFade}
+              onChange={(v) => set("showOutsideFade", v)}
+            />
+          </ControlGroup>
+
+          {design.showOutsideFade && (
+            <ControlGroup label="Fade Opacity">
+              <div className="flex items-center gap-2">
+                <input
+                  type="range"
+                  min={0.1}
+                  max={0.8}
+                  step={0.05}
+                  value={design.outsideFadeOpacity}
+                  onChange={(e) => set("outsideFadeOpacity", parseFloat(e.target.value))}
+                  className="h-1 w-16 accent-blue-500"
+                />
+                <span className="w-6 text-right text-gray-400">{design.outsideFadeOpacity.toFixed(2)}</span>
+              </div>
+            </ControlGroup>
+          )}
         </div>
       )}
     </div>
