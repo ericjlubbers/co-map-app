@@ -13,9 +13,10 @@ import {
   MAP_CENTER,
   MAP_ZOOM,
   MAP_MAX_BOUNDS,
-  TILE_CONFIG,
   CLUSTER_SETTINGS,
+  getTileConfig,
 } from "../config";
+import { useDesign } from "../context/DesignContext";
 import { createMarkerIcon } from "./MarkerIcon";
 import { createClusterIcon } from "./ClusterIcon";
 import PointPopup from "./PointPopup";
@@ -53,6 +54,8 @@ function FlyToSelected({
 }
 
 export default function MapView({ points, selectedId, onSelectPoint }: Props) {
+  const { design } = useDesign();
+  const tileConfig = getTileConfig(design.tilePreset);
   const mapRef = useRef<LeafletMap | null>(null);
   const markerRefs = useRef<Record<string, L.Marker>>({});
 
@@ -90,11 +93,22 @@ export default function MapView({ points, selectedId, onSelectPoint }: Props) {
       zoomControl={true}
       attributionControl={false}
     >
-      <TileLayer url={TILE_CONFIG.url} attribution={TILE_CONFIG.attribution} maxZoom={TILE_CONFIG.maxZoom} />
+      <TileLayer key={design.tilePreset} url={tileConfig.url} attribution={tileConfig.attribution} maxZoom={tileConfig.maxZoom} />
+      {design.showLabels && tileConfig.labelsUrl && (
+        <TileLayer
+          key={`${design.tilePreset}-labels`}
+          url={tileConfig.labelsUrl}
+          maxZoom={tileConfig.maxZoom}
+          pane="shadowPane"
+        />
+      )}
       <FlyToSelected point={selectedPoint} mapRef={mapRef} />
 
       <MarkerClusterGroup
-        iconCreateFunction={createClusterIcon}
+        key={design.clusterStyle}
+        iconCreateFunction={(cluster: unknown) =>
+          createClusterIcon(cluster as Parameters<typeof createClusterIcon>[0], design.clusterStyle)
+        }
         maxClusterRadius={CLUSTER_SETTINGS.maxClusterRadius}
         disableClusteringAtZoom={CLUSTER_SETTINGS.disableClusteringAtZoom}
         animate={CLUSTER_SETTINGS.animate}
@@ -107,7 +121,7 @@ export default function MapView({ points, selectedId, onSelectPoint }: Props) {
           <Marker
             key={point.id}
             position={[point.lat, point.lng]}
-            icon={createMarkerIcon(point.category, point.id === selectedId)}
+            icon={createMarkerIcon(point.category, point.id === selectedId, design.markerSize)}
             category={point.category}
             ref={handleMarkerRef(point.id)}
             eventHandlers={{

@@ -1,6 +1,6 @@
 # Colorado Map App
 
-An interactive map of Colorado locations built with React, Leaflet, and Tailwind CSS. Features categorized markers with clustering, filtering, text search, and a synced data table.
+An interactive map of Colorado locations built with React, Leaflet, and Tailwind CSS. Features categorized markers with clustering, filtering, text search, a synced data table, and a live **Design Mode** for collaboratively tweaking every visual option.
 
 Deployed automatically to GitHub Pages on push to `main`.
 
@@ -27,28 +27,57 @@ Create a `.env` file in the project root:
 VITE_STADIA_API_KEY=your-stadia-api-key
 ```
 
-This key is required for the Stadia Watercolor tile layer. For the CARTO light basemap no key is needed.
+This key is required for tile layers served by Stadia Maps (Watercolor, Toner, Alidade Smooth, Outdoors). CARTO and OpenStreetMap presets don't need it.
+
+## Design Mode
+
+A live toolbar for adjusting every visual option without touching code. Changes are reflected instantly.
+
+**Activate:** Add `?design=1` to the URL, or press `Ctrl+Shift+D` (`Cmd` on Mac).
+
+### Controls
+
+| Control       | Options                                                                 |
+| ------------- | ----------------------------------------------------------------------- |
+| **Tiles**     | 9 basemap presets (see below)                                           |
+| **Labels**    | Toggle labels overlay (auto-added for tiles that lack built-in labels)  |
+| **Font**      | Libre Franklin, Atkinson Hyperlegible, Plus Jakarta Sans                |
+| **Clusters**  | Donut, Gradient, Minimal                                                |
+| **Map/Table** | Grid ratio (3fr 2fr, 1fr 1fr, 2fr 3fr, 2fr 1fr, 4fr 1fr)              |
+| **Radius**    | Global border-radius slider (0–24px)                                    |
+| **Markers**   | Marker pin size slider (20–60px)                                        |
+| **Border**    | Toggle CO150 triple border frame                                        |
+| **Colors**    | Panel background, page background, text color, muted text color pickers |
+
+### Sharing
+
+- **Share** — copies a URL with your design choices baked in; recipients see the finalized map (no toolbar)
+- **Share + Editor** — copies a URL that also shows the toolbar so collaborators can keep tweaking
+- **Reset** — returns everything to the defaults from `config.ts`
+
+All state lives in URL search params — no backend or localStorage needed.
 
 ## Configuration
 
-All map and display options live in `src/config.ts`.
+Static defaults live in `src/config.ts`. Design Mode overrides these at runtime.
 
 ### Tile Presets
 
-Set `TILE_PRESET` to switch the basemap:
+| Preset                | Description                                     |
+| --------------------- | ----------------------------------------------- |
+| `"stadia-watercolor"` | Stamen Watercolor via Stadia Maps **(default)**  |
+| `"carto-light"`       | Clean light basemap via CARTO                   |
+| `"carto-dark"`        | Dark mode basemap via CARTO                     |
+| `"carto-voyager"`     | Colorful detailed basemap via CARTO             |
+| `"osm-standard"`      | Classic OpenStreetMap                            |
+| `"stadia-toner"`      | High-contrast black & white                     |
+| `"stadia-toner-lite"` | Lighter black & white                           |
+| `"stadia-smooth"`     | Soft muted tones (Alidade Smooth)               |
+| `"stadia-outdoors"`   | Topographic / trails                            |
 
-| Preset              | Description                           |
-| ------------------- | ------------------------------------- |
-| `"carto-light"`     | Clean light basemap via CARTO         |
-| `"stadia-watercolor"` | Stamen Watercolor via Stadia Maps (default) |
-
-```ts
-export const TILE_PRESET: TilePreset = "stadia-watercolor";
-```
+Tiles that lack built-in labels (e.g. Watercolor) automatically get a labels overlay from Stadia terrain labels, controllable via the Labels toggle.
 
 ### Cluster Styles
-
-Set `CLUSTER_STYLE` to change how marker clusters render:
 
 | Style        | Description                                  |
 | ------------ | -------------------------------------------- |
@@ -56,23 +85,13 @@ Set `CLUSTER_STYLE` to change how marker clusters render:
 | `"gradient"` | Color based on dominant category             |
 | `"minimal"`  | Clean monochrome circles                     |
 
-```ts
-export const CLUSTER_STYLE: ClusterStyle = "donut";
-```
-
 ### Font Family
 
-Set `FONT_FAMILY` to swap the app-wide typeface:
-
-| Font                       |
-| -------------------------- |
-| `"Libre Franklin"` (default) |
-| `"Atkinson Hyperlegible"`  |
-| `"Plus Jakarta Sans"`      |
-
-```ts
-export const FONT_FAMILY: FontFamily = "Libre Franklin";
-```
+| Font                          |
+| ----------------------------- |
+| `"Libre Franklin"` (default)  |
+| `"Atkinson Hyperlegible"`     |
+| `"Plus Jakarta Sans"`         |
 
 ### Map Defaults
 
@@ -94,7 +113,7 @@ Location data is currently loaded from static seed data in `src/data/seedLocatio
 
 Pushes to `main` trigger the GitHub Actions workflow at `.github/workflows/deploy.yml`, which builds the app and deploys to GitHub Pages.
 
-The `VITE_STADIA_API_KEY` secret must be added to the repository (**Settings → Secrets and variables → Actions**) for the Stadia tile layer to work in production.
+The `VITE_STADIA_API_KEY` secret must be added to the repository (**Settings → Secrets and variables → Actions**) for Stadia-hosted tile layers to work in production.
 
 ## Scripts
 
@@ -109,20 +128,23 @@ The `VITE_STADIA_API_KEY` secret must be added to the repository (**Settings →
 
 ```
 src/
-  App.tsx              Main app layout (map + table + filters)
-  config.ts            All configurable options
-  types.ts             Shared TypeScript types
+  App.tsx                Main app layout (map + table + filters)
+  config.ts              All configurable defaults
+  types.ts               Shared TypeScript types
+  context/
+    DesignContext.tsx     Design state provider, URL serialization, useDesign() hook
   components/
-    MapView.tsx        Leaflet map with clustering
-    DataTable.tsx      Searchable/filterable data table
-    FilterBar.tsx      Category filter pills
-    ClusterIcon.tsx    Custom cluster icon renderer
-    MarkerIcon.tsx     Custom marker icon renderer
-    PointPopup.tsx     Map popup content
+    DesignToolbar.tsx     Live design controls toolbar
+    MapView.tsx           Leaflet map with clustering & labels overlay
+    DataTable.tsx         Searchable/filterable data table
+    FilterBar.tsx         Category filter pills
+    ClusterIcon.tsx       Custom cluster icon renderer
+    MarkerIcon.tsx        Custom marker icon renderer
+    PointPopup.tsx        Map popup content
   data/
-    seedLocations.ts   Static location dataset
+    seedLocations.ts     Static location dataset
   hooks/
-    useLocationData.ts Data-fetching hook
+    useLocationData.ts   Data-fetching hook
   styles/
-    index.css          Global styles / Tailwind entry
+    index.css            Global styles / Tailwind entry
 ```

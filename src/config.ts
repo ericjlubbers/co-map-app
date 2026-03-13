@@ -1,4 +1,4 @@
-import type { ClusterStyle, FontFamily, CategoryInfo, TilePreset } from "./types";
+import type { ClusterStyle, FontFamily, CategoryInfo, TilePreset, DesignState } from "./types";
 
 // ── Font Configuration ──────────────────────────────────────────────
 // Change this one value to swap the entire app's font:
@@ -23,22 +23,76 @@ export const MAP_MAX_BOUNDS: [[number, number], [number, number]] = [
 export const TILE_PRESET: TilePreset = "stadia-watercolor";
 
 const STADIA_API_KEY = import.meta.env.VITE_STADIA_API_KEY ?? "";
+const stadiaQ = STADIA_API_KEY ? `?api_key=${STADIA_API_KEY}` : "";
 
-const TILE_PRESETS: Record<TilePreset, { url: string; attribution: string; maxZoom?: number }> = {
+export interface TileConfig {
+  url: string;
+  attribution: string;
+  maxZoom?: number;
+  /** Optional labels-only overlay URL for tiles that lack labels */
+  labelsUrl?: string;
+}
+
+const TILE_PRESETS: Record<TilePreset, TileConfig> = {
   "carto-light": {
     url: "https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png",
     attribution:
       '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> &copy; <a href="https://carto.com/">CARTO</a>',
   },
+  "carto-dark": {
+    url: "https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png",
+    attribution:
+      '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> &copy; <a href="https://carto.com/">CARTO</a>',
+  },
+  "carto-voyager": {
+    url: "https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png",
+    attribution:
+      '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> &copy; <a href="https://carto.com/">CARTO</a>',
+  },
+  "osm-standard": {
+    url: "https://tile.openstreetmap.org/{z}/{x}/{y}.png",
+    attribution:
+      '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
+    maxZoom: 19,
+  },
   "stadia-watercolor": {
-    url: `https://tiles.stadiamaps.com/tiles/stamen_watercolor/{z}/{x}/{y}.jpg${STADIA_API_KEY ? `?api_key=${STADIA_API_KEY}` : ""}`,
+    url: `https://tiles.stadiamaps.com/tiles/stamen_watercolor/{z}/{x}/{y}.jpg${stadiaQ}`,
+    attribution:
+      '&copy; <a href="https://stadiamaps.com/">Stadia Maps</a> &middot; <a href="https://stamen.com/">Stamen Design</a>',
+    maxZoom: 18,
+    labelsUrl: `https://tiles.stadiamaps.com/tiles/stamen_terrain_labels/{z}/{x}/{y}{r}.png${stadiaQ}`,
+  },
+  "stadia-toner": {
+    url: `https://tiles.stadiamaps.com/tiles/stamen_toner/{z}/{x}/{y}{r}.png${stadiaQ}`,
     attribution:
       '&copy; <a href="https://stadiamaps.com/">Stadia Maps</a> &middot; <a href="https://stamen.com/">Stamen Design</a>',
     maxZoom: 18,
   },
+  "stadia-toner-lite": {
+    url: `https://tiles.stadiamaps.com/tiles/stamen_toner_lite/{z}/{x}/{y}{r}.png${stadiaQ}`,
+    attribution:
+      '&copy; <a href="https://stadiamaps.com/">Stadia Maps</a> &middot; <a href="https://stamen.com/">Stamen Design</a>',
+    maxZoom: 18,
+  },
+  "stadia-smooth": {
+    url: `https://tiles.stadiamaps.com/tiles/alidade_smooth/{z}/{x}/{y}{r}.png${stadiaQ}`,
+    attribution:
+      '&copy; <a href="https://stadiamaps.com/">Stadia Maps</a> &middot; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
+    maxZoom: 20,
+  },
+  "stadia-outdoors": {
+    url: `https://tiles.stadiamaps.com/tiles/outdoors/{z}/{x}/{y}{r}.png${stadiaQ}`,
+    attribution:
+      '&copy; <a href="https://stadiamaps.com/">Stadia Maps</a> &middot; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
+    maxZoom: 20,
+  },
 };
 
 export const TILE_CONFIG = TILE_PRESETS[TILE_PRESET];
+
+export function getTileConfig(preset: TilePreset) {
+  return TILE_PRESETS[preset];
+}
 
 // ── Layout & Appearance ─────────────────────────────────────────────
 export const LAYOUT = {
@@ -58,6 +112,23 @@ export const LAYOUT = {
   textColor: "#1f2937",
   /** Muted / secondary text color */
   textMuted: "#6b7280",
+};
+
+// ── Default Design State (used by DesignContext) ────────────────────
+export const DEFAULT_DESIGN: DesignState = {
+  fontFamily: FONT_FAMILY,
+  clusterStyle: CLUSTER_STYLE,
+  tilePreset: TILE_PRESET,
+  mapTableRatio: LAYOUT.mapTableRatio,
+  mobileMapHeight: LAYOUT.mobileMapHeight,
+  borderRadius: LAYOUT.borderRadius,
+  panelBg: LAYOUT.panelBg,
+  pageBg: LAYOUT.pageBg,
+  textColor: LAYOUT.textColor,
+  textMuted: LAYOUT.textMuted,
+  showLabels: true,
+  showBorder: true,
+  markerSize: 34,
 };
 
 // ── Clustering Settings ─────────────────────────────────────────────

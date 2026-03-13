@@ -18,4 +18,29 @@ export interface CategoryInfo {
 
 export type ClusterStyle = "donut" | "gradient" | "minimal";
 export type FontFamily = "Libre Franklin" | "Atkinson Hyperlegible" | "Plus Jakarta Sans";
-export type TilePreset = "carto-light" | "stadia-watercolor";
+export type TilePreset =
+  | "carto-light"
+  | "carto-dark"
+  | "carto-voyager"
+  | "osm-standard"
+  | "stadia-watercolor"
+  | "stadia-toner"
+  | "stadia-toner-lite"
+  | "stadia-smooth"
+  | "stadia-outdoors";
+
+export interface DesignState {
+  fontFamily: FontFamily;
+  clusterStyle: ClusterStyle;
+  tilePreset: TilePreset;
+  mapTableRatio: string;
+  mobileMapHeight: string;
+  borderRadius: string;
+  panelBg: string;
+  pageBg: string;
+  textColor: string;
+  textMuted: string;
+  showLabels: boolean;
+  showBorder: boolean;
+  markerSize: number;
+}
