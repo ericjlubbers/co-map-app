@@ -1,0 +1,77 @@
+import type { ClusterStyle, FontFamily, CategoryInfo } from "./types";
+
+// ── Font Configuration ──────────────────────────────────────────────
+// Change this one value to swap the entire app's font:
+export const FONT_FAMILY: FontFamily = "Libre Franklin";
+// Alternatives: "Atkinson Hyperlegible" | "Plus Jakarta Sans"
+
+// ── Cluster Style ───────────────────────────────────────────────────
+// "donut" = pie-ring showing category proportions (default)
+// "gradient" = cluster color based on dominant category
+// "minimal" = clean monochrome circles
+export const CLUSTER_STYLE: ClusterStyle = "donut";
+
+// ── Map Defaults ────────────────────────────────────────────────────
+export const MAP_CENTER: [number, number] = [39.0, -105.5];
+export const MAP_ZOOM = 7;
+export const MAP_MAX_BOUNDS: [[number, number], [number, number]] = [
+  [36.5, -109.5],
+  [41.5, -101.5],
+];
+export const TILE_URL =
+  "https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png";
+export const TILE_ATTRIBUTION =
+  '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> &copy; <a href="https://carto.com/">CARTO</a>';
+
+// ── Clustering Settings ─────────────────────────────────────────────
+export const CLUSTER_SETTINGS = {
+  maxClusterRadius: 50,
+  disableClusteringAtZoom: 13,
+  animate: true,
+  spiderfyDistanceMultiplier: 1.5,
+  chunkedLoading: true,
+  zoomToBoundsOnClick: true,
+  showCoverageOnHover: false,
+};
+
+// ── Category → Icon/Color Map ───────────────────────────────────────
+// Icons reference Font Awesome solid icon names (without "fa-" prefix)
+// Colors are Tailwind-compatible hex values
+const CATEGORY_DEFINITIONS: Record<string, CategoryInfo> = {
+  "Parks & Recreation": { icon: "tree", color: "#16a34a", bgColor: "#dcfce7" },
+  Government: { icon: "landmark", color: "#2563eb", bgColor: "#dbeafe" },
+  Education: { icon: "graduation-cap", color: "#9333ea", bgColor: "#f3e8ff" },
+  Healthcare: { icon: "heart-pulse", color: "#dc2626", bgColor: "#fee2e2" },
+  Dining: { icon: "utensils", color: "#ea580c", bgColor: "#ffedd5" },
+  "Arts & Culture": { icon: "palette", color: "#db2777", bgColor: "#fce7f3" },
+  Business: { icon: "briefcase", color: "#0891b2", bgColor: "#cffafe" },
+  Community: { icon: "people-group", color: "#ca8a04", bgColor: "#fef9c3" },
+};
+
+// Fallback palette for categories not in the map above
+const FALLBACK_PALETTE: CategoryInfo[] = [
+  { icon: "map-pin", color: "#6366f1", bgColor: "#e0e7ff" },
+  { icon: "map-pin", color: "#14b8a6", bgColor: "#ccfbf1" },
+  { icon: "map-pin", color: "#f43f5e", bgColor: "#ffe4e6" },
+  { icon: "map-pin", color: "#8b5cf6", bgColor: "#ede9fe" },
+  { icon: "map-pin", color: "#f97316", bgColor: "#fff7ed" },
+];
+
+// Deterministic category → info mapping
+const dynamicCategoryCache = new Map<string, CategoryInfo>();
+let fallbackIndex = 0;
+
+export function getCategoryInfo(category: string): CategoryInfo {
+  if (CATEGORY_DEFINITIONS[category]) return CATEGORY_DEFINITIONS[category];
+  if (dynamicCategoryCache.has(category))
+    return dynamicCategoryCache.get(category)!;
+  const info = FALLBACK_PALETTE[fallbackIndex % FALLBACK_PALETTE.length];
+  fallbackIndex++;
+  dynamicCategoryCache.set(category, info);
+  return info;
+}
+
+export function resetCategoryCache() {
+  dynamicCategoryCache.clear();
+  fallbackIndex = 0;
+}
