@@ -1,73 +1,128 @@
-# React + TypeScript + Vite
+# Colorado Map App
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+An interactive map of Colorado locations built with React, Leaflet, and Tailwind CSS. Features categorized markers with clustering, filtering, text search, and a synced data table.
 
-Currently, two official plugins are available:
+Deployed automatically to GitHub Pages on push to `main`.
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+## Tech Stack
 
-## React Compiler
+- **React 19** + **TypeScript** + **Vite**
+- **Leaflet** / **react-leaflet** for the map
+- **react-leaflet-cluster** for marker clustering
+- **Tailwind CSS v4** for styling
+- **Font Awesome** for category icons
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+## Getting Started
 
-## Expanding the ESLint configuration
-
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
-
-```js
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-
-      // Remove tseslint.configs.recommended and replace with this
-      tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      tseslint.configs.stylisticTypeChecked,
-
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+```bash
+npm install
+npm run dev
 ```
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
+### Environment Variables
 
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
+Create a `.env` file in the project root:
 
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+```
+VITE_STADIA_API_KEY=your-stadia-api-key
+```
+
+This key is required for the Stadia Watercolor tile layer. For the CARTO light basemap no key is needed.
+
+## Configuration
+
+All map and display options live in `src/config.ts`.
+
+### Tile Presets
+
+Set `TILE_PRESET` to switch the basemap:
+
+| Preset              | Description                           |
+| ------------------- | ------------------------------------- |
+| `"carto-light"`     | Clean light basemap via CARTO         |
+| `"stadia-watercolor"` | Stamen Watercolor via Stadia Maps (default) |
+
+```ts
+export const TILE_PRESET: TilePreset = "stadia-watercolor";
+```
+
+### Cluster Styles
+
+Set `CLUSTER_STYLE` to change how marker clusters render:
+
+| Style        | Description                                  |
+| ------------ | -------------------------------------------- |
+| `"donut"`    | Pie-ring showing category proportions (default) |
+| `"gradient"` | Color based on dominant category             |
+| `"minimal"`  | Clean monochrome circles                     |
+
+```ts
+export const CLUSTER_STYLE: ClusterStyle = "donut";
+```
+
+### Font Family
+
+Set `FONT_FAMILY` to swap the app-wide typeface:
+
+| Font                       |
+| -------------------------- |
+| `"Libre Franklin"` (default) |
+| `"Atkinson Hyperlegible"`  |
+| `"Plus Jakarta Sans"`      |
+
+```ts
+export const FONT_FAMILY: FontFamily = "Libre Franklin";
+```
+
+### Map Defaults
+
+```ts
+export const MAP_CENTER: [number, number] = [39.0, -105.5];
+export const MAP_ZOOM = 7;
+export const MAP_MAX_BOUNDS = [[36.5, -109.5], [41.5, -101.5]];
+```
+
+### Category Icons & Colors
+
+Category appearance is defined in the `CATEGORY_DEFINITIONS` map inside `src/config.ts`. Each entry maps a category name to a Font Awesome icon, primary color, and background color. Categories not explicitly defined receive a fallback icon and color from `FALLBACK_PALETTE`.
+
+## Data Source
+
+Location data is currently loaded from static seed data in `src/data/seedLocations.ts`. The `useLocationData` hook in `src/hooks/useLocationData.ts` abstracts the data source and can be swapped to fetch from a live source (e.g. Google Sheets CSV) without changing any components.
+
+## Deployment
+
+Pushes to `main` trigger the GitHub Actions workflow at `.github/workflows/deploy.yml`, which builds the app and deploys to GitHub Pages.
+
+The `VITE_STADIA_API_KEY` secret must be added to the repository (**Settings → Secrets and variables → Actions**) for the Stadia tile layer to work in production.
+
+## Scripts
+
+| Command           | Description              |
+| ----------------- | ------------------------ |
+| `npm run dev`     | Start dev server         |
+| `npm run build`   | Type-check and build     |
+| `npm run preview` | Preview production build |
+| `npm run lint`    | Run ESLint               |
+
+## Project Structure
+
+```
+src/
+  App.tsx              Main app layout (map + table + filters)
+  config.ts            All configurable options
+  types.ts             Shared TypeScript types
+  components/
+    MapView.tsx        Leaflet map with clustering
+    DataTable.tsx      Searchable/filterable data table
+    FilterBar.tsx      Category filter pills
+    ClusterIcon.tsx    Custom cluster icon renderer
+    MarkerIcon.tsx     Custom marker icon renderer
+    PointPopup.tsx     Map popup content
+  data/
+    seedLocations.ts   Static location dataset
+  hooks/
+    useLocationData.ts Data-fetching hook
+  styles/
+    index.css          Global styles / Tailwind entry
 ```
