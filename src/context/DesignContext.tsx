@@ -51,7 +51,12 @@ function parseFromURL(): Partial<DesignState> {
     partial.clusterStyle = clusters as ClusterStyle;
 
   const tiles = params.get(PARAM_MAP.tilePreset);
-  if (tiles && ["carto-light", "stadia-watercolor"].includes(tiles))
+  const VALID_TILES: string[] = [
+    "carto-light", "carto-dark", "carto-voyager", "osm-standard",
+    "stadia-watercolor", "stadia-toner", "stadia-toner-lite",
+    "stadia-smooth", "stadia-outdoors",
+  ];
+  if (tiles && VALID_TILES.includes(tiles))
     partial.tilePreset = tiles as TilePreset;
 
   const ratio = params.get(PARAM_MAP.mapTableRatio);
