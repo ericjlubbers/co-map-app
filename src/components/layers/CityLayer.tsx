@@ -29,13 +29,15 @@ function makeCityIcon(
   fontSize: number,
   override: CityStyleOverride | undefined,
   useMetric: boolean,
-  selected: boolean
+  selected: boolean,
+  fontFamily: string
 ): L.DivIcon {
   const displayColor = override?.color ?? color;
   const displaySize = override?.fontSize ?? fontSize;
   const isPeak = city.type === "peak";
   const elevStr = escapeHtml(formatElevation(city.elevation_m, useMetric));
   const name = escapeHtml(city.name);
+  const safeFont = escapeHtml(fontFamily);
 
   const label = isPeak
     ? `<span style="font-size:${displaySize - 1}px;color:#6b7280">▲ ${name}</span><br/><span style="font-size:${displaySize - 2}px;color:#9ca3af">${elevStr}</span>`
@@ -51,7 +53,7 @@ function makeCityIcon(
       padding:2px 5px;
       pointer-events:auto;
       box-shadow:0 1px 3px rgba(0,0,0,0.15);
-      font-family:inherit;
+      font-family:'${safeFont}',sans-serif;
       line-height:1.3;
     ">${label}</div>`,
     iconAnchor: [0, 0],
@@ -79,13 +81,15 @@ export default function CityLayer() {
     <>
       {visibleCities.map((city) => {
         const override = styleOverrides[city.id];
+        const labelFont = design.labelFont === "inherit" ? design.fontFamily : design.labelFont;
         const icon = makeCityIcon(
           city,
           design.cityColor,
           design.cityFontSize,
           override,
           design.useMetricUnits,
-          selectedId === city.id
+          selectedId === city.id,
+          labelFont
         );
 
         return (

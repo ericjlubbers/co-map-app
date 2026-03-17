@@ -68,31 +68,49 @@ const _cache = new Map<string, GeoJSON.FeatureCollection>();
 
 async function overpassFetch(
   query: string,
-  cacheKey: string
+  cacheKey: string,
+  retries = 1
 ): Promise<GeoJSON.FeatureCollection> {
   if (_cache.has(cacheKey)) return _cache.get(cacheKey)!;
 
-  const response = await fetch(OVERPASS_URL, {
-    method: "POST",
-    headers: { "Content-Type": "application/x-www-form-urlencoded" },
-    body: `data=${encodeURIComponent(query)}`,
-  });
+  let lastError: Error | null = null;
+  for (let attempt = 0; attempt <= retries; attempt++) {
+    if (attempt > 0) {
+      // Wait before retrying (2s, 4s, …)
+      await new Promise((r) => setTimeout(r, 2000 * attempt));
+    }
+    try {
+      const response = await fetch(OVERPASS_URL, {
+        method: "POST",
+        headers: { "Content-Type": "application/x-www-form-urlencoded" },
+        body: `data=${encodeURIComponent(query)}`,
+      });
 
-  if (!response.ok) {
-    throw new Error(`Overpass API error: ${response.status}`);
+      if (response.status === 429 || response.status === 504) {
+        lastError = new Error(`Overpass API error: ${response.status}`);
+        continue; // retry on rate-limit or gateway timeout
+      }
+      if (!response.ok) {
+        throw new Error(`Overpass API error: ${response.status}`);
+      }
+
+      const data = (await response.json()) as { elements?: OsmElement[] };
+      const geojson = osmElementsToGeoJSON(data.elements ?? []);
+      _cache.set(cacheKey, geojson);
+      return geojson;
+    } catch (e) {
+      lastError = e instanceof Error ? e : new Error(String(e));
+      if (attempt === retries) break;
+    }
   }
-
-  const data = (await response.json()) as { elements?: OsmElement[] };
-  const geojson = osmElementsToGeoJSON(data.elements ?? []);
-  _cache.set(cacheKey, geojson);
-  return geojson;
+  throw lastError ?? new Error("Overpass API request failed");
 }
 
 // ── Public data-fetch functions ──────────────────────────────────────────────
 
 /** Fetch major Colorado roads (motorway, trunk, primary) from Overpass API. */
 export async function fetchColoradoRoads(): Promise<GeoJSON.FeatureCollection> {
-  const query = `[out:json][timeout:60][bbox:${CO_BBOX}];
+  const query = `[out:json][timeout:120][bbox:${CO_BBOX}];
 (
   way["highway"="motorway"];
   way["highway"="trunk"];
@@ -104,11 +122,9 @@ out geom;`;
 
 /** Fetch named Colorado waterways (rivers, streams) from Overpass API. */
 export async function fetchColoradoWaterways(): Promise<GeoJSON.FeatureCollection> {
-  const query = `[out:json][timeout:60][bbox:${CO_BBOX}];
-(
-  way["waterway"="river"];
-  way["waterway"="stream"]["name"];
-);
+  // Only fetch rivers (not all named streams) to keep the query manageable
+  const query = `[out:json][timeout:120][bbox:${CO_BBOX}];
+way["waterway"="river"];
 out geom;`;
   return overpassFetch(query, "co-waterways");
 }
