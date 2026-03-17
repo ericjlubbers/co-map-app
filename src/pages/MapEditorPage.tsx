@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback, useRef, useMemo } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
@@ -11,6 +11,8 @@ import {
 import { getMap, updateMap, type MapDetail } from "../lib/api";
 import { DesignProvider } from "../context/DesignContext";
 import MapEditorContent from "../components/MapEditorContent";
+import { emptyCollection } from "../lib/drawing";
+import type { DrawnFeatureCollection } from "../types";
 
 export default function MapEditorPage() {
   const { id } = useParams<{ id: string }>();
@@ -19,6 +21,7 @@ export default function MapEditorPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [showEmbedCode, setShowEmbedCode] = useState(false);
+  const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const fetchMap = async () => {
     if (!id) return;
@@ -43,6 +46,34 @@ export default function MapEditorPage() {
     if (!id) return;
     await updateMap(id, { design_state: designState });
   };
+
+  // Debounced save for drawn features
+  const handleDrawnFeaturesChange = useCallback(
+    (features: DrawnFeatureCollection) => {
+      if (!id) return;
+      if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
+      saveTimerRef.current = setTimeout(async () => {
+        try {
+          await updateMap(id, {
+            data_config: { drawnFeatures: features },
+          });
+        } catch {
+          // Non-blocking — persistence failure is silent
+        }
+      }, 1000);
+    },
+    [id],
+  );
+
+  // Parse drawn features from the loaded data_config
+  const initialDrawnFeatures = useMemo<DrawnFeatureCollection>(() => {
+    if (!mapData?.data_config) return emptyCollection();
+    const raw = mapData.data_config as Record<string, unknown>;
+    if (raw.drawnFeatures && typeof raw.drawnFeatures === "object") {
+      return raw.drawnFeatures as DrawnFeatureCollection;
+    }
+    return emptyCollection();
+  }, [mapData]);
 
   const embedUrl = `${window.location.origin}/embed/${id}`;
   const embedCode = `<iframe src="${embedUrl}" width="100%" height="600" frameborder="0" style="border:0" allowfullscreen></iframe>`;
@@ -128,7 +159,11 @@ export default function MapEditorPage() {
 
         {/* Map editor content */}
         <div className="min-h-0 flex-1">
-          <MapEditorContent />
+          <MapEditorContent
+            mapId={id}
+            initialDrawnFeatures={initialDrawnFeatures}
+            onDrawnFeaturesChange={handleDrawnFeaturesChange}
+          />
         </div>
       </div>
     </DesignProvider>
