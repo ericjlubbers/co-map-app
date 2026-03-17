@@ -1,4 +1,4 @@
-import { useEffect, useRef, useMemo, useCallback } from "react";
+import { useEffect, useRef, useMemo, useCallback, useState } from "react";
 import {
   MapContainer,
   TileLayer,
@@ -6,10 +6,14 @@ import {
   Popup,
   GeoJSON,
   useMap,
+  useMapEvents,
+  Polyline,
+  Polygon,
+  CircleMarker,
 } from "react-leaflet";
 import MarkerClusterGroup from "react-leaflet-cluster";
 import "leaflet/dist/leaflet.css";
-import type { PointData } from "../types";
+import type { PointData, DrawingMode, DrawnFeatureCollection } from "../types";
 import {
   MAP_CENTER,
   MAP_ZOOM,
@@ -23,19 +27,36 @@ import { createClusterIcon } from "./ClusterIcon";
 import PointPopup from "./PointPopup";
 import { COLORADO_COUNTIES } from "../data/coloradoCounties";
 import { COLORADO_BORDER, COLORADO_MASK } from "../data/coloradoBorder";
-import type { Map as LeafletMap } from "leaflet";
+import DrawnFeaturesLayer from "./layers/DrawnFeaturesLayer";
 import LabelLayer from "./layers/LabelLayer";
 import RoadLayer from "./layers/RoadLayer";
 import WaterwayLayer from "./layers/WaterwayLayer";
 import CityLayer from "./layers/CityLayer";
+import type { Map as LeafletMap, LatLng } from "leaflet";
+
+/** Milliseconds to wait after a click before treating it as a single-click
+ *  (rather than the first click of a double-click gesture). */
+const CLICK_DEBOUNCE_MS = 220;
 
 interface Props {
   points: PointData[];
   selectedId: string | null;
   onSelectPoint: (id: string | null) => void;
+  /** Drawing mode (null = view only) */
+  drawingMode?: DrawingMode | null;
+  /** Collection of drawn features to render */
+  drawnFeatures?: DrawnFeatureCollection;
+  /** Called when the user finishes drawing a feature */
+  onDrawingComplete?: (type: "point" | "line" | "polygon", latlngs: LatLng[]) => void;
+  /** Called when user clicks a drawn feature in select mode */
+  onSelectFeature?: (id: string) => void;
+  /** Called when user clicks a drawn feature in delete mode */
+  onDeleteFeature?: (id: string) => void;
+  /** ID of the currently selected drawn feature */
+  selectedFeatureId?: string | null;
 }
 
-// Helper component to fly to a selected point
+// ── FlyToSelected ────────────────────────────────────────────
 function FlyToSelected({
   point,
   mapRef,
@@ -60,18 +81,169 @@ function FlyToSelected({
   return null;
 }
 
-export default function MapView({ points, selectedId, onSelectPoint }: Props) {
+// ── DrawingInteraction ───────────────────────────────────────
+interface DrawingInteractionProps {
+  drawingMode: DrawingMode | null;
+  onDrawingComplete: (type: "point" | "line" | "polygon", latlngs: LatLng[]) => void;
+  pendingVertices: LatLng[];
+  setPendingVertices: React.Dispatch<React.SetStateAction<LatLng[]>>;
+}
+
+function DrawingInteraction({
+  drawingMode,
+  onDrawingComplete,
+  pendingVertices,
+  setPendingVertices,
+}: DrawingInteractionProps) {
+  const map = useMap();
+  const verticesRef = useRef<LatLng[]>([]);
+  const clickTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // Keep ref in sync with state
+  useEffect(() => {
+    verticesRef.current = pendingVertices;
+  }, [pendingVertices]);
+
+  // Enable/disable double-click zoom based on drawing mode
+  useEffect(() => {
+    if (drawingMode === "line" || drawingMode === "polygon") {
+      map.doubleClickZoom.disable();
+    } else {
+      map.doubleClickZoom.enable();
+      if (clickTimerRef.current) {
+        clearTimeout(clickTimerRef.current);
+        clickTimerRef.current = null;
+      }
+      verticesRef.current = [];
+      setPendingVertices([]);
+    }
+  }, [drawingMode, map, setPendingVertices]);
+
+  useMapEvents({
+    click(e) {
+      if (!drawingMode || drawingMode === "select" || drawingMode === "delete") return;
+
+      if (drawingMode === "point") {
+        onDrawingComplete("point", [e.latlng]);
+        return;
+      }
+
+      // line / polygon: debounce to distinguish single-click from first click of a dblclick
+      if (clickTimerRef.current) {
+        clearTimeout(clickTimerRef.current);
+        clickTimerRef.current = null;
+        // Second click of a dblclick pair — ignore it
+        return;
+      }
+      const latlng = e.latlng;
+      clickTimerRef.current = setTimeout(() => {
+        clickTimerRef.current = null;
+        const updated = [...verticesRef.current, latlng];
+        verticesRef.current = updated;
+        setPendingVertices(updated);
+      }, CLICK_DEBOUNCE_MS);
+    },
+    dblclick() {
+      if (drawingMode !== "line" && drawingMode !== "polygon") return;
+      if (clickTimerRef.current) {
+        clearTimeout(clickTimerRef.current);
+        clickTimerRef.current = null;
+      }
+      const verts = verticesRef.current;
+      verticesRef.current = [];
+      setPendingVertices([]);
+      if (drawingMode === "line" && verts.length >= 2) {
+        onDrawingComplete("line", verts);
+      } else if (drawingMode === "polygon" && verts.length >= 3) {
+        onDrawingComplete("polygon", verts);
+      }
+    },
+  });
+
+  return null;
+}
+
+// ── DrawingPreview (in-progress drawing) ────────────────────
+function DrawingPreview({
+  drawingMode,
+  pendingVertices,
+}: {
+  drawingMode: DrawingMode | null;
+  pendingVertices: LatLng[];
+}) {
+  if (pendingVertices.length === 0) return null;
+
+  const positions = pendingVertices.map((v) => [v.lat, v.lng] as [number, number]);
+
+  if (drawingMode === "line" && positions.length >= 2) {
+    return (
+      <Polyline
+        positions={positions}
+        pathOptions={{ color: "#ef4444", weight: 2, dashArray: "6,4", opacity: 0.8 }}
+        interactive={false}
+      />
+    );
+  }
+
+  if (drawingMode === "polygon" && positions.length >= 2) {
+    return (
+      <Polygon
+        positions={positions}
+        pathOptions={{
+          color: "#3b82f6",
+          weight: 2,
+          dashArray: "6,4",
+          fillOpacity: 0.1,
+          opacity: 0.8,
+        }}
+        interactive={false}
+      />
+    );
+  }
+
+  // Vertex dots for the first point
+  return (
+    <>
+      {positions.map(([lat, lng], i) => (
+        <CircleMarker
+          key={i}
+          center={[lat, lng]}
+          radius={4}
+          pathOptions={{ color: "#3b82f6", fillColor: "#fff", fillOpacity: 1, weight: 2 }}
+          interactive={false}
+        />
+      ))}
+    </>
+  );
+}
+
+// ── Main MapView export ──────────────────────────────────────
+
+const EMPTY_DRAWN: DrawnFeatureCollection = { type: "FeatureCollection", features: [] };
+
+export default function MapView({
+  points,
+  selectedId,
+  onSelectPoint,
+  drawingMode = null,
+  drawnFeatures,
+  onDrawingComplete,
+  onSelectFeature,
+  onDeleteFeature,
+  selectedFeatureId = null,
+}: Props) {
   const { design } = useDesign();
   const tileConfig = getTileConfig(design.tilePreset);
   const mapRef = useRef<LeafletMap | null>(null);
   const markerRefs = useRef<Record<string, L.Marker>>({});
 
+  const [pendingVertices, setPendingVertices] = useState<LatLng[]>([]);
+
   const selectedPoint = useMemo(
     () => points.find((p) => p.id === selectedId) ?? null,
-    [points, selectedId]
+    [points, selectedId],
   );
 
-  // Open popup on selected marker after fly-to
   useEffect(() => {
     if (selectedId && markerRefs.current[selectedId]) {
       const timer = setTimeout(() => {
@@ -87,101 +259,139 @@ export default function MapView({ points, selectedId, onSelectPoint }: Props) {
         markerRefs.current[id] = ref;
       }
     },
-    []
+    [],
   );
 
+  const cursorClass =
+    drawingMode === "point" || drawingMode === "line" || drawingMode === "polygon"
+      ? "[&_.leaflet-container]:cursor-crosshair"
+      : drawingMode === "delete"
+        ? "[&_.leaflet-container]:cursor-pointer"
+        : "";
+
   return (
-    <MapContainer
-      center={MAP_CENTER}
-      zoom={MAP_ZOOM}
-      maxBounds={MAP_MAX_BOUNDS}
-      maxBoundsViscosity={0.8}
-      className="h-full w-full"
-      zoomControl={true}
-      attributionControl={false}
-    >
-      <TileLayer key={design.tilePreset} url={tileConfig.url} attribution={tileConfig.attribution} maxZoom={tileConfig.maxZoom} />
-
-      {/* Outside-state fade mask */}
-      {design.showOutsideFade && (
-        <GeoJSON
-          key={`mask-${design.outsideFadeOpacity}`}
-          data={COLORADO_MASK}
-          style={{
-            fillColor: "#000000",
-            fillOpacity: design.outsideFadeOpacity,
-            stroke: false,
-          }}
-        />
-      )}
-
-      {/* State border */}
-      {design.showStateBorder && (
-        <GeoJSON
-          key={`state-border-${design.stateBorderColor}-${design.stateBorderWeight}`}
-          data={COLORADO_BORDER}
-          style={{
-            color: design.stateBorderColor,
-            weight: design.stateBorderWeight,
-            fill: false,
-          }}
-        />
-      )}
-
-      {/* County lines */}
-      {design.showCountyLines && (
-        <GeoJSON
-          key={`counties-${design.countyLineColor}-${design.countyLineWeight}-${design.countyLineOpacity}`}
-          data={COLORADO_COUNTIES}
-          style={{
-            color: design.countyLineColor,
-            weight: design.countyLineWeight,
-            opacity: design.countyLineOpacity,
-            fill: false,
-          }}
-        />
-      )}
-
-      <FlyToSelected point={selectedPoint} mapRef={mapRef} />
-
-      <MarkerClusterGroup
-        key={design.clusterStyle}
-        iconCreateFunction={(cluster: unknown) =>
-          createClusterIcon(cluster as Parameters<typeof createClusterIcon>[0], design.clusterStyle)
-        }
-        maxClusterRadius={CLUSTER_SETTINGS.maxClusterRadius}
-        disableClusteringAtZoom={CLUSTER_SETTINGS.disableClusteringAtZoom}
-        animate={CLUSTER_SETTINGS.animate}
-        spiderfyDistanceMultiplier={CLUSTER_SETTINGS.spiderfyDistanceMultiplier}
-        chunkedLoading={CLUSTER_SETTINGS.chunkedLoading}
-        zoomToBoundsOnClick={CLUSTER_SETTINGS.zoomToBoundsOnClick}
-        showCoverageOnHover={CLUSTER_SETTINGS.showCoverageOnHover}
+    <div className={`h-full w-full ${cursorClass}`}>
+      <MapContainer
+        center={MAP_CENTER}
+        zoom={MAP_ZOOM}
+        maxBounds={MAP_MAX_BOUNDS}
+        maxBoundsViscosity={0.8}
+        className="h-full w-full"
+        zoomControl={true}
+        attributionControl={false}
       >
-        {points.map((point) => (
-          <Marker
-            key={point.id}
-            position={[point.lat, point.lng]}
-            icon={createMarkerIcon(point.category, point.id === selectedId, design.markerSize)}
-            category={point.category}
-            ref={handleMarkerRef(point.id)}
-            eventHandlers={{
-              click: () => onSelectPoint(point.id),
+        <TileLayer key={design.tilePreset} url={tileConfig.url} attribution={tileConfig.attribution} maxZoom={tileConfig.maxZoom} />
+        {design.showLabels && tileConfig.labelsUrl && (
+          <TileLayer
+            key={`${design.tilePreset}-labels`}
+            url={tileConfig.labelsUrl}
+            maxZoom={tileConfig.maxZoom}
+            pane="shadowPane"
+          />
+        )}
+
+        {design.showOutsideFade && (
+          <GeoJSON
+            key={`mask-${design.outsideFadeOpacity}`}
+            data={COLORADO_MASK}
+            style={{
+              fillColor: "#000000",
+              fillOpacity: design.outsideFadeOpacity,
+              stroke: false,
             }}
-          >
-            <Popup>
-              <PointPopup point={point} />
-            </Popup>
-          </Marker>
-        ))}
-      </MarkerClusterGroup>
+          />
+        )}
 
-      {/* Feature layers */}
-      <RoadLayer />
-      <WaterwayLayer />
-      <CityLayer />
+        {design.showStateBorder && (
+          <GeoJSON
+            key={`state-border-${design.stateBorderColor}-${design.stateBorderWeight}`}
+            data={COLORADO_BORDER}
+            style={{
+              color: design.stateBorderColor,
+              weight: design.stateBorderWeight,
+              fill: false,
+            }}
+          />
+        )}
 
-      {/* Label overlay — rendered last so it always appears on top */}
-      <LabelLayer />
-    </MapContainer>
+        {design.showCountyLines && (
+          <GeoJSON
+            key={`counties-${design.countyLineColor}-${design.countyLineWeight}-${design.countyLineOpacity}`}
+            data={COLORADO_COUNTIES}
+            style={{
+              color: design.countyLineColor,
+              weight: design.countyLineWeight,
+              opacity: design.countyLineOpacity,
+              fill: false,
+            }}
+          />
+        )}
+
+        <FlyToSelected point={selectedPoint} mapRef={mapRef} />
+
+        {drawingMode && onDrawingComplete && (
+          <DrawingInteraction
+            drawingMode={drawingMode}
+            onDrawingComplete={onDrawingComplete}
+            pendingVertices={pendingVertices}
+            setPendingVertices={setPendingVertices}
+          />
+        )}
+
+        <DrawingPreview drawingMode={drawingMode} pendingVertices={pendingVertices} />
+
+        <DrawnFeaturesLayer
+          features={drawnFeatures ?? EMPTY_DRAWN}
+          drawingMode={drawingMode}
+          selectedFeatureId={selectedFeatureId}
+          onSelectFeature={onSelectFeature ?? (() => {})}
+          onDeleteFeature={onDeleteFeature ?? (() => {})}
+        />
+
+        <MarkerClusterGroup
+          key={design.clusterStyle}
+          iconCreateFunction={(cluster: unknown) =>
+            createClusterIcon(cluster as Parameters<typeof createClusterIcon>[0], design.clusterStyle)
+          }
+          maxClusterRadius={CLUSTER_SETTINGS.maxClusterRadius}
+          disableClusteringAtZoom={CLUSTER_SETTINGS.disableClusteringAtZoom}
+          animate={CLUSTER_SETTINGS.animate}
+          spiderfyDistanceMultiplier={CLUSTER_SETTINGS.spiderfyDistanceMultiplier}
+          chunkedLoading={CLUSTER_SETTINGS.chunkedLoading}
+          zoomToBoundsOnClick={CLUSTER_SETTINGS.zoomToBoundsOnClick}
+          showCoverageOnHover={CLUSTER_SETTINGS.showCoverageOnHover}
+        >
+          {points.map((point) => (
+            <Marker
+              key={point.id}
+              position={[point.lat, point.lng]}
+              icon={createMarkerIcon(point.category, point.id === selectedId, design.markerSize)}
+              category={point.category}
+              ref={handleMarkerRef(point.id)}
+              eventHandlers={{
+                click: () => {
+                  // Don't select data points while in an active drawing mode (except select)
+                  if (!drawingMode || drawingMode === "select") {
+                    onSelectPoint(point.id);
+                  }
+                },
+              }}
+            >
+              <Popup>
+                <PointPopup point={point} />
+              </Popup>
+            </Marker>
+          ))}
+        </MarkerClusterGroup>
+
+        {/* Feature layers */}
+        <RoadLayer />
+        <WaterwayLayer />
+        <CityLayer />
+
+        {/* Label overlay — rendered last so it always appears on top */}
+        <LabelLayer />
+      </MapContainer>
+    </div>
   );
 }

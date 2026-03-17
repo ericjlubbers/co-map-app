@@ -10,6 +10,45 @@ export interface PointData {
   lng: number;
 }
 
+// ── Drawing & Sketching ──────────────────────────────────────
+
+export type DrawingMode = 'point' | 'line' | 'polygon' | 'select' | 'delete';
+
+export interface DrawnFeatureProperties {
+  id: string;
+  label: string;
+  featureType: 'point' | 'line' | 'polygon';
+  color: string;
+  weight: number;
+  dashArray: string;
+  fillColor: string;
+  fillOpacity: number;
+  opacity: number;
+  description: string;
+}
+
+export type DrawnFeature =
+  | {
+      type: 'Feature';
+      geometry: { type: 'Point'; coordinates: [number, number] };
+      properties: DrawnFeatureProperties;
+    }
+  | {
+      type: 'Feature';
+      geometry: { type: 'LineString'; coordinates: [number, number][] };
+      properties: DrawnFeatureProperties;
+    }
+  | {
+      type: 'Feature';
+      geometry: { type: 'Polygon'; coordinates: [number, number][][] };
+      properties: DrawnFeatureProperties;
+    };
+
+export interface DrawnFeatureCollection {
+  type: 'FeatureCollection';
+  features: DrawnFeature[];
+}
+
 export interface CategoryInfo {
   icon: string;
   color: string;

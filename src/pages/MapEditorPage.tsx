@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from "react";
+import { useState, useEffect, useCallback, useRef, useMemo } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
@@ -14,7 +14,9 @@ import MapEditorContent from "../components/MapEditorContent";
 import DataTabBar from "../components/DataTabBar";
 import DataEditor from "../components/DataEditor";
 import DataSidebar from "../components/DataSidebar";
+import { emptyCollection } from "../lib/drawing";
 import type {
+  DrawnFeatureCollection,
   EditorTab,
   DataLayerTab,
   DataConfig,
@@ -22,6 +24,9 @@ import type {
   ColumnMappings,
   DataRow,
 } from "../types";
+
+/** Debounce delay (ms) before persisting changes to the API. */
+const AUTOSAVE_DEBOUNCE_MS = 1000;
 
 // ── Default empty layer ──────────────────────────────────────
 
@@ -43,6 +48,8 @@ export default function MapEditorPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [showEmbedCode, setShowEmbedCode] = useState(false);
+  const drawSaveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const dataSaveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // ── Tab state ─────────────────────────────────────────────
   const [activeTab, setActiveTab] = useState<EditorTab>("preview");
@@ -80,21 +87,20 @@ export default function MapEditorPage() {
   };
 
   // ── Persist data_config after each change (debounced) ──────
-  const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const saveDataConfig = useCallback(
     (config: DataConfig) => {
       if (!id) return;
-      if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
-      saveTimerRef.current = setTimeout(async () => {
+      if (dataSaveTimerRef.current) clearTimeout(dataSaveTimerRef.current);
+      dataSaveTimerRef.current = setTimeout(async () => {
         try {
           const data_config = JSON.parse(JSON.stringify(config)) as Record<string, unknown>;
           await updateMap(id, { data_config });
         } catch {
           // non-fatal — user can retry
         }
-      }, 1000);
+      }, AUTOSAVE_DEBOUNCE_MS);
     },
-    [id]
+    [id],
   );
 
   // ── Layer-level updaters ──────────────────────────────────
@@ -107,30 +113,58 @@ export default function MapEditorPage() {
         return next;
       });
     },
-    [saveDataConfig]
+    [saveDataConfig],
   );
 
   const handleColumnsChange = useCallback(
     (cols: string[]) => updateLayer(activeLayer, (l) => ({ ...l, columns: cols })),
-    [activeLayer, updateLayer]
+    [activeLayer, updateLayer],
   );
 
   const handleRowsChange = useCallback(
     (rows: DataRow[]) => updateLayer(activeLayer, (l) => ({ ...l, rows })),
-    [activeLayer, updateLayer]
+    [activeLayer, updateLayer],
   );
 
   const handleMappingsChange = useCallback(
     (mappings: ColumnMappings) =>
       updateLayer(activeLayer, (l) => ({ ...l, columnMappings: mappings })),
-    [activeLayer, updateLayer]
+    [activeLayer, updateLayer],
   );
 
   const handleSheetLoaded = useCallback(
     (data: Pick<LayerData, "columns" | "rows" | "googleSheetsUrl" | "lastSynced">) =>
       updateLayer(activeLayer, (l) => ({ ...l, ...data })),
-    [activeLayer, updateLayer]
+    [activeLayer, updateLayer],
   );
+
+  // ── Debounced save for drawn features ──────────────────────
+  const handleDrawnFeaturesChange = useCallback(
+    (features: DrawnFeatureCollection) => {
+      if (!id) return;
+      if (drawSaveTimerRef.current) clearTimeout(drawSaveTimerRef.current);
+      drawSaveTimerRef.current = setTimeout(async () => {
+        try {
+          await updateMap(id, {
+            data_config: { drawnFeatures: features },
+          });
+        } catch {
+          // Non-blocking — persistence failure is silent
+        }
+      }, AUTOSAVE_DEBOUNCE_MS);
+    },
+    [id],
+  );
+
+  // Parse drawn features from the loaded data_config
+  const initialDrawnFeatures = useMemo<DrawnFeatureCollection>(() => {
+    if (!mapData?.data_config) return emptyCollection();
+    const raw = mapData.data_config as Record<string, unknown>;
+    if (raw.drawnFeatures && typeof raw.drawnFeatures === "object") {
+      return raw.drawnFeatures as DrawnFeatureCollection;
+    }
+    return emptyCollection();
+  }, [mapData]);
 
   const embedUrl = `${window.location.origin}/embed/${id}`;
   const embedCode = `<iframe src="${embedUrl}" width="100%" height="600" frameborder="0" style="border:0" allowfullscreen></iframe>`;
@@ -225,7 +259,11 @@ export default function MapEditorPage() {
         {/* Main content — switches between Preview and Data tab */}
         <div className="min-h-0 flex-1">
           {activeTab === "preview" ? (
-            <MapEditorContent />
+            <MapEditorContent
+              mapId={id}
+              initialDrawnFeatures={initialDrawnFeatures}
+              onDrawnFeaturesChange={handleDrawnFeaturesChange}
+            />
           ) : (
             /* Data tab: editor + sidebar side-by-side */
             <div className="flex h-full">
