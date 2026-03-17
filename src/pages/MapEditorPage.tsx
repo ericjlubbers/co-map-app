@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
@@ -11,6 +11,30 @@ import {
 import { getMap, updateMap, type MapDetail } from "../lib/api";
 import { DesignProvider } from "../context/DesignContext";
 import MapEditorContent from "../components/MapEditorContent";
+import DataTabBar from "../components/DataTabBar";
+import DataEditor from "../components/DataEditor";
+import DataSidebar from "../components/DataSidebar";
+import type {
+  EditorTab,
+  DataLayerTab,
+  DataConfig,
+  LayerData,
+  ColumnMappings,
+  DataRow,
+} from "../types";
+
+// ── Default empty layer ──────────────────────────────────────
+
+function emptyLayer(): LayerData {
+  return { columns: [], rows: [], columnMappings: {} };
+}
+
+function parseDataConfig(raw: Record<string, unknown>): DataConfig {
+  return {
+    regions: (raw?.regions as LayerData) ?? emptyLayer(),
+    points: (raw?.points as LayerData) ?? emptyLayer(),
+  };
+}
 
 export default function MapEditorPage() {
   const { id } = useParams<{ id: string }>();
@@ -20,6 +44,16 @@ export default function MapEditorPage() {
   const [error, setError] = useState<string | null>(null);
   const [showEmbedCode, setShowEmbedCode] = useState(false);
 
+  // ── Tab state ─────────────────────────────────────────────
+  const [activeTab, setActiveTab] = useState<EditorTab>("preview");
+  const [activeLayer, setActiveLayer] = useState<DataLayerTab>("points");
+
+  // ── Data config (local copy — saved on changes) ───────────
+  const [dataConfig, setDataConfig] = useState<DataConfig>({
+    regions: emptyLayer(),
+    points: emptyLayer(),
+  });
+
   const fetchMap = async () => {
     if (!id) return;
     setLoading(true);
@@ -27,6 +61,7 @@ export default function MapEditorPage() {
     try {
       const data = await getMap(id);
       setMapData(data);
+      setDataConfig(parseDataConfig(data.data_config ?? {}));
     } catch (e) {
       setError(e instanceof Error ? e.message : "Failed to load map");
     } finally {
@@ -43,6 +78,56 @@ export default function MapEditorPage() {
     if (!id) return;
     await updateMap(id, { design_state: designState });
   };
+
+  // ── Persist data_config after each change ─────────────────
+  const saveDataConfig = useCallback(
+    async (config: DataConfig) => {
+      if (!id) return;
+      try {
+        // Serialise DataConfig to the generic Record shape expected by the API
+        const data_config = JSON.parse(JSON.stringify(config)) as Record<string, unknown>;
+        await updateMap(id, { data_config });
+      } catch {
+        // non-fatal — user can retry
+      }
+    },
+    [id]
+  );
+
+  // ── Layer-level updaters ──────────────────────────────────
+
+  const updateLayer = useCallback(
+    (layer: DataLayerTab, updater: (prev: LayerData) => LayerData) => {
+      setDataConfig((prev) => {
+        const next: DataConfig = { ...prev, [layer]: updater(prev[layer]) };
+        saveDataConfig(next);
+        return next;
+      });
+    },
+    [saveDataConfig]
+  );
+
+  const handleColumnsChange = useCallback(
+    (cols: string[]) => updateLayer(activeLayer, (l) => ({ ...l, columns: cols })),
+    [activeLayer, updateLayer]
+  );
+
+  const handleRowsChange = useCallback(
+    (rows: DataRow[]) => updateLayer(activeLayer, (l) => ({ ...l, rows })),
+    [activeLayer, updateLayer]
+  );
+
+  const handleMappingsChange = useCallback(
+    (mappings: ColumnMappings) =>
+      updateLayer(activeLayer, (l) => ({ ...l, columnMappings: mappings })),
+    [activeLayer, updateLayer]
+  );
+
+  const handleSheetLoaded = useCallback(
+    (data: Pick<LayerData, "columns" | "rows" | "googleSheetsUrl" | "lastSynced">) =>
+      updateLayer(activeLayer, (l) => ({ ...l, ...data })),
+    [activeLayer, updateLayer]
+  );
 
   const embedUrl = `${window.location.origin}/embed/${id}`;
   const embedCode = `<iframe src="${embedUrl}" width="100%" height="600" frameborder="0" style="border:0" allowfullscreen></iframe>`;
@@ -126,9 +211,37 @@ export default function MapEditorPage() {
           </div>
         )}
 
-        {/* Map editor content */}
+        {/* Tab bar: Preview | Data */}
+        <DataTabBar
+          activeTab={activeTab}
+          onTabChange={setActiveTab}
+          activeLayer={activeLayer}
+          onLayerChange={setActiveLayer}
+        />
+
+        {/* Main content — switches between Preview and Data tab */}
         <div className="min-h-0 flex-1">
-          <MapEditorContent />
+          {activeTab === "preview" ? (
+            <MapEditorContent />
+          ) : (
+            /* Data tab: editor + sidebar side-by-side */
+            <div className="flex h-full">
+              <div className="min-w-0 flex-1 overflow-hidden">
+                <DataEditor
+                  columns={dataConfig[activeLayer].columns}
+                  rows={dataConfig[activeLayer].rows}
+                  columnMappings={dataConfig[activeLayer].columnMappings}
+                  onColumnsChange={handleColumnsChange}
+                  onRowsChange={handleRowsChange}
+                />
+              </div>
+              <DataSidebar
+                layerData={dataConfig[activeLayer]}
+                onUpdateMappings={handleMappingsChange}
+                onSheetLoaded={handleSheetLoaded}
+              />
+            </div>
+          )}
         </div>
       </div>
     </DesignProvider>
