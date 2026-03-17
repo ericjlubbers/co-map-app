@@ -138,7 +138,8 @@ src/
   context/
     DesignContext.tsx     Design state provider, URL serialization, useDesign() hook
   components/
-    DesignToolbar.tsx     Live design controls toolbar
+    DesignSidebar.tsx    Accordion design controls sidebar (right panel)
+    AccordionSection.tsx Collapsible section used by DesignSidebar
     MapView.tsx           Leaflet map with clustering & labels overlay
     DataTable.tsx         Searchable/filterable data table
     FilterBar.tsx         Category filter pills

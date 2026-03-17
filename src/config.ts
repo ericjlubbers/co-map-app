@@ -18,9 +18,9 @@ export const MAP_MAX_BOUNDS: [[number, number], [number, number]] = [
   [36.5, -109.5],
   [41.5, -101.5],
 ];
-// "carto-light" = clean light basemap
-// "stadia-watercolor" = Stamen Watercolor via Stadia Maps (default)
-export const TILE_PRESET: TilePreset = "stadia-watercolor";
+// "carto-voyager" = colorful, label-rich basemap (default)
+// "stadia-watercolor" = Stamen Watercolor via Stadia Maps
+export const TILE_PRESET: TilePreset = "carto-voyager";
 
 const STADIA_API_KEY = import.meta.env.VITE_STADIA_API_KEY ?? "";
 const stadiaQ = STADIA_API_KEY ? `?api_key=${STADIA_API_KEY}` : "";

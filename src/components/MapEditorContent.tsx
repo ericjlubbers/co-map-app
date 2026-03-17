@@ -1,4 +1,4 @@
-import { useState, useMemo, useCallback } from "react";
+import { useState, useMemo, useCallback, useEffect } from "react";
 import { useDesign } from "../context/DesignContext";
 import { useLocationData } from "../hooks/useLocationData";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
@@ -6,11 +6,12 @@ import {
   faSpinner,
   faExclamationTriangle,
   faRotateRight,
+  faGear,
 } from "@fortawesome/free-solid-svg-icons";
 import MapView from "./MapView";
 import DataTable from "./DataTable";
 import FilterBar from "./FilterBar";
-import DesignToolbar from "./DesignToolbar";
+import DesignSidebar from "./DesignSidebar";
 
 interface MapEditorContentProps {
   embedMode?: boolean;
@@ -20,6 +21,13 @@ export default function MapEditorContent({ embedMode = false }: MapEditorContent
   const { design, designMode } = useDesign();
   const { data, loading, error, retry } = useLocationData();
   const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [sidebarOpen, setSidebarOpen] = useState(designMode);
+
+  // Sync sidebar with keyboard shortcut (Cmd+Shift+D toggles designMode in context)
+  useEffect(() => {
+    setSidebarOpen(designMode);
+  }, [designMode]);
+
   const [activeCategories, setActiveCategories] = useState<Set<string>>(
     new Set()
   );
@@ -132,50 +140,68 @@ export default function MapEditorContent({ embedMode = false }: MapEditorContent
 
   // ── Full editor layout ──
   return (
-    <div className="flex h-full flex-col" style={{ backgroundColor: design.pageBg }}>
-      {designMode && <DesignToolbar />}
-      <div className={`${design.showBorder ? "co150" : ""} min-h-0 flex-1`}>
-        <div
-          className="design-grid grid h-full"
-          style={{
-            "--design-map-h": design.mobileMapHeight,
-            "--design-cols": design.mapTableRatio,
-          } as React.CSSProperties}
-        >
-          {/* Map panel */}
-          <div className="relative min-h-0">
-            <MapView
-              points={filteredPoints}
-              selectedId={selectedId}
-              onSelectPoint={handleSelectPoint}
-            />
-          </div>
-
-          {/* Table panel */}
-          <div
-            className="flex min-h-0 flex-col overflow-hidden border-t border-gray-200 lg:border-l lg:border-t-0"
-            style={{ backgroundColor: design.panelBg }}
+    <div className="flex h-full" style={{ backgroundColor: design.pageBg }}>
+      {/* Main content area */}
+      <div className="flex min-w-0 flex-1 flex-col">
+        {/* Sidebar toggle button (top-right floating) */}
+        {!embedMode && !sidebarOpen && (
+          <button
+            onClick={() => setSidebarOpen(true)}
+            className="absolute right-3 top-14 z-[1000] rounded-md bg-white px-2.5 py-1.5 text-xs font-medium text-gray-600 shadow-md border border-gray-200 hover:bg-gray-50 transition-colors"
+            title="Open design panel (⌘⇧D)"
           >
-            <FilterBar
-              categories={categories}
-              activeCategories={activeCategories}
-              onToggleCategory={handleToggleCategory}
-              onResetCategories={handleResetCategories}
-              searchQuery={searchQuery}
-              onSearchChange={handleSearchChange}
-              resultCount={filteredPoints.length}
-              totalCount={data.length}
-            />
-            <div className="min-h-0 flex-1">
-              <DataTable
+            <FontAwesomeIcon icon={faGear} className="mr-1.5" />
+            Design
+          </button>
+        )}
+        <div className={`${design.showBorder ? "co150" : ""} min-h-0 flex-1`}>
+          <div
+            className="design-grid grid h-full"
+            style={{
+              "--design-map-h": design.mobileMapHeight,
+              "--design-cols": design.mapTableRatio,
+            } as React.CSSProperties}
+          >
+            {/* Map panel */}
+            <div className="relative min-h-0">
+              <MapView
                 points={filteredPoints}
                 selectedId={selectedId}
                 onSelectPoint={handleSelectPoint}
               />
             </div>
+
+            {/* Table panel */}
+            <div
+              className="flex min-h-0 flex-col overflow-hidden border-t border-gray-200 lg:border-l lg:border-t-0"
+              style={{ backgroundColor: design.panelBg }}
+            >
+              <FilterBar
+                categories={categories}
+                activeCategories={activeCategories}
+                onToggleCategory={handleToggleCategory}
+                onResetCategories={handleResetCategories}
+                searchQuery={searchQuery}
+                onSearchChange={handleSearchChange}
+                resultCount={filteredPoints.length}
+                totalCount={data.length}
+              />
+              <div className="min-h-0 flex-1">
+                <DataTable
+                  points={filteredPoints}
+                  selectedId={selectedId}
+                  onSelectPoint={handleSelectPoint}
+                />
+              </div>
+            </div>
           </div>
         </div>
       </div>
+
+      {/* Design sidebar */}
+      {!embedMode && sidebarOpen && (
+        <DesignSidebar onClose={() => setSidebarOpen(false)} />
+      )}
     </div>
   );
 }
