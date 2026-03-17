@@ -368,16 +368,6 @@ export default function DesignSidebar({ onClose }: DesignSidebarProps) {
                     suffix="px"
                   />
                 </Field>
-                <Field label="Elevation">
-                  <SegmentedControl
-                    options={[
-                      { value: "false", label: "Feet" },
-                      { value: "true", label: "Meters" },
-                    ]}
-                    value={String(design.useMetricUnits)}
-                    onChange={(v) => set("useMetricUnits", v === "true")}
-                  />
-                </Field>
                 <p className="text-[11px] text-gray-400 italic">
                   Click a city or peak label to override its style or hide it.
                 </p>
