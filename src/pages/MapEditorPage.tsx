@@ -26,6 +26,16 @@ export default function MapEditorPage() {
   const [showEmbedCode, setShowEmbedCode] = useState(false);
   const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
+  // ── Tab state ─────────────────────────────────────────────
+  const [activeTab, setActiveTab] = useState<EditorTab>("preview");
+  const [activeLayer, setActiveLayer] = useState<DataLayerTab>("points");
+
+  // ── Data config (local copy — saved on changes) ───────────
+  const [dataConfig, setDataConfig] = useState<DataConfig>({
+    regions: emptyLayer(),
+    points: emptyLayer(),
+  });
+
   const fetchMap = async () => {
     if (!id) return;
     setLoading(true);
@@ -33,6 +43,7 @@ export default function MapEditorPage() {
     try {
       const data = await getMap(id);
       setMapData(data);
+      setDataConfig(parseDataConfig(data.data_config ?? {}));
     } catch (e) {
       setError(e instanceof Error ? e.message : "Failed to load map");
     } finally {
@@ -160,7 +171,15 @@ export default function MapEditorPage() {
           </div>
         )}
 
-        {/* Map editor content */}
+        {/* Tab bar: Preview | Data */}
+        <DataTabBar
+          activeTab={activeTab}
+          onTabChange={setActiveTab}
+          activeLayer={activeLayer}
+          onLayerChange={setActiveLayer}
+        />
+
+        {/* Main content — switches between Preview and Data tab */}
         <div className="min-h-0 flex-1">
           <MapEditorContent
             mapId={id}

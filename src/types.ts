@@ -59,15 +59,50 @@ export type ClusterStyle = "donut" | "gradient" | "minimal";
 export type FontFamily = "Libre Franklin" | "Atkinson Hyperlegible" | "Plus Jakarta Sans";
 export type TilePreset =
   | "carto-light"
+  | "carto-light-nolabels"
   | "carto-dark"
+  | "carto-dark-nolabels"
   | "carto-voyager"
+  | "carto-voyager-nolabels"
   | "osm-standard"
   | "stadia-watercolor"
   | "stadia-toner"
   | "stadia-toner-lite"
+  | "stadia-toner-nolabels"
   | "stadia-smooth"
   | "stadia-outdoors"
-  | "stadia-terrain";
+  | "stadia-terrain"
+  | "stadia-terrain-nolabels";
+
+// ── Data Tab Types ──────────────────────────────────────────
+
+/** Roles a column can be assigned to in the data editor */
+export type ColumnRole = "geometry" | "name" | "label" | "value" | "group" | "metadata" | "none";
+
+/** Maps a column name to a visualization role */
+export type ColumnMappings = Record<string, ColumnRole>;
+
+/** A single data row: keys are column headers, values are cell content */
+export type DataRow = Record<string, string>;
+
+/** Layer data (Regions or Points) stored in data_config */
+export interface LayerData {
+  columns: string[];
+  rows: DataRow[];
+  columnMappings: ColumnMappings;
+  googleSheetsUrl?: string;
+  lastSynced?: string; // ISO timestamp
+}
+
+/** Top-level data_config object persisted on the map */
+export interface DataConfig {
+  regions: LayerData;
+  points: LayerData;
+}
+
+/** Active tabs in the editor */
+export type EditorTab = "preview" | "data";
+export type DataLayerTab = "regions" | "points";
 
 export interface DesignState {
   fontFamily: FontFamily;
@@ -95,4 +130,23 @@ export interface DesignState {
   // Outside-state fade/mask
   showOutsideFade: boolean;
   outsideFadeOpacity: number;
+  // Units
+  useMetricUnits: boolean;
+  // Roads layer
+  showRoads: boolean;
+  roadColor: string;
+  roadWeight: number;
+  roadOpacity: number;
+  roadDashArray: string;
+  // Waterways layer
+  showWaterways: boolean;
+  waterwayColor: string;
+  waterwayWeight: number;
+  waterwayOpacity: number;
+  // Cities layer
+  showCities: boolean;
+  cityFontSize: number;
+  cityColor: string;
+  // Labels layer
+  labelFont: string;
 }
