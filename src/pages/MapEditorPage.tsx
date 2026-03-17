@@ -14,6 +14,9 @@ import MapEditorContent from "../components/MapEditorContent";
 import { emptyCollection } from "../lib/drawing";
 import type { DrawnFeatureCollection } from "../types";
 
+/** Debounce delay (ms) before persisting drawn features to the API. */
+const AUTOSAVE_DEBOUNCE_MS = 1000;
+
 export default function MapEditorPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
@@ -60,7 +63,7 @@ export default function MapEditorPage() {
         } catch {
           // Non-blocking — persistence failure is silent
         }
-      }, 1000);
+      }, AUTOSAVE_DEBOUNCE_MS);
     },
     [id],
   );

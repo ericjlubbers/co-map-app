@@ -9,8 +9,13 @@ import type {
 // ── ID generation ────────────────────────────────────────────
 
 export function generateFeatureId(): string {
-  const rand = Math.random().toString(36).slice(2, 9);
-  return `df_${Date.now()}_${rand}`;
+  if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
+    return `df_${crypto.randomUUID()}`;
+  }
+  // Fallback with high-entropy random for older environments
+  const arr = new Uint32Array(2);
+  crypto.getRandomValues(arr);
+  return `df_${arr[0].toString(36)}${arr[1].toString(36)}_${Date.now().toString(36)}`;
 }
 
 // ── Default properties ───────────────────────────────────────

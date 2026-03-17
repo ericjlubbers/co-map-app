@@ -30,6 +30,10 @@ import { COLORADO_BORDER, COLORADO_MASK } from "../data/coloradoBorder";
 import DrawnFeaturesLayer from "./layers/DrawnFeaturesLayer";
 import type { Map as LeafletMap, LatLng } from "leaflet";
 
+/** Milliseconds to wait after a click before treating it as a single-click
+ *  (rather than the first click of a double-click gesture). */
+const CLICK_DEBOUNCE_MS = 220;
+
 interface Props {
   points: PointData[];
   selectedId: string | null;
@@ -133,7 +137,7 @@ function DrawingInteraction({
         const updated = [...verticesRef.current, latlng];
         verticesRef.current = updated;
         setPendingVertices(updated);
-      }, 220);
+      }, CLICK_DEBOUNCE_MS);
     },
     dblclick() {
       if (drawingMode !== "line" && drawingMode !== "polygon") return;
