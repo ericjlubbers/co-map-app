@@ -5,6 +5,24 @@ import type { Env, MapInput, MapRecord } from './types';
 
 const app = new Hono<{ Bindings: Env }>();
 
+// ---------- Helpers ----------
+
+/** Build the canonical cache key for a map's JSON response */
+function mapCacheKey(id: string, baseUrl: string): string {
+  const url = new URL(baseUrl);
+  return `${url.origin}/api/maps/${id}`;
+}
+
+/** Purge a cached map response (best-effort; non-fatal on error). */
+async function purgeCachedMap(id: string, baseUrl: string): Promise<void> {
+  try {
+    const cache = caches.default;
+    await cache.delete(new Request(mapCacheKey(id, baseUrl)));
+  } catch {
+    // Cache purge is best-effort; don't fail the write request
+  }
+}
+
 // ---------- Middleware ----------
 
 app.use('/api/*', async (c, next) => {
@@ -52,6 +70,13 @@ app.get('/api/maps', async (c) => {
 // Get single map (public for published, auth for draft)
 app.get('/api/maps/:id', async (c) => {
   const id = c.req.param('id');
+
+  // Serve from Cloudflare edge cache for published maps
+  const cacheKey = new Request(mapCacheKey(id, c.req.url));
+  const cache = caches.default;
+  const cached = await cache.match(cacheKey);
+  if (cached) return cached;
+
   const row = await c.env.DB.prepare(
     'SELECT * FROM maps WHERE id = ?'
   ).bind(id).first<MapRecord>();
@@ -64,11 +89,25 @@ app.get('/api/maps/:id', async (c) => {
     if (!authorized) return c.json({ error: 'Unauthorized' }, 401);
   }
 
-  return c.json({
+  const payload = {
     ...row,
     design_state: JSON.parse(row.design_state),
     data_config: JSON.parse(row.data_config),
-  });
+  };
+
+  // Cache published maps at the edge for 24 hours
+  if (row.status === 'published') {
+    const response = new Response(JSON.stringify(payload), {
+      headers: {
+        'Content-Type': 'application/json',
+        'Cache-Control': 's-maxage=86400, stale-while-revalidate=3600',
+      },
+    });
+    c.executionCtx.waitUntil(cache.put(cacheKey, response.clone()));
+    return response;
+  }
+
+  return c.json(payload);
 });
 
 // Create map (auth required)
@@ -127,6 +166,10 @@ app.put('/api/maps/:id', async (c) => {
   ).bind(...values).run();
 
   if (!result.meta.changes) return c.json({ error: 'Map not found' }, 404);
+
+  // Purge edge cache in the background so the next GET reflects the updated data
+  c.executionCtx.waitUntil(purgeCachedMap(id, c.req.url));
+
   return c.json({ updated_at: now });
 });
 

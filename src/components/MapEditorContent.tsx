@@ -12,12 +12,15 @@ import MapView from "./MapView";
 import DataTable from "./DataTable";
 import FilterBar from "./FilterBar";
 import DesignSidebar from "./DesignSidebar";
+import AutoRotateDemo from "./AutoRotateDemo";
 
 interface MapEditorContentProps {
   embedMode?: boolean;
+  /** Activates auto-rotate demo mode (embed `?demo=1`) */
+  demoMode?: boolean;
 }
 
-export default function MapEditorContent({ embedMode = false }: MapEditorContentProps) {
+export default function MapEditorContent({ embedMode = false, demoMode = false }: MapEditorContentProps) {
   const { design, designMode } = useDesign();
   const { data, loading, error, retry } = useLocationData();
   const [selectedId, setSelectedId] = useState<string | null>(null);
@@ -31,6 +34,8 @@ export default function MapEditorContent({ embedMode = false }: MapEditorContent
   const [activeCategories, setActiveCategories] = useState<Set<string>>(
     new Set()
   );
+  // Demo mode: current spotlighted category (null = show all)
+  const [demoCategoryFilter, setDemoCategoryFilter] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
 
@@ -55,6 +60,11 @@ export default function MapEditorContent({ embedMode = false }: MapEditorContent
   const filteredPoints = useMemo(() => {
     let result = data;
 
+    // Demo mode overrides manual category filter
+    if (demoMode && demoCategoryFilter !== null) {
+      return result.filter((p) => p.category === demoCategoryFilter);
+    }
+
     // Category filter
     if (activeCategories.size > 0) {
       result = result.filter((p) => activeCategories.has(p.category));
@@ -72,7 +82,7 @@ export default function MapEditorContent({ embedMode = false }: MapEditorContent
     }
 
     return result;
-  }, [data, activeCategories, debouncedSearch]);
+  }, [data, activeCategories, debouncedSearch, demoMode, demoCategoryFilter]);
 
   const handleToggleCategory = useCallback((category: string) => {
     setActiveCategories((prev) => {
@@ -128,12 +138,19 @@ export default function MapEditorContent({ embedMode = false }: MapEditorContent
   // ── Embed mode: map only ──
   if (embedMode) {
     return (
-      <div className="h-full w-full" style={{ backgroundColor: design.pageBg }}>
+      <div className="relative h-full w-full" style={{ backgroundColor: design.pageBg }}>
         <MapView
           points={filteredPoints}
           selectedId={selectedId}
           onSelectPoint={handleSelectPoint}
         />
+        {demoMode && categories.length > 0 && (
+          <AutoRotateDemo
+            categories={categories}
+            intervalMs={design.demoIntervalMs}
+            onCategoryChange={setDemoCategoryFilter}
+          />
+        )}
       </div>
     );
   }

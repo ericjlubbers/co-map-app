@@ -70,6 +70,11 @@ export async function updateMap(id: string, input: MapInput): Promise<void> {
   if (!res.ok) throw new Error(`Failed to update map: ${res.status}`);
 }
 
+/** Set map status to "published" and purge edge cache. */
+export async function publishMap(id: string): Promise<void> {
+  await updateMap(id, { status: 'published' });
+}
+
 export async function deleteMap(id: string): Promise<void> {
   const res = await fetch(`${API_BASE}/maps/${encodeURIComponent(id)}`, {
     method: 'DELETE',
