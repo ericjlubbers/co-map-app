@@ -35,6 +35,36 @@ export type TilePreset =
   | "stadia-terrain"
   | "stadia-terrain-nolabels";
 
+// ── Data Tab Types ──────────────────────────────────────────
+
+/** Roles a column can be assigned to in the data editor */
+export type ColumnRole = "geometry" | "name" | "label" | "value" | "group" | "metadata" | "none";
+
+/** Maps a column name to a visualization role */
+export type ColumnMappings = Record<string, ColumnRole>;
+
+/** A single data row: keys are column headers, values are cell content */
+export type DataRow = Record<string, string>;
+
+/** Layer data (Regions or Points) stored in data_config */
+export interface LayerData {
+  columns: string[];
+  rows: DataRow[];
+  columnMappings: ColumnMappings;
+  googleSheetsUrl?: string;
+  lastSynced?: string; // ISO timestamp
+}
+
+/** Top-level data_config object persisted on the map */
+export interface DataConfig {
+  regions: LayerData;
+  points: LayerData;
+}
+
+/** Active tabs in the editor */
+export type EditorTab = "preview" | "data";
+export type DataLayerTab = "regions" | "points";
+
 export interface DesignState {
   fontFamily: FontFamily;
   clusterStyle: ClusterStyle;
