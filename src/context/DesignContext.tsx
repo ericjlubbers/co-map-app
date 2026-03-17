@@ -212,13 +212,30 @@ interface DesignContextValue {
 
 const DesignCtx = createContext<DesignContextValue | null>(null);
 
-export function DesignProvider({ children }: { children: ReactNode }) {
+interface DesignProviderProps {
+  children: ReactNode;
+  /** Initial design state loaded from the API (overridden by URL params) */
+  initialDesignState?: Record<string, unknown>;
+  /** Callback to save design state to the API */
+  onSave?: (state: Record<string, unknown>) => Promise<void>;
+  /** Suppress design mode UI (for embeds) */
+  embedMode?: boolean;
+}
+
+export function DesignProvider({
+  children,
+  initialDesignState,
+  onSave,
+  embedMode = false,
+}: DesignProviderProps) {
   const urlOverrides = parseFromURL();
   const initialDesignMode =
-    new URLSearchParams(window.location.search).get("design") === "1";
+    !embedMode && new URLSearchParams(window.location.search).get("design") === "1";
 
+  // Merge: defaults ← API state ← URL overrides
   const [design, dispatch] = useReducer(designReducer, {
     ...DEFAULT_DESIGN,
+    ...(initialDesignState as Partial<DesignState>),
     ...urlOverrides,
   });
 
@@ -263,6 +280,16 @@ export function DesignProvider({ children }: { children: ReactNode }) {
     (includeDesignMode = false) => serializeToURL(design, includeDesignMode),
     [design]
   );
+
+  // Auto-save to API when design changes (debounced)
+  useEffect(() => {
+    if (!onSave) return;
+    const timer = setTimeout(() => {
+      onSave(design as unknown as Record<string, unknown>);
+    }, 1000);
+    return () => clearTimeout(timer);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [design, onSave]);
 
   return (
     <DesignCtx.Provider value={{ design, designMode, set, reset, getShareURL }}>

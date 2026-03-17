@@ -1,0 +1,15 @@
+name = "co-map-worker"
+main = "src/index.ts"
+compatibility_date = "2025-03-14"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "co-map-db"
+database_id = "local"
+migrations_dir = "migrations"
+
+[vars]
+CORS_ORIGIN = "http://localhost:5173"
+API_KEY = "dev-only-key"
+
+# In production, override API_KEY via: wrangler secret put API_KEY
