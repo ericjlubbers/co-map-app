@@ -35,15 +35,22 @@ const PARAM_MAP: Record<keyof DesignState, string> = {
   outsideFadeOpacity: "fadeOp",
   useMetricUnits: "metric",
   showRoads: "roads",
+  showMotorways: "motorways",
+  showTrunkRoads: "trunks",
+  showPrimaryRoads: "primaries",
   roadColor: "roadColor",
   roadWeight: "roadW",
   roadOpacity: "roadOp",
   roadDashArray: "roadDash",
   showWaterways: "waterways",
+  showRivers: "rivers",
+  showStreams: "streams",
   waterwayColor: "waterwayColor",
   waterwayWeight: "waterwayW",
   waterwayOpacity: "waterwayOp",
   showCities: "cities",
+  showCityLabels: "cityLabels",
+  showPeakLabels: "peakLabels",
   cityFontSize: "citySize",
   cityColor: "cityColor",
   labelFont: "labelFont",
@@ -150,6 +157,13 @@ function parseFromURL(): Partial<DesignState> {
   const showRoads = params.get(PARAM_MAP.showRoads);
   if (showRoads) partial.showRoads = showRoads === "1";
 
+  const showMotorways = params.get(PARAM_MAP.showMotorways);
+  if (showMotorways) partial.showMotorways = showMotorways === "1";
+  const showTrunks = params.get(PARAM_MAP.showTrunkRoads);
+  if (showTrunks) partial.showTrunkRoads = showTrunks === "1";
+  const showPrimaries = params.get(PARAM_MAP.showPrimaryRoads);
+  if (showPrimaries) partial.showPrimaryRoads = showPrimaries === "1";
+
   const roadColor = params.get(PARAM_MAP.roadColor);
   if (roadColor) partial.roadColor = `#${roadColor}`;
 
@@ -165,6 +179,11 @@ function parseFromURL(): Partial<DesignState> {
   const showWaterways = params.get(PARAM_MAP.showWaterways);
   if (showWaterways) partial.showWaterways = showWaterways === "1";
 
+  const showRivers = params.get(PARAM_MAP.showRivers);
+  if (showRivers) partial.showRivers = showRivers === "1";
+  const showStreams = params.get(PARAM_MAP.showStreams);
+  if (showStreams) partial.showStreams = showStreams === "1";
+
   const waterwayColor = params.get(PARAM_MAP.waterwayColor);
   if (waterwayColor) partial.waterwayColor = `#${waterwayColor}`;
 
@@ -176,6 +195,11 @@ function parseFromURL(): Partial<DesignState> {
 
   const showCities = params.get(PARAM_MAP.showCities);
   if (showCities) partial.showCities = showCities === "1";
+
+  const showCityLabels = params.get(PARAM_MAP.showCityLabels);
+  if (showCityLabels) partial.showCityLabels = showCityLabels === "1";
+  const showPeakLabels = params.get(PARAM_MAP.showPeakLabels);
+  if (showPeakLabels) partial.showPeakLabels = showPeakLabels === "1";
 
   const citySize = params.get(PARAM_MAP.cityFontSize);
   if (citySize) partial.cityFontSize = parseInt(citySize, 10);
@@ -247,6 +271,12 @@ function serializeToURL(state: DesignState, includeDesignMode: boolean): string 
 
   if (state.showRoads !== DEFAULT_DESIGN.showRoads)
     params.set(PARAM_MAP.showRoads, state.showRoads ? "1" : "0");
+  if (state.showMotorways !== DEFAULT_DESIGN.showMotorways)
+    params.set(PARAM_MAP.showMotorways, state.showMotorways ? "1" : "0");
+  if (state.showTrunkRoads !== DEFAULT_DESIGN.showTrunkRoads)
+    params.set(PARAM_MAP.showTrunkRoads, state.showTrunkRoads ? "1" : "0");
+  if (state.showPrimaryRoads !== DEFAULT_DESIGN.showPrimaryRoads)
+    params.set(PARAM_MAP.showPrimaryRoads, state.showPrimaryRoads ? "1" : "0");
   if (state.roadColor !== DEFAULT_DESIGN.roadColor)
     params.set(PARAM_MAP.roadColor, state.roadColor.replace("#", ""));
   if (state.roadWeight !== DEFAULT_DESIGN.roadWeight)
@@ -258,6 +288,10 @@ function serializeToURL(state: DesignState, includeDesignMode: boolean): string 
 
   if (state.showWaterways !== DEFAULT_DESIGN.showWaterways)
     params.set(PARAM_MAP.showWaterways, state.showWaterways ? "1" : "0");
+  if (state.showRivers !== DEFAULT_DESIGN.showRivers)
+    params.set(PARAM_MAP.showRivers, state.showRivers ? "1" : "0");
+  if (state.showStreams !== DEFAULT_DESIGN.showStreams)
+    params.set(PARAM_MAP.showStreams, state.showStreams ? "1" : "0");
   if (state.waterwayColor !== DEFAULT_DESIGN.waterwayColor)
     params.set(PARAM_MAP.waterwayColor, state.waterwayColor.replace("#", ""));
   if (state.waterwayWeight !== DEFAULT_DESIGN.waterwayWeight)
@@ -267,6 +301,10 @@ function serializeToURL(state: DesignState, includeDesignMode: boolean): string 
 
   if (state.showCities !== DEFAULT_DESIGN.showCities)
     params.set(PARAM_MAP.showCities, state.showCities ? "1" : "0");
+  if (state.showCityLabels !== DEFAULT_DESIGN.showCityLabels)
+    params.set(PARAM_MAP.showCityLabels, state.showCityLabels ? "1" : "0");
+  if (state.showPeakLabels !== DEFAULT_DESIGN.showPeakLabels)
+    params.set(PARAM_MAP.showPeakLabels, state.showPeakLabels ? "1" : "0");
   if (state.cityFontSize !== DEFAULT_DESIGN.cityFontSize)
     params.set(PARAM_MAP.cityFontSize, String(state.cityFontSize));
   if (state.cityColor !== DEFAULT_DESIGN.cityColor)

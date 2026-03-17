@@ -108,25 +108,44 @@ async function overpassFetch(
 
 // ── Public data-fetch functions ──────────────────────────────────────────────
 
-/** Fetch major Colorado roads (motorway, trunk, primary) from Overpass API. */
-export async function fetchColoradoRoads(): Promise<GeoJSON.FeatureCollection> {
+/** Fetch Colorado motorways from Overpass API. */
+export async function fetchColoradoMotorways(): Promise<GeoJSON.FeatureCollection> {
   const query = `[out:json][timeout:120][bbox:${CO_BBOX}];
-(
-  way["highway"="motorway"];
-  way["highway"="trunk"];
-  way["highway"="primary"];
-);
+way["highway"="motorway"];
 out geom;`;
-  return overpassFetch(query, "co-roads");
+  return overpassFetch(query, "co-motorways");
 }
 
-/** Fetch named Colorado waterways (rivers, streams) from Overpass API. */
-export async function fetchColoradoWaterways(): Promise<GeoJSON.FeatureCollection> {
-  // Only fetch rivers (not all named streams) to keep the query manageable
+/** Fetch Colorado trunk roads from Overpass API. */
+export async function fetchColoradoTrunkRoads(): Promise<GeoJSON.FeatureCollection> {
+  const query = `[out:json][timeout:120][bbox:${CO_BBOX}];
+way["highway"="trunk"];
+out geom;`;
+  return overpassFetch(query, "co-trunk-roads");
+}
+
+/** Fetch Colorado primary roads from Overpass API. */
+export async function fetchColoradoPrimaryRoads(): Promise<GeoJSON.FeatureCollection> {
+  const query = `[out:json][timeout:120][bbox:${CO_BBOX}];
+way["highway"="primary"];
+out geom;`;
+  return overpassFetch(query, "co-primary-roads");
+}
+
+/** Fetch Colorado rivers from Overpass API. */
+export async function fetchColoradoRivers(): Promise<GeoJSON.FeatureCollection> {
   const query = `[out:json][timeout:120][bbox:${CO_BBOX}];
 way["waterway"="river"];
 out geom;`;
-  return overpassFetch(query, "co-waterways");
+  return overpassFetch(query, "co-rivers");
+}
+
+/** Fetch named Colorado streams from Overpass API. */
+export async function fetchColoradoStreams(): Promise<GeoJSON.FeatureCollection> {
+  const query = `[out:json][timeout:120][bbox:${CO_BBOX}];
+way["waterway"="stream"]["name"];
+out geom;`;
+  return overpassFetch(query, "co-streams");
 }
 
 // ── Static Colorado cities & peaks dataset ──────────────────────────────────

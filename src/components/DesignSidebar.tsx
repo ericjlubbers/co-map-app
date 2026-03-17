@@ -249,6 +249,25 @@ export default function DesignSidebar({ onClose }: DesignSidebarProps) {
             </Field>
             {design.showRoads && (
               <>
+                <Field label="Road Types">
+                  <div className="flex flex-wrap gap-1">
+                    <TogglePill
+                      label="Motorways"
+                      checked={design.showMotorways}
+                      onChange={(v) => set("showMotorways", v)}
+                    />
+                    <TogglePill
+                      label="Trunk"
+                      checked={design.showTrunkRoads}
+                      onChange={(v) => set("showTrunkRoads", v)}
+                    />
+                    <TogglePill
+                      label="Primary"
+                      checked={design.showPrimaryRoads}
+                      onChange={(v) => set("showPrimaryRoads", v)}
+                    />
+                  </div>
+                </Field>
                 <Field label="Color">
                   <ColorInput
                     value={design.roadColor}
@@ -307,6 +326,20 @@ export default function DesignSidebar({ onClose }: DesignSidebarProps) {
             </Field>
             {design.showWaterways && (
               <>
+                <Field label="Waterway Types">
+                  <div className="flex flex-wrap gap-1">
+                    <TogglePill
+                      label="Rivers"
+                      checked={design.showRivers}
+                      onChange={(v) => set("showRivers", v)}
+                    />
+                    <TogglePill
+                      label="Streams"
+                      checked={design.showStreams}
+                      onChange={(v) => set("showStreams", v)}
+                    />
+                  </div>
+                </Field>
                 <Field label="Color">
                   <ColorInput
                     value={design.waterwayColor}
@@ -352,6 +385,20 @@ export default function DesignSidebar({ onClose }: DesignSidebarProps) {
             </Field>
             {design.showCities && (
               <>
+                <Field label="Label Types">
+                  <div className="flex flex-wrap gap-1">
+                    <TogglePill
+                      label="Cities"
+                      checked={design.showCityLabels}
+                      onChange={(v) => set("showCityLabels", v)}
+                    />
+                    <TogglePill
+                      label="Peaks"
+                      checked={design.showPeakLabels}
+                      onChange={(v) => set("showPeakLabels", v)}
+                    />
+                  </div>
+                </Field>
                 <Field label="Label Color">
                   <ColorInput
                     value={design.cityColor}
@@ -565,6 +612,21 @@ function ToggleSwitch({ checked, onChange }: { checked: boolean; onChange: (v: b
           checked ? "translate-x-4" : "translate-x-0"
         }`}
       />
+    </button>
+  );
+}
+
+function TogglePill({ label, checked, onChange }: { label: string; checked: boolean; onChange: (v: boolean) => void }) {
+  return (
+    <button
+      onClick={() => onChange(!checked)}
+      className={`rounded-full px-2.5 py-1 text-[11px] font-medium transition-colors ${
+        checked
+          ? "bg-blue-100 text-blue-700 ring-1 ring-blue-300"
+          : "bg-gray-100 text-gray-400 ring-1 ring-gray-200"
+      }`}
+    >
+      {label}
     </button>
   );
 }

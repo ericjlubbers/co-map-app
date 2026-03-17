@@ -3,7 +3,10 @@ import { GeoJSON, Popup, useMap } from "react-leaflet";
 import L from "leaflet";
 import type { Layer, PathOptions, LeafletMouseEvent } from "leaflet";
 import { useDesign } from "../../context/DesignContext";
-import { fetchColoradoWaterways } from "../../lib/vectorTiles";
+import {
+  fetchColoradoRivers,
+  fetchColoradoStreams,
+} from "../../lib/vectorTiles";
 
 interface FeatureStyle {
   color: string;
@@ -17,32 +20,49 @@ const WATERWAY_WEIGHT: Record<string, number> = {
   canal: 2,
 };
 
-export default function WaterwayLayer() {
-  const { design } = useDesign();
+// ── Sub-layer for a single waterway type ─────────────────────────────────────
+function WaterwaySubLayer({
+  enabled,
+  fetcher,
+  cacheKey,
+  waterwayColor,
+  waterwayWeight,
+  waterwayOpacity,
+  styleOverrides,
+  onStyleOverride,
+  onClearOverride,
+}: {
+  enabled: boolean;
+  fetcher: () => Promise<GeoJSON.FeatureCollection>;
+  cacheKey: string;
+  waterwayColor: string;
+  waterwayWeight: number;
+  waterwayOpacity: number;
+  styleOverrides: Record<string, Partial<FeatureStyle>>;
+  onStyleOverride: (id: string, style: Partial<FeatureStyle>) => void;
+  onClearOverride: (id: string) => void;
+}) {
   const map = useMap();
-
   const [data, setData] = useState<GeoJSON.FeatureCollection | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-
-  const [styleOverrides, setStyleOverrides] = useState<Record<string, Partial<FeatureStyle>>>({});
-  const [selectedFeatureId, setSelectedFeatureId] = useState<string | null>(null);
-  const [popupLatLng, setPopupLatLng] = useState<[number, number] | null>(null);
-  const [editColor, setEditColor] = useState(design.waterwayColor);
-  const [editWeight, setEditWeight] = useState(design.waterwayWeight);
-
   const geoJsonRef = useRef<L.GeoJSON | null>(null);
 
+  const [selectedFeatureId, setSelectedFeatureId] = useState<string | null>(null);
+  const [popupLatLng, setPopupLatLng] = useState<[number, number] | null>(null);
+  const [editColor, setEditColor] = useState(waterwayColor);
+  const [editWeight, setEditWeight] = useState(waterwayWeight);
+
   useEffect(() => {
-    if (!design.showWaterways) return;
+    if (!enabled) return;
     if (data) return;
     setLoading(true);
     setError(null);
-    fetchColoradoWaterways()
+    fetcher()
       .then(setData)
       .catch((e: Error) => setError(e.message))
       .finally(() => setLoading(false));
-  }, [design.showWaterways, data]);
+  }, [enabled, data, fetcher]);
 
   const getStyle = useCallback(
     (feature?: GeoJSON.Feature): PathOptions => {
@@ -51,20 +71,20 @@ export default function WaterwayLayer() {
       const waterway = (feature?.properties?.waterway as string) ?? "";
       const baseWeight = WATERWAY_WEIGHT[waterway] ?? 1;
       return {
-        color: override?.color ?? design.waterwayColor,
-        weight: (override?.weight ?? design.waterwayWeight) + (baseWeight - 1),
-        opacity: override?.opacity ?? design.waterwayOpacity,
-        fillColor: override?.color ?? design.waterwayColor,
+        color: override?.color ?? waterwayColor,
+        weight: (override?.weight ?? waterwayWeight) + (baseWeight - 1),
+        opacity: override?.opacity ?? waterwayOpacity,
+        fillColor: override?.color ?? waterwayColor,
         fillOpacity: 0.3,
       };
     },
-    [design.waterwayColor, design.waterwayWeight, design.waterwayOpacity, styleOverrides]
+    [waterwayColor, waterwayWeight, waterwayOpacity, styleOverrides],
   );
 
   useEffect(() => {
     if (!geoJsonRef.current) return;
     geoJsonRef.current.setStyle((feature) => getStyle(feature as GeoJSON.Feature));
-  }, [design.waterwayColor, design.waterwayWeight, design.waterwayOpacity, styleOverrides, getStyle]);
+  }, [waterwayColor, waterwayWeight, waterwayOpacity, styleOverrides, getStyle]);
 
   const onEachFeature = useCallback(
     (feature: GeoJSON.Feature, layer: Layer) => {
@@ -72,12 +92,11 @@ export default function WaterwayLayer() {
       layer.on("click", (e: LeafletMouseEvent) => {
         L.DomEvent.stopPropagation(e);
         const override = styleOverrides[id];
-        setEditColor(override?.color ?? design.waterwayColor);
-        setEditWeight(override?.weight ?? design.waterwayWeight);
+        setEditColor(override?.color ?? waterwayColor);
+        setEditWeight(override?.weight ?? waterwayWeight);
         setSelectedFeatureId(id);
         setPopupLatLng([e.latlng.lat, e.latlng.lng]);
       });
-
       layer.on("mouseover", () => {
         const w = getStyle(feature).weight ?? 2;
         (layer as L.Path).setStyle({ weight: w + 2, opacity: 1 });
@@ -86,39 +105,18 @@ export default function WaterwayLayer() {
         (layer as L.Path).setStyle(getStyle(feature));
       });
     },
-    [design.waterwayColor, design.waterwayWeight, styleOverrides, getStyle]
+    [waterwayColor, waterwayWeight, styleOverrides, getStyle],
   );
 
-  const applyOverride = useCallback(() => {
-    if (!selectedFeatureId) return;
-    setStyleOverrides((prev) => ({
-      ...prev,
-      [selectedFeatureId]: { color: editColor, weight: editWeight },
-    }));
-    setSelectedFeatureId(null);
-    setPopupLatLng(null);
-  }, [selectedFeatureId, editColor, editWeight]);
-
-  const clearOverride = useCallback(() => {
-    if (!selectedFeatureId) return;
-    setStyleOverrides((prev) => {
-      const next = { ...prev };
-      delete next[selectedFeatureId];
-      return next;
-    });
-    setSelectedFeatureId(null);
-    setPopupLatLng(null);
-  }, [selectedFeatureId]);
-
-  if (!design.showWaterways) return null;
-  if (loading) return <LoadingNotice map={map} message="Loading waterways…" />;
-  if (error) return <LoadingNotice map={map} message={`Waterways error: ${error}`} />;
+  if (!enabled) return null;
+  if (loading) return <LoadingNotice map={map} message={`Loading ${cacheKey}…`} />;
+  if (error) return <LoadingNotice map={map} message={`${cacheKey} error: ${error}`} />;
   if (!data) return null;
 
   return (
     <>
       <GeoJSON
-        key={`waterways-${data.features.length}`}
+        key={`${cacheKey}-${data.features.length}`}
         data={data}
         style={getStyle}
         onEachFeature={onEachFeature}
@@ -126,7 +124,6 @@ export default function WaterwayLayer() {
           if (ref) geoJsonRef.current = ref;
         }}
       />
-
       {selectedFeatureId && popupLatLng && (
         <Popup
           position={popupLatLng}
@@ -161,13 +158,26 @@ export default function WaterwayLayer() {
             </label>
             <div className="flex gap-1 pt-1">
               <button
-                onClick={applyOverride}
+                onClick={() => {
+                  if (selectedFeatureId) {
+                    onStyleOverride(selectedFeatureId, {
+                      color: editColor,
+                      weight: editWeight,
+                    });
+                  }
+                  setSelectedFeatureId(null);
+                  setPopupLatLng(null);
+                }}
                 className="flex-1 rounded bg-blue-600 px-2 py-1 text-white hover:bg-blue-700"
               >
                 Apply
               </button>
               <button
-                onClick={clearOverride}
+                onClick={() => {
+                  if (selectedFeatureId) onClearOverride(selectedFeatureId);
+                  setSelectedFeatureId(null);
+                  setPopupLatLng(null);
+                }}
                 className="flex-1 rounded border border-gray-300 px-2 py-1 text-gray-600 hover:bg-gray-50"
               >
                 Reset
@@ -176,6 +186,53 @@ export default function WaterwayLayer() {
           </div>
         </Popup>
       )}
+    </>
+  );
+}
+
+// ── Main WaterwayLayer ──────────────────────────────────────────────────────
+export default function WaterwayLayer() {
+  const { design } = useDesign();
+  const [styleOverrides, setStyleOverrides] = useState<Record<string, Partial<FeatureStyle>>>({});
+
+  const handleOverride = useCallback((id: string, style: Partial<FeatureStyle>) => {
+    setStyleOverrides((prev) => ({ ...prev, [id]: style }));
+  }, []);
+
+  const handleClear = useCallback((id: string) => {
+    setStyleOverrides((prev) => {
+      const next = { ...prev };
+      delete next[id];
+      return next;
+    });
+  }, []);
+
+  if (!design.showWaterways) return null;
+
+  return (
+    <>
+      <WaterwaySubLayer
+        enabled={design.showRivers}
+        fetcher={fetchColoradoRivers}
+        cacheKey="rivers"
+        waterwayColor={design.waterwayColor}
+        waterwayWeight={design.waterwayWeight}
+        waterwayOpacity={design.waterwayOpacity}
+        styleOverrides={styleOverrides}
+        onStyleOverride={handleOverride}
+        onClearOverride={handleClear}
+      />
+      <WaterwaySubLayer
+        enabled={design.showStreams}
+        fetcher={fetchColoradoStreams}
+        cacheKey="streams"
+        waterwayColor={design.waterwayColor}
+        waterwayWeight={design.waterwayWeight}
+        waterwayOpacity={design.waterwayOpacity}
+        styleOverrides={styleOverrides}
+        onStyleOverride={handleOverride}
+        onClearOverride={handleClear}
+      />
     </>
   );
 }

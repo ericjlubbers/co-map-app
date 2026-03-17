@@ -3,7 +3,11 @@ import { GeoJSON, Popup, useMap } from "react-leaflet";
 import L from "leaflet";
 import type { Layer, PathOptions, LeafletMouseEvent } from "leaflet";
 import { useDesign } from "../../context/DesignContext";
-import { fetchColoradoRoads } from "../../lib/vectorTiles";
+import {
+  fetchColoradoMotorways,
+  fetchColoradoTrunkRoads,
+  fetchColoradoPrimaryRoads,
+} from "../../lib/vectorTiles";
 
 interface FeatureStyle {
   color: string;
@@ -18,37 +22,52 @@ const HIGHWAY_WEIGHT: Record<string, number> = {
   primary: 2,
 };
 
-export default function RoadLayer() {
-  const { design } = useDesign();
+// ── Sub-layer for a single road type ──────────────────────────────────────────
+function RoadSubLayer({
+  enabled,
+  fetcher,
+  cacheKey,
+  roadColor,
+  roadWeight,
+  roadOpacity,
+  roadDashArray,
+  styleOverrides,
+  onStyleOverride,
+  onClearOverride,
+}: {
+  enabled: boolean;
+  fetcher: () => Promise<GeoJSON.FeatureCollection>;
+  cacheKey: string;
+  roadColor: string;
+  roadWeight: number;
+  roadOpacity: number;
+  roadDashArray: string;
+  styleOverrides: Record<string, Partial<FeatureStyle>>;
+  onStyleOverride: (id: string, style: Partial<FeatureStyle>) => void;
+  onClearOverride: (id: string) => void;
+}) {
   const map = useMap();
-
   const [data, setData] = useState<GeoJSON.FeatureCollection | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-
-  // Per-feature style overrides: featureId → style
-  const [styleOverrides, setStyleOverrides] = useState<Record<string, Partial<FeatureStyle>>>({});
-
-  // Selected feature state for inline popup editor
-  const [selectedFeatureId, setSelectedFeatureId] = useState<string | null>(null);
-  const [popupLatLng, setPopupLatLng] = useState<[number, number] | null>(null);
-  const [editColor, setEditColor] = useState(design.roadColor);
-  const [editWeight, setEditWeight] = useState(design.roadWeight);
-  const [editDash, setEditDash] = useState(design.roadDashArray);
-
-  // Keep a ref to the GeoJSON layer for re-styling
   const geoJsonRef = useRef<L.GeoJSON | null>(null);
 
+  const [selectedFeatureId, setSelectedFeatureId] = useState<string | null>(null);
+  const [popupLatLng, setPopupLatLng] = useState<[number, number] | null>(null);
+  const [editColor, setEditColor] = useState(roadColor);
+  const [editWeight, setEditWeight] = useState(roadWeight);
+  const [editDash, setEditDash] = useState(roadDashArray);
+
   useEffect(() => {
-    if (!design.showRoads) return;
-    if (data) return; // already loaded
+    if (!enabled) return;
+    if (data) return;
     setLoading(true);
     setError(null);
-    fetchColoradoRoads()
+    fetcher()
       .then(setData)
       .catch((e: Error) => setError(e.message))
       .finally(() => setLoading(false));
-  }, [design.showRoads, data]);
+  }, [enabled, data, fetcher]);
 
   const getStyle = useCallback(
     (feature?: GeoJSON.Feature): PathOptions => {
@@ -57,36 +76,32 @@ export default function RoadLayer() {
       const highway = (feature?.properties?.highway as string) ?? "";
       const baseWeight = HIGHWAY_WEIGHT[highway] ?? 1;
       return {
-        color: override?.color ?? design.roadColor,
-        weight: (override?.weight ?? design.roadWeight) + (baseWeight - 1),
-        opacity: override?.opacity ?? design.roadOpacity,
-        dashArray: override?.dashArray ?? design.roadDashArray,
+        color: override?.color ?? roadColor,
+        weight: (override?.weight ?? roadWeight) + (baseWeight - 1),
+        opacity: override?.opacity ?? roadOpacity,
+        dashArray: override?.dashArray ?? roadDashArray,
       };
     },
-    [design.roadColor, design.roadWeight, design.roadOpacity, design.roadDashArray, styleOverrides]
+    [roadColor, roadWeight, roadOpacity, roadDashArray, styleOverrides],
   );
 
-  // Re-style all features when global defaults or overrides change
   useEffect(() => {
     if (!geoJsonRef.current) return;
     geoJsonRef.current.setStyle((feature) => getStyle(feature as GeoJSON.Feature));
-  }, [design.roadColor, design.roadWeight, design.roadOpacity, design.roadDashArray, styleOverrides, getStyle]);
+  }, [roadColor, roadWeight, roadOpacity, roadDashArray, styleOverrides, getStyle]);
 
   const onEachFeature = useCallback(
     (feature: GeoJSON.Feature, layer: Layer) => {
       const id = feature.id as string;
       layer.on("click", (e: LeafletMouseEvent) => {
-        // Prevent the click from propagating to the map
         L.DomEvent.stopPropagation(e);
         const override = styleOverrides[id];
-        setEditColor(override?.color ?? design.roadColor);
-        setEditWeight(override?.weight ?? design.roadWeight);
-        setEditDash(override?.dashArray ?? design.roadDashArray);
+        setEditColor(override?.color ?? roadColor);
+        setEditWeight(override?.weight ?? roadWeight);
+        setEditDash(override?.dashArray ?? roadDashArray);
         setSelectedFeatureId(id);
         setPopupLatLng([e.latlng.lat, e.latlng.lng]);
       });
-
-      // Highlight on hover
       layer.on("mouseover", () => {
         const w = getStyle(feature).weight ?? 2;
         (layer as L.Path).setStyle({ weight: w + 2, opacity: 1 });
@@ -95,39 +110,18 @@ export default function RoadLayer() {
         (layer as L.Path).setStyle(getStyle(feature));
       });
     },
-    [design.roadColor, design.roadWeight, design.roadDashArray, styleOverrides, getStyle]
+    [roadColor, roadWeight, roadDashArray, styleOverrides, getStyle],
   );
 
-  const applyOverride = useCallback(() => {
-    if (!selectedFeatureId) return;
-    setStyleOverrides((prev) => ({
-      ...prev,
-      [selectedFeatureId]: { color: editColor, weight: editWeight, dashArray: editDash },
-    }));
-    setSelectedFeatureId(null);
-    setPopupLatLng(null);
-  }, [selectedFeatureId, editColor, editWeight, editDash]);
-
-  const clearOverride = useCallback(() => {
-    if (!selectedFeatureId) return;
-    setStyleOverrides((prev) => {
-      const next = { ...prev };
-      delete next[selectedFeatureId];
-      return next;
-    });
-    setSelectedFeatureId(null);
-    setPopupLatLng(null);
-  }, [selectedFeatureId]);
-
-  if (!design.showRoads) return null;
-  if (loading) return <LoadingNotice map={map} message="Loading roads…" />;
-  if (error) return <LoadingNotice map={map} message={`Roads error: ${error}`} />;
+  if (!enabled) return null;
+  if (loading) return <LoadingNotice map={map} message={`Loading ${cacheKey}…`} />;
+  if (error) return <LoadingNotice map={map} message={`${cacheKey} error: ${error}`} />;
   if (!data) return null;
 
   return (
     <>
       <GeoJSON
-        key={`roads-${data.features.length}`}
+        key={`${cacheKey}-${data.features.length}`}
         data={data}
         style={getStyle}
         onEachFeature={onEachFeature}
@@ -135,8 +129,6 @@ export default function RoadLayer() {
           if (ref) geoJsonRef.current = ref;
         }}
       />
-
-      {/* Inline style editor popup */}
       {selectedFeatureId && popupLatLng && (
         <Popup
           position={popupLatLng}
@@ -181,13 +173,27 @@ export default function RoadLayer() {
             </label>
             <div className="flex gap-1 pt-1">
               <button
-                onClick={applyOverride}
+                onClick={() => {
+                  if (selectedFeatureId) {
+                    onStyleOverride(selectedFeatureId, {
+                      color: editColor,
+                      weight: editWeight,
+                      dashArray: editDash,
+                    });
+                  }
+                  setSelectedFeatureId(null);
+                  setPopupLatLng(null);
+                }}
                 className="flex-1 rounded bg-blue-600 px-2 py-1 text-white hover:bg-blue-700"
               >
                 Apply
               </button>
               <button
-                onClick={clearOverride}
+                onClick={() => {
+                  if (selectedFeatureId) onClearOverride(selectedFeatureId);
+                  setSelectedFeatureId(null);
+                  setPopupLatLng(null);
+                }}
                 className="flex-1 rounded border border-gray-300 px-2 py-1 text-gray-600 hover:bg-gray-50"
               >
                 Reset
@@ -196,6 +202,67 @@ export default function RoadLayer() {
           </div>
         </Popup>
       )}
+    </>
+  );
+}
+
+// ── Main RoadLayer ──────────────────────────────────────────────────────────
+export default function RoadLayer() {
+  const { design } = useDesign();
+  const [styleOverrides, setStyleOverrides] = useState<Record<string, Partial<FeatureStyle>>>({});
+
+  const handleOverride = useCallback((id: string, style: Partial<FeatureStyle>) => {
+    setStyleOverrides((prev) => ({ ...prev, [id]: style }));
+  }, []);
+
+  const handleClear = useCallback((id: string) => {
+    setStyleOverrides((prev) => {
+      const next = { ...prev };
+      delete next[id];
+      return next;
+    });
+  }, []);
+
+  if (!design.showRoads) return null;
+
+  return (
+    <>
+      <RoadSubLayer
+        enabled={design.showMotorways}
+        fetcher={fetchColoradoMotorways}
+        cacheKey="motorways"
+        roadColor={design.roadColor}
+        roadWeight={design.roadWeight}
+        roadOpacity={design.roadOpacity}
+        roadDashArray={design.roadDashArray}
+        styleOverrides={styleOverrides}
+        onStyleOverride={handleOverride}
+        onClearOverride={handleClear}
+      />
+      <RoadSubLayer
+        enabled={design.showTrunkRoads}
+        fetcher={fetchColoradoTrunkRoads}
+        cacheKey="trunk roads"
+        roadColor={design.roadColor}
+        roadWeight={design.roadWeight}
+        roadOpacity={design.roadOpacity}
+        roadDashArray={design.roadDashArray}
+        styleOverrides={styleOverrides}
+        onStyleOverride={handleOverride}
+        onClearOverride={handleClear}
+      />
+      <RoadSubLayer
+        enabled={design.showPrimaryRoads}
+        fetcher={fetchColoradoPrimaryRoads}
+        cacheKey="primary roads"
+        roadColor={design.roadColor}
+        roadWeight={design.roadWeight}
+        roadOpacity={design.roadOpacity}
+        roadDashArray={design.roadDashArray}
+        styleOverrides={styleOverrides}
+        onStyleOverride={handleOverride}
+        onClearOverride={handleClear}
+      />
     </>
   );
 }

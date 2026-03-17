@@ -134,17 +134,24 @@ export interface DesignState {
   useMetricUnits: boolean;
   // Roads layer
   showRoads: boolean;
+  showMotorways: boolean;
+  showTrunkRoads: boolean;
+  showPrimaryRoads: boolean;
   roadColor: string;
   roadWeight: number;
   roadOpacity: number;
   roadDashArray: string;
   // Waterways layer
   showWaterways: boolean;
+  showRivers: boolean;
+  showStreams: boolean;
   waterwayColor: string;
   waterwayWeight: number;
   waterwayOpacity: number;
   // Cities layer
   showCities: boolean;
+  showCityLabels: boolean;
+  showPeakLabels: boolean;
   cityFontSize: number;
   cityColor: string;
   // Labels layer

@@ -73,9 +73,12 @@ export default function CityLayer() {
 
   if (!design.showCities) return null;
 
-  const visibleCities = COLORADO_CITIES.filter(
-    (c) => !(styleOverrides[c.id]?.visible === false)
-  );
+  const visibleCities = COLORADO_CITIES.filter((c) => {
+    if (styleOverrides[c.id]?.visible === false) return false;
+    if (c.type === "peak" && !design.showPeakLabels) return false;
+    if ((c.type === "city" || c.type === "town") && !design.showCityLabels) return false;
+    return true;
+  });
 
   return (
     <>
