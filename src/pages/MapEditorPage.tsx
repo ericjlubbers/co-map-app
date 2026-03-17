@@ -11,11 +11,35 @@ import {
 import { getMap, updateMap, type MapDetail } from "../lib/api";
 import { DesignProvider } from "../context/DesignContext";
 import MapEditorContent from "../components/MapEditorContent";
+import DataTabBar from "../components/DataTabBar";
+import DataEditor from "../components/DataEditor";
+import DataSidebar from "../components/DataSidebar";
 import { emptyCollection } from "../lib/drawing";
-import type { DrawnFeatureCollection } from "../types";
+import type {
+  DrawnFeatureCollection,
+  EditorTab,
+  DataLayerTab,
+  DataConfig,
+  LayerData,
+  ColumnMappings,
+  DataRow,
+} from "../types";
 
-/** Debounce delay (ms) before persisting drawn features to the API. */
+/** Debounce delay (ms) before persisting changes to the API. */
 const AUTOSAVE_DEBOUNCE_MS = 1000;
+
+// ── Default empty layer ──────────────────────────────────────
+
+function emptyLayer(): LayerData {
+  return { columns: [], rows: [], columnMappings: {} };
+}
+
+function parseDataConfig(raw: Record<string, unknown>): DataConfig {
+  return {
+    regions: (raw?.regions as LayerData) ?? emptyLayer(),
+    points: (raw?.points as LayerData) ?? emptyLayer(),
+  };
+}
 
 export default function MapEditorPage() {
   const { id } = useParams<{ id: string }>();
@@ -24,7 +48,8 @@ export default function MapEditorPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [showEmbedCode, setShowEmbedCode] = useState(false);
-  const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const drawSaveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const dataSaveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // ── Tab state ─────────────────────────────────────────────
   const [activeTab, setActiveTab] = useState<EditorTab>("preview");
@@ -61,12 +86,64 @@ export default function MapEditorPage() {
     await updateMap(id, { design_state: designState });
   };
 
-  // Debounced save for drawn features
+  // ── Persist data_config after each change (debounced) ──────
+  const saveDataConfig = useCallback(
+    (config: DataConfig) => {
+      if (!id) return;
+      if (dataSaveTimerRef.current) clearTimeout(dataSaveTimerRef.current);
+      dataSaveTimerRef.current = setTimeout(async () => {
+        try {
+          const data_config = JSON.parse(JSON.stringify(config)) as Record<string, unknown>;
+          await updateMap(id, { data_config });
+        } catch {
+          // non-fatal — user can retry
+        }
+      }, AUTOSAVE_DEBOUNCE_MS);
+    },
+    [id],
+  );
+
+  // ── Layer-level updaters ──────────────────────────────────
+
+  const updateLayer = useCallback(
+    (layer: DataLayerTab, updater: (prev: LayerData) => LayerData) => {
+      setDataConfig((prev) => {
+        const next: DataConfig = { ...prev, [layer]: updater(prev[layer]) };
+        saveDataConfig(next);
+        return next;
+      });
+    },
+    [saveDataConfig],
+  );
+
+  const handleColumnsChange = useCallback(
+    (cols: string[]) => updateLayer(activeLayer, (l) => ({ ...l, columns: cols })),
+    [activeLayer, updateLayer],
+  );
+
+  const handleRowsChange = useCallback(
+    (rows: DataRow[]) => updateLayer(activeLayer, (l) => ({ ...l, rows })),
+    [activeLayer, updateLayer],
+  );
+
+  const handleMappingsChange = useCallback(
+    (mappings: ColumnMappings) =>
+      updateLayer(activeLayer, (l) => ({ ...l, columnMappings: mappings })),
+    [activeLayer, updateLayer],
+  );
+
+  const handleSheetLoaded = useCallback(
+    (data: Pick<LayerData, "columns" | "rows" | "googleSheetsUrl" | "lastSynced">) =>
+      updateLayer(activeLayer, (l) => ({ ...l, ...data })),
+    [activeLayer, updateLayer],
+  );
+
+  // ── Debounced save for drawn features ──────────────────────
   const handleDrawnFeaturesChange = useCallback(
     (features: DrawnFeatureCollection) => {
       if (!id) return;
-      if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
-      saveTimerRef.current = setTimeout(async () => {
+      if (drawSaveTimerRef.current) clearTimeout(drawSaveTimerRef.current);
+      drawSaveTimerRef.current = setTimeout(async () => {
         try {
           await updateMap(id, {
             data_config: { drawnFeatures: features },
@@ -181,11 +258,31 @@ export default function MapEditorPage() {
 
         {/* Main content — switches between Preview and Data tab */}
         <div className="min-h-0 flex-1">
-          <MapEditorContent
-            mapId={id}
-            initialDrawnFeatures={initialDrawnFeatures}
-            onDrawnFeaturesChange={handleDrawnFeaturesChange}
-          />
+          {activeTab === "preview" ? (
+            <MapEditorContent
+              mapId={id}
+              initialDrawnFeatures={initialDrawnFeatures}
+              onDrawnFeaturesChange={handleDrawnFeaturesChange}
+            />
+          ) : (
+            /* Data tab: editor + sidebar side-by-side */
+            <div className="flex h-full">
+              <div className="min-w-0 flex-1 overflow-hidden">
+                <DataEditor
+                  columns={dataConfig[activeLayer].columns}
+                  rows={dataConfig[activeLayer].rows}
+                  columnMappings={dataConfig[activeLayer].columnMappings}
+                  onColumnsChange={handleColumnsChange}
+                  onRowsChange={handleRowsChange}
+                />
+              </div>
+              <DataSidebar
+                layerData={dataConfig[activeLayer]}
+                onUpdateMappings={handleMappingsChange}
+                onSheetLoaded={handleSheetLoaded}
+              />
+            </div>
+          )}
         </div>
       </div>
     </DesignProvider>

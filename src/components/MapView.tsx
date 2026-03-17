@@ -28,6 +28,10 @@ import PointPopup from "./PointPopup";
 import { COLORADO_COUNTIES } from "../data/coloradoCounties";
 import { COLORADO_BORDER, COLORADO_MASK } from "../data/coloradoBorder";
 import DrawnFeaturesLayer from "./layers/DrawnFeaturesLayer";
+import LabelLayer from "./layers/LabelLayer";
+import RoadLayer from "./layers/RoadLayer";
+import WaterwayLayer from "./layers/WaterwayLayer";
+import CityLayer from "./layers/CityLayer";
 import type { Map as LeafletMap, LatLng } from "leaflet";
 
 /** Milliseconds to wait after a click before treating it as a single-click
@@ -379,6 +383,14 @@ export default function MapView({
             </Marker>
           ))}
         </MarkerClusterGroup>
+
+        {/* Feature layers */}
+        <RoadLayer />
+        <WaterwayLayer />
+        <CityLayer />
+
+        {/* Label overlay — rendered last so it always appears on top */}
+        <LabelLayer />
       </MapContainer>
     </div>
   );
