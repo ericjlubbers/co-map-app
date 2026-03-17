@@ -165,7 +165,7 @@ export default function DataEditor({
       if (columns.length === 0) {
         const newCols = pasteRows[0].map((h, i) => h.trim() || `Column ${i + 1}`);
         const newRows = pasteRows.slice(1).map((cells) => {
-          const row: DataRow = { __id: generateId() };
+          const row: DataRow = { _rowId: generateId() };
           newCols.forEach((col, i) => { row[col] = cells[i] ?? ""; });
           return row;
         });

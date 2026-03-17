@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
@@ -79,17 +79,20 @@ export default function MapEditorPage() {
     await updateMap(id, { design_state: designState });
   };
 
-  // ── Persist data_config after each change ─────────────────
+  // ── Persist data_config after each change (debounced) ──────
+  const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const saveDataConfig = useCallback(
-    async (config: DataConfig) => {
+    (config: DataConfig) => {
       if (!id) return;
-      try {
-        // Serialise DataConfig to the generic Record shape expected by the API
-        const data_config = JSON.parse(JSON.stringify(config)) as Record<string, unknown>;
-        await updateMap(id, { data_config });
-      } catch {
-        // non-fatal — user can retry
-      }
+      if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
+      saveTimerRef.current = setTimeout(async () => {
+        try {
+          const data_config = JSON.parse(JSON.stringify(config)) as Record<string, unknown>;
+          await updateMap(id, { data_config });
+        } catch {
+          // non-fatal — user can retry
+        }
+      }, 1000);
     },
     [id]
   );
