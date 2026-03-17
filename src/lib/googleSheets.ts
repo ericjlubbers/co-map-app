@@ -19,7 +19,7 @@ import type { DataRow } from "../types";
 export function extractSheetId(url: string): string | null {
   try {
     const parsed = new URL(url.trim());
-    if (!parsed.hostname.endsWith("google.com")) return null;
+    if (parsed.hostname !== "google.com" && !parsed.hostname.endsWith(".google.com")) return null;
     // Path format: /spreadsheets/d/{id}/...
     const match = parsed.pathname.match(/\/spreadsheets\/d\/([^/]+)/);
     return match ? match[1] : null;
