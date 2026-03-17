@@ -33,6 +33,20 @@ const PARAM_MAP: Record<keyof DesignState, string> = {
   stateBorderWeight: "stateW",
   showOutsideFade: "fade",
   outsideFadeOpacity: "fadeOp",
+  useMetricUnits: "metric",
+  showRoads: "roads",
+  roadColor: "roadColor",
+  roadWeight: "roadW",
+  roadOpacity: "roadOp",
+  roadDashArray: "roadDash",
+  showWaterways: "waterways",
+  waterwayColor: "waterwayColor",
+  waterwayWeight: "waterwayW",
+  waterwayOpacity: "waterwayOp",
+  showCities: "cities",
+  cityFontSize: "citySize",
+  cityColor: "cityColor",
+  labelFont: "labelFont",
 };
 
 // ── Font shorthand mapping ──────────────────────────────────
@@ -61,9 +75,14 @@ function parseFromURL(): Partial<DesignState> {
 
   const tiles = params.get(PARAM_MAP.tilePreset);
   const VALID_TILES: string[] = [
-    "carto-light", "carto-dark", "carto-voyager", "osm-standard",
-    "stadia-watercolor", "stadia-toner", "stadia-toner-lite",
-    "stadia-smooth", "stadia-outdoors", "stadia-terrain",
+    "carto-light", "carto-light-nolabels",
+    "carto-dark", "carto-dark-nolabels",
+    "carto-voyager", "carto-voyager-nolabels",
+    "osm-standard",
+    "stadia-watercolor",
+    "stadia-toner", "stadia-toner-lite", "stadia-toner-nolabels",
+    "stadia-smooth", "stadia-outdoors",
+    "stadia-terrain", "stadia-terrain-nolabels",
   ];
   if (tiles && VALID_TILES.includes(tiles))
     partial.tilePreset = tiles as TilePreset;
@@ -125,6 +144,48 @@ function parseFromURL(): Partial<DesignState> {
   const fadeOp = params.get(PARAM_MAP.outsideFadeOpacity);
   if (fadeOp) partial.outsideFadeOpacity = parseFloat(fadeOp);
 
+  const metric = params.get(PARAM_MAP.useMetricUnits);
+  if (metric) partial.useMetricUnits = metric === "1";
+
+  const showRoads = params.get(PARAM_MAP.showRoads);
+  if (showRoads) partial.showRoads = showRoads === "1";
+
+  const roadColor = params.get(PARAM_MAP.roadColor);
+  if (roadColor) partial.roadColor = `#${roadColor}`;
+
+  const roadW = params.get(PARAM_MAP.roadWeight);
+  if (roadW) partial.roadWeight = parseFloat(roadW);
+
+  const roadOp = params.get(PARAM_MAP.roadOpacity);
+  if (roadOp) partial.roadOpacity = parseFloat(roadOp);
+
+  const roadDash = params.get(PARAM_MAP.roadDashArray);
+  if (roadDash) partial.roadDashArray = roadDash;
+
+  const showWaterways = params.get(PARAM_MAP.showWaterways);
+  if (showWaterways) partial.showWaterways = showWaterways === "1";
+
+  const waterwayColor = params.get(PARAM_MAP.waterwayColor);
+  if (waterwayColor) partial.waterwayColor = `#${waterwayColor}`;
+
+  const waterwayW = params.get(PARAM_MAP.waterwayWeight);
+  if (waterwayW) partial.waterwayWeight = parseFloat(waterwayW);
+
+  const waterwayOp = params.get(PARAM_MAP.waterwayOpacity);
+  if (waterwayOp) partial.waterwayOpacity = parseFloat(waterwayOp);
+
+  const showCities = params.get(PARAM_MAP.showCities);
+  if (showCities) partial.showCities = showCities === "1";
+
+  const citySize = params.get(PARAM_MAP.cityFontSize);
+  if (citySize) partial.cityFontSize = parseInt(citySize, 10);
+
+  const cityColor = params.get(PARAM_MAP.cityColor);
+  if (cityColor) partial.cityColor = `#${cityColor}`;
+
+  const labelFont = params.get(PARAM_MAP.labelFont);
+  if (labelFont) partial.labelFont = decodeURIComponent(labelFont);
+
   return partial;
 }
 
@@ -180,6 +241,38 @@ function serializeToURL(state: DesignState, includeDesignMode: boolean): string 
     params.set(PARAM_MAP.showOutsideFade, state.showOutsideFade ? "1" : "0");
   if (state.outsideFadeOpacity !== DEFAULT_DESIGN.outsideFadeOpacity)
     params.set(PARAM_MAP.outsideFadeOpacity, String(state.outsideFadeOpacity));
+
+  if (state.useMetricUnits !== DEFAULT_DESIGN.useMetricUnits)
+    params.set(PARAM_MAP.useMetricUnits, state.useMetricUnits ? "1" : "0");
+
+  if (state.showRoads !== DEFAULT_DESIGN.showRoads)
+    params.set(PARAM_MAP.showRoads, state.showRoads ? "1" : "0");
+  if (state.roadColor !== DEFAULT_DESIGN.roadColor)
+    params.set(PARAM_MAP.roadColor, state.roadColor.replace("#", ""));
+  if (state.roadWeight !== DEFAULT_DESIGN.roadWeight)
+    params.set(PARAM_MAP.roadWeight, String(state.roadWeight));
+  if (state.roadOpacity !== DEFAULT_DESIGN.roadOpacity)
+    params.set(PARAM_MAP.roadOpacity, String(state.roadOpacity));
+  if (state.roadDashArray !== DEFAULT_DESIGN.roadDashArray)
+    params.set(PARAM_MAP.roadDashArray, state.roadDashArray);
+
+  if (state.showWaterways !== DEFAULT_DESIGN.showWaterways)
+    params.set(PARAM_MAP.showWaterways, state.showWaterways ? "1" : "0");
+  if (state.waterwayColor !== DEFAULT_DESIGN.waterwayColor)
+    params.set(PARAM_MAP.waterwayColor, state.waterwayColor.replace("#", ""));
+  if (state.waterwayWeight !== DEFAULT_DESIGN.waterwayWeight)
+    params.set(PARAM_MAP.waterwayWeight, String(state.waterwayWeight));
+  if (state.waterwayOpacity !== DEFAULT_DESIGN.waterwayOpacity)
+    params.set(PARAM_MAP.waterwayOpacity, String(state.waterwayOpacity));
+
+  if (state.showCities !== DEFAULT_DESIGN.showCities)
+    params.set(PARAM_MAP.showCities, state.showCities ? "1" : "0");
+  if (state.cityFontSize !== DEFAULT_DESIGN.cityFontSize)
+    params.set(PARAM_MAP.cityFontSize, String(state.cityFontSize));
+  if (state.cityColor !== DEFAULT_DESIGN.cityColor)
+    params.set(PARAM_MAP.cityColor, state.cityColor.replace("#", ""));
+  if (state.labelFont !== DEFAULT_DESIGN.labelFont)
+    params.set(PARAM_MAP.labelFont, encodeURIComponent(state.labelFont));
 
   if (includeDesignMode) params.set("design", "1");
 

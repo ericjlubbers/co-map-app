@@ -20,15 +20,20 @@ export type ClusterStyle = "donut" | "gradient" | "minimal";
 export type FontFamily = "Libre Franklin" | "Atkinson Hyperlegible" | "Plus Jakarta Sans";
 export type TilePreset =
   | "carto-light"
+  | "carto-light-nolabels"
   | "carto-dark"
+  | "carto-dark-nolabels"
   | "carto-voyager"
+  | "carto-voyager-nolabels"
   | "osm-standard"
   | "stadia-watercolor"
   | "stadia-toner"
   | "stadia-toner-lite"
+  | "stadia-toner-nolabels"
   | "stadia-smooth"
   | "stadia-outdoors"
-  | "stadia-terrain";
+  | "stadia-terrain"
+  | "stadia-terrain-nolabels";
 
 // ── Data Tab Types ──────────────────────────────────────────
 
@@ -86,4 +91,23 @@ export interface DesignState {
   // Outside-state fade/mask
   showOutsideFade: boolean;
   outsideFadeOpacity: number;
+  // Units
+  useMetricUnits: boolean;
+  // Roads layer
+  showRoads: boolean;
+  roadColor: string;
+  roadWeight: number;
+  roadOpacity: number;
+  roadDashArray: string;
+  // Waterways layer
+  showWaterways: boolean;
+  waterwayColor: string;
+  waterwayWeight: number;
+  waterwayOpacity: number;
+  // Cities layer
+  showCities: boolean;
+  cityFontSize: number;
+  cityColor: string;
+  // Labels layer
+  labelFont: string;
 }
