@@ -27,18 +27,37 @@ const CLUSTER_STYLES: { value: ClusterStyle; label: string }[] = [
 
 const TILE_PRESETS: { value: TilePreset; label: string }[] = [
   { value: "carto-voyager", label: "Voyager" },
+  { value: "carto-voyager-nolabels", label: "Voyager (no labels)" },
   { value: "carto-light", label: "Carto Light" },
+  { value: "carto-light-nolabels", label: "Carto Light (no labels)" },
   { value: "carto-dark", label: "Carto Dark" },
+  { value: "carto-dark-nolabels", label: "Carto Dark (no labels)" },
   { value: "osm-standard", label: "OpenStreetMap" },
   { value: "stadia-watercolor", label: "Watercolor" },
   { value: "stadia-toner", label: "Toner" },
   { value: "stadia-toner-lite", label: "Toner Lite" },
+  { value: "stadia-toner-nolabels", label: "Toner (no labels)" },
   { value: "stadia-smooth", label: "Alidade Smooth" },
   { value: "stadia-outdoors", label: "Outdoors" },
   { value: "stadia-terrain", label: "Terrain" },
+  { value: "stadia-terrain-nolabels", label: "Terrain (no labels)" },
 ];
 
 const RATIOS = ["3fr 2fr", "1fr 1fr", "2fr 3fr", "2fr 1fr", "4fr 1fr"];
+
+const LABEL_FONTS: { value: string; label: string }[] = [
+  { value: "inherit", label: "Same as app font" },
+  { value: "Libre Franklin", label: "Libre Franklin" },
+  { value: "Atkinson Hyperlegible", label: "Atkinson Hyperlegible" },
+  { value: "Plus Jakarta Sans", label: "Plus Jakarta Sans" },
+];
+
+const DASH_PATTERNS: { value: string; label: string }[] = [
+  { value: "", label: "Solid" },
+  { value: "6 3", label: "Dashed" },
+  { value: "2 4", label: "Dotted" },
+  { value: "10 5 2 5", label: "Dash-dot" },
+];
 
 // ── Main Component ──────────────────────────────────────────
 
@@ -125,6 +144,35 @@ export default function DesignSidebar({ onClose }: DesignSidebarProps) {
           </div>
         </AccordionSection>
 
+        {/* ── Labels Layer ── */}
+        <AccordionSection title="Labels layer">
+          <div className="space-y-3">
+            <Field label="Label Font">
+              <select
+                value={design.labelFont}
+                onChange={(e) => set("labelFont", e.target.value)}
+                className="w-full rounded-md border border-gray-300 bg-white px-2.5 py-1.5 text-xs text-gray-700"
+              >
+                {LABEL_FONTS.map((f) => (
+                  <option key={f.value} value={f.value}>
+                    {f.label}
+                  </option>
+                ))}
+              </select>
+            </Field>
+            <Field label="Elevation Units">
+              <SegmentedControl
+                options={[
+                  { value: "false", label: "Feet" },
+                  { value: "true", label: "Meters" },
+                ]}
+                value={String(design.useMetricUnits)}
+                onChange={(v) => set("useMetricUnits", v === "true")}
+              />
+            </Field>
+          </div>
+        </AccordionSection>
+
         {/* ── Regions Layer ── */}
         <AccordionSection title="Regions layer">
           <div className="space-y-3">
@@ -187,6 +235,154 @@ export default function DesignSidebar({ onClose }: DesignSidebarProps) {
                 suffix="px"
               />
             </Field>
+          </div>
+        </AccordionSection>
+
+        {/* ── Roads Layer ── */}
+        <AccordionSection title="Roads layer">
+          <div className="space-y-3">
+            <Field label="Show Roads">
+              <ToggleSwitch
+                checked={design.showRoads}
+                onChange={(v) => set("showRoads", v)}
+              />
+            </Field>
+            {design.showRoads && (
+              <>
+                <Field label="Color">
+                  <ColorInput
+                    value={design.roadColor}
+                    onChange={(v) => set("roadColor", v)}
+                  />
+                </Field>
+                <Field label="Weight">
+                  <Slider
+                    min={1}
+                    max={8}
+                    step={0.5}
+                    value={design.roadWeight}
+                    onChange={(v) => set("roadWeight", v)}
+                    suffix="px"
+                  />
+                </Field>
+                <Field label="Opacity">
+                  <Slider
+                    min={0.1}
+                    max={1}
+                    step={0.1}
+                    value={design.roadOpacity}
+                    onChange={(v) => set("roadOpacity", v)}
+                    format={(v) => v.toFixed(1)}
+                  />
+                </Field>
+                <Field label="Dash Pattern">
+                  <select
+                    value={design.roadDashArray}
+                    onChange={(e) => set("roadDashArray", e.target.value)}
+                    className="w-full rounded-md border border-gray-300 bg-white px-2.5 py-1.5 text-xs text-gray-700"
+                  >
+                    {DASH_PATTERNS.map((d) => (
+                      <option key={d.value} value={d.value}>
+                        {d.label}
+                      </option>
+                    ))}
+                  </select>
+                </Field>
+                <p className="text-[11px] text-gray-400 italic">
+                  Click a road on the map to override its style.
+                </p>
+              </>
+            )}
+          </div>
+        </AccordionSection>
+
+        {/* ── Waterways Layer ── */}
+        <AccordionSection title="Waterways layer">
+          <div className="space-y-3">
+            <Field label="Show Waterways">
+              <ToggleSwitch
+                checked={design.showWaterways}
+                onChange={(v) => set("showWaterways", v)}
+              />
+            </Field>
+            {design.showWaterways && (
+              <>
+                <Field label="Color">
+                  <ColorInput
+                    value={design.waterwayColor}
+                    onChange={(v) => set("waterwayColor", v)}
+                  />
+                </Field>
+                <Field label="Weight">
+                  <Slider
+                    min={1}
+                    max={8}
+                    step={0.5}
+                    value={design.waterwayWeight}
+                    onChange={(v) => set("waterwayWeight", v)}
+                    suffix="px"
+                  />
+                </Field>
+                <Field label="Opacity">
+                  <Slider
+                    min={0.1}
+                    max={1}
+                    step={0.1}
+                    value={design.waterwayOpacity}
+                    onChange={(v) => set("waterwayOpacity", v)}
+                    format={(v) => v.toFixed(1)}
+                  />
+                </Field>
+                <p className="text-[11px] text-gray-400 italic">
+                  Click a waterway on the map to override its style.
+                </p>
+              </>
+            )}
+          </div>
+        </AccordionSection>
+
+        {/* ── Cities Layer ── */}
+        <AccordionSection title="Cities layer">
+          <div className="space-y-3">
+            <Field label="Show Cities & Peaks">
+              <ToggleSwitch
+                checked={design.showCities}
+                onChange={(v) => set("showCities", v)}
+              />
+            </Field>
+            {design.showCities && (
+              <>
+                <Field label="Label Color">
+                  <ColorInput
+                    value={design.cityColor}
+                    onChange={(v) => set("cityColor", v)}
+                  />
+                </Field>
+                <Field label="Font Size">
+                  <Slider
+                    min={8}
+                    max={20}
+                    step={1}
+                    value={design.cityFontSize}
+                    onChange={(v) => set("cityFontSize", v)}
+                    suffix="px"
+                  />
+                </Field>
+                <Field label="Elevation">
+                  <SegmentedControl
+                    options={[
+                      { value: "false", label: "Feet" },
+                      { value: "true", label: "Meters" },
+                    ]}
+                    value={String(design.useMetricUnits)}
+                    onChange={(v) => set("useMetricUnits", v === "true")}
+                  />
+                </Field>
+                <p className="text-[11px] text-gray-400 italic">
+                  Click a city or peak label to override its style or hide it.
+                </p>
+              </>
+            )}
           </div>
         </AccordionSection>
 

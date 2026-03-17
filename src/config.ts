@@ -40,17 +40,38 @@ const TILE_PRESETS: Record<TilePreset, TileConfig> = {
       '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> &copy; <a href="https://carto.com/">CARTO</a>',
     maxZoom: 20,
   },
+  "carto-light-nolabels": {
+    url: "https://{s}.basemaps.cartocdn.com/light_nolabels/{z}/{x}/{y}{r}.png",
+    attribution:
+      '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> &copy; <a href="https://carto.com/">CARTO</a>',
+    maxZoom: 20,
+    labelsUrl: "https://{s}.basemaps.cartocdn.com/light_only_labels/{z}/{x}/{y}{r}.png",
+  },
   "carto-dark": {
     url: "https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png",
     attribution:
       '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> &copy; <a href="https://carto.com/">CARTO</a>',
     maxZoom: 20,
   },
+  "carto-dark-nolabels": {
+    url: "https://{s}.basemaps.cartocdn.com/dark_nolabels/{z}/{x}/{y}{r}.png",
+    attribution:
+      '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> &copy; <a href="https://carto.com/">CARTO</a>',
+    maxZoom: 20,
+    labelsUrl: "https://{s}.basemaps.cartocdn.com/dark_only_labels/{z}/{x}/{y}{r}.png",
+  },
   "carto-voyager": {
     url: "https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png",
     attribution:
       '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> &copy; <a href="https://carto.com/">CARTO</a>',
     maxZoom: 20,
+  },
+  "carto-voyager-nolabels": {
+    url: "https://{s}.basemaps.cartocdn.com/rastertiles/voyager_nolabels/{z}/{x}/{y}{r}.png",
+    attribution:
+      '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> &copy; <a href="https://carto.com/">CARTO</a>',
+    maxZoom: 20,
+    labelsUrl: "https://{s}.basemaps.cartocdn.com/rastertiles/voyager_labels_under/{z}/{x}/{y}{r}.png",
   },
   "osm-standard": {
     url: "https://tile.openstreetmap.org/{z}/{x}/{y}.png",
@@ -77,6 +98,13 @@ const TILE_PRESETS: Record<TilePreset, TileConfig> = {
       '&copy; <a href="https://stadiamaps.com/">Stadia Maps</a> &middot; <a href="https://stamen.com/">Stamen Design</a>',
     maxZoom: 18,
   },
+  "stadia-toner-nolabels": {
+    url: `https://tiles.stadiamaps.com/tiles/stamen_toner_background/{z}/{x}/{y}{r}.png${stadiaQ}`,
+    attribution:
+      '&copy; <a href="https://stadiamaps.com/">Stadia Maps</a> &middot; <a href="https://stamen.com/">Stamen Design</a>',
+    maxZoom: 18,
+    labelsUrl: `https://tiles.stadiamaps.com/tiles/stamen_toner_labels/{z}/{x}/{y}{r}.png${stadiaQ}`,
+  },
   "stadia-smooth": {
     url: `https://tiles.stadiamaps.com/tiles/alidade_smooth/{z}/{x}/{y}{r}.png${stadiaQ}`,
     attribution:
@@ -94,6 +122,13 @@ const TILE_PRESETS: Record<TilePreset, TileConfig> = {
     attribution:
       '&copy; <a href="https://stadiamaps.com/">Stadia Maps</a> &middot; <a href="https://stamen.com/">Stamen Design</a>',
     maxZoom: 18,
+  },
+  "stadia-terrain-nolabels": {
+    url: `https://tiles.stadiamaps.com/tiles/stamen_terrain_background/{z}/{x}/{y}{r}.png${stadiaQ}`,
+    attribution:
+      '&copy; <a href="https://stadiamaps.com/">Stadia Maps</a> &middot; <a href="https://stamen.com/">Stamen Design</a>',
+    maxZoom: 18,
+    labelsUrl: `https://tiles.stadiamaps.com/tiles/stamen_terrain_labels/{z}/{x}/{y}{r}.png${stadiaQ}`,
   },
 };
 
@@ -147,6 +182,20 @@ export const DEFAULT_DESIGN: DesignState = {
   stateBorderWeight: 3,
   showOutsideFade: false,
   outsideFadeOpacity: 0.3,
+  useMetricUnits: false,
+  showRoads: false,
+  roadColor: "#ef4444",
+  roadWeight: 2,
+  roadOpacity: 0.8,
+  roadDashArray: "",
+  showWaterways: false,
+  waterwayColor: "#3b82f6",
+  waterwayWeight: 2,
+  waterwayOpacity: 0.8,
+  showCities: false,
+  cityFontSize: 12,
+  cityColor: "#1f2937",
+  labelFont: "inherit",
 };
 
 // ── Clustering Settings ─────────────────────────────────────────────

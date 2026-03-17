@@ -24,6 +24,10 @@ import PointPopup from "./PointPopup";
 import { COLORADO_COUNTIES } from "../data/coloradoCounties";
 import { COLORADO_BORDER, COLORADO_MASK } from "../data/coloradoBorder";
 import type { Map as LeafletMap } from "leaflet";
+import LabelLayer from "./layers/LabelLayer";
+import RoadLayer from "./layers/RoadLayer";
+import WaterwayLayer from "./layers/WaterwayLayer";
+import CityLayer from "./layers/CityLayer";
 
 interface Props {
   points: PointData[];
@@ -97,14 +101,6 @@ export default function MapView({ points, selectedId, onSelectPoint }: Props) {
       attributionControl={false}
     >
       <TileLayer key={design.tilePreset} url={tileConfig.url} attribution={tileConfig.attribution} maxZoom={tileConfig.maxZoom} />
-      {design.showLabels && tileConfig.labelsUrl && (
-        <TileLayer
-          key={`${design.tilePreset}-labels`}
-          url={tileConfig.labelsUrl}
-          maxZoom={tileConfig.maxZoom}
-          pane="shadowPane"
-        />
-      )}
 
       {/* Outside-state fade mask */}
       {design.showOutsideFade && (
@@ -178,6 +174,14 @@ export default function MapView({ points, selectedId, onSelectPoint }: Props) {
           </Marker>
         ))}
       </MarkerClusterGroup>
+
+      {/* Feature layers */}
+      <RoadLayer />
+      <WaterwayLayer />
+      <CityLayer />
+
+      {/* Label overlay — rendered last so it always appears on top */}
+      <LabelLayer />
     </MapContainer>
   );
 }
