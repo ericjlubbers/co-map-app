@@ -144,8 +144,8 @@ export default function DesignSidebar({ onClose, categories = [] }: DesignSideba
         {/* ════════════ LAYERS ════════════ */}
         <SidebarGroup title="Layers" open={openGroup === "layers"} onToggle={() => setOpenGroup("layers")}>
 
-          {/* ── Projection ── */}
-          <AccordionSection title="Projection" defaultOpen>
+          {/* ── Tiles ── */}
+          <AccordionSection title="Tiles" defaultOpen>
             <div className="space-y-3">
               <Field label="Tile Layer">
                 <select
@@ -648,6 +648,24 @@ export default function DesignSidebar({ onClose, categories = [] }: DesignSideba
                   step={2}
                   value={design.embedPadding}
                   onChange={(v) => set("embedPadding", v)}
+                  suffix="px"
+                />
+              </Field>
+              {design.embedPadding > 0 && (
+                <Field label="Padding Color">
+                  <ColorPicker
+                    value={design.pageBg}
+                    onChange={(v) => set("pageBg", v)}
+                  />
+                </Field>
+              )}
+              <Field label="Embed Margin">
+                <Slider
+                  min={0}
+                  max={32}
+                  step={2}
+                  value={design.embedMargin}
+                  onChange={(v) => set("embedMargin", v)}
                   suffix="px"
                 />
               </Field>

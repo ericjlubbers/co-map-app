@@ -19,12 +19,12 @@ Internal mapping platform for The Colorado Sun newsroom. Reporters and data visu
 | 5 — Drawing & Sketching Tools | ✅ | Point/line/polygon, vertex editing, style controls |
 | 7 — Embed & Edge Caching | ✅ | Auto-rotate demo, 24h edge cache, publish flow |
 
-### Production Sprints (new)
+### Production Sprints
 
 | Sprint | Status | Focus |
 |--------|--------|-------|
-| S1 — Editor UX Polish | 🔲 | Font isolation, sidebar reorg, table toggle, empty-by-default, example data |
-| S2 — Responsive Embed | 🔲 | Aspect ratio control, responsive loader script for WordPress |
+| S1 — Editor UX Polish | ✅ | Font isolation, sidebar reorg (3 groups, single-open), table toggle, empty-by-default, example data, custom ColorPicker, category colors, custom border controls, embed padding/margin/background |
+| S2 — Responsive Embed | ✅ | Independent desktop/mobile aspect ratios, responsive embed.js loader, live embed code snippets, auto-rotate demo toggle |
 | S3 — View-Scoped Curation | 🔲 | Lock view, bbox-scoped Overpass, per-feature show/hide |
 | S4 — Auth & Deployment | 🔲 | User login, admin panel, Cloudflare Pages, DNS, production config |
 
@@ -43,6 +43,17 @@ Internal mapping platform for The Colorado Sun newsroom. Reporters and data visu
 - Label font fix: CityLayer applies `design.labelFont` to DivIcon styles
 - Overpass API reliability: timeout 60→120s, retry with backoff on 429/504
 - On-demand sub-toggles: Roads (Motorways/Trunk/Primary), Waterways (Rivers/Streams), Cities (Cities/Peaks) — all default off
+
+### Sprint 1 & 2 extras (merged 2026-03-18)
+- Custom ColorPicker: HSV color space, hex/RGB inputs, Carbon Design palettes, flip-up positioning near screen bottom
+- Category colors: per-category color assignment with unique default palette
+- SidebarGroup: 3 collapsible super-groups (Layers, Design, Embed) with single-open behavior
+- Custom border: style/width/color controls, mutually exclusive with CO150
+- Embed controls: padding + padding background color, margin, border radius
+- Responsive embed.js: ~1KB iframe loader, reads data-co-map attributes
+- EmbedCodeBanner: live design-aware embed snippets with auto `?demo=1`
+- Auto-rotate demo converted from separate embed type to design toggle
+- Renamed "Projection" sidebar section to "Tiles"
 
 ---
 

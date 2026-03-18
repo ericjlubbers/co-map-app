@@ -263,14 +263,16 @@ export default function MapEditorContent({
         <div
           className={`${design.showBorder ? "co150" : ""} min-h-0 flex-1`}
           style={{
+            ...(design.embedMargin > 0
+              ? { margin: `${design.embedMargin}px` }
+              : {}),
             ...(design.showCustomBorder && !design.showBorder
               ? {
                   border: `${design.customBorderWidth}px ${design.customBorderStyle} ${design.customBorderColor}`,
-                  margin: `${design.customBorderWidth}px`,
                 }
               : {}),
             ...(design.embedPadding > 0
-              ? { padding: `${design.embedPadding}px` }
+              ? { padding: `${design.embedPadding}px`, backgroundColor: design.pageBg }
               : {}),
           }}
         >

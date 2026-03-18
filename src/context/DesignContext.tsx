@@ -28,6 +28,7 @@ const PARAM_MAP: Record<keyof DesignState, string> = {
   customBorderWidth: "cbWidth",
   customBorderStyle: "cbStyle",
   embedPadding: "ePadding",
+  embedMargin: "eMargin",
   markerSize: "marker",
   showCountyLines: "county",
   countyLineColor: "countyColor",

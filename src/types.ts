@@ -123,6 +123,7 @@ export interface DesignState {
   customBorderWidth: number;
   customBorderStyle: string;
   embedPadding: number;
+  embedMargin: number;
   markerSize: number;
   // County lines
   showCountyLines: boolean;

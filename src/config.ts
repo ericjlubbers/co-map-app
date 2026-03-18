@@ -177,6 +177,7 @@ export const DEFAULT_DESIGN: DesignState = {
   customBorderWidth: 2,
   customBorderStyle: "solid",
   embedPadding: 0,
+  embedMargin: 0,
   markerSize: 34,
   showCountyLines: false,
   countyLineColor: "#6b7280",
