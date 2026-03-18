@@ -2,7 +2,7 @@
 
 Transform the current single-map static prototype into a multi-map platform backed by Cloudflare Workers + D1, with a Flourish-style data editor, accordion design sidebar, multiple feature layers, drawing tools, iframe embedding, and edge caching. Internal team auth only; all published maps are public.
 
-## Status Summary (updated 2026-03-17)
+## Status Summary (updated 2026-03-18)
 
 | Phase | Status | Notes |
 |-------|--------|-------|
@@ -12,7 +12,7 @@ Transform the current single-map static prototype into a multi-map platform back
 | 4 — Data Tab | ✅ Complete | Merged (PR #12). Fixes: row ID consistency, debounced saves |
 | 5 — Drawing & Sketching Tools | ✅ Complete | Merged (PR #9). Manual conflict resolution with Phases 3+4 |
 | 6 — Locator Map Wizard | 🔲 Not started | Depends on Phases 3+5 |
-| 7 — Embed & Edge Caching | 🔄 PR #11 open | Copilot-generated, not yet reviewed |
+| 7 — Embed & Edge Caching | ✅ Complete | Merged (PR #13). Auto-rotate demo, edge caching, publish flow |
 | 8 — View-Scoped Label Curation | 🔲 Not started | Roadmap only |
 
 ### Post-merge refinements applied to main (2026-03-17):
