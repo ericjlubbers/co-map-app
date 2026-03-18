@@ -1,6 +1,25 @@
 # CO Map App — Production Roadmap
 
-Transform the current single-map static prototype into a multi-map platform backed by Cloudflare Workers + D1, with a Flourish-style data editor, accordion design sidebar, multiple feature layers, drawing tools, iframe embedding, and edge caching. Internal team auth only; all published maps are public. Seven phases ordered for maximum efficiency — each builds on the last.
+Transform the current single-map static prototype into a multi-map platform backed by Cloudflare Workers + D1, with a Flourish-style data editor, accordion design sidebar, multiple feature layers, drawing tools, iframe embedding, and edge caching. Internal team auth only; all published maps are public.
+
+## Status Summary (updated 2026-03-17)
+
+| Phase | Status | Notes |
+|-------|--------|-------|
+| 1 — Database & Management | ✅ Complete | Merged to main |
+| 2 — Accordion Design Sidebar | ✅ Complete | Merged to main |
+| 3 — Map Layers & Base Styling | ✅ Complete | Merged (PR #8). Post-merge fixes: label font, Overpass 504/429, sub-toggles |
+| 4 — Data Tab | ✅ Complete | Merged (PR #12). Fixes: row ID consistency, debounced saves |
+| 5 — Drawing & Sketching Tools | ✅ Complete | Merged (PR #9). Manual conflict resolution with Phases 3+4 |
+| 6 — Locator Map Wizard | 🔲 Not started | Depends on Phases 3+5 |
+| 7 — Embed & Edge Caching | 🔄 PR #11 open | Copilot-generated, not yet reviewed |
+| 8 — View-Scoped Label Curation | 🔲 Not started | Roadmap only |
+
+### Post-merge refinements applied to main (2026-03-17):
+- **Label font fix**: CityLayer now applies `design.labelFont` to DivIcon styles
+- **Overpass API reliability**: timeout 60→120s, retry with backoff on 429/504
+- **On-demand sub-toggles**: Roads split into Motorways/Trunk/Primary pills; Waterways split into Rivers/Streams pills; Cities split into Cities/Peaks pills. All default to off — no Overpass calls fire until user explicitly enables a pill
+- **Future refinement**: Multi-select/marquee tool for batch-styling road/waterway segments (noted for Phase 3 polish pass)
 
 ---
 
@@ -254,31 +273,60 @@ Transform the current single-map static prototype into a multi-map platform back
 
 ---
 
+## Phase 8 — View-Scoped Label Curation
+
+**Goal**: Add a locked-view mode where editors can curate which labels, road segments, and feature objects are visible at a specific zoom/bounds. This enables precise "what you see is what you get" label curation for publication-quality maps.
+
+1. "Lock view" toggle in the editor — freezes the current zoom level and map bounds
+2. When locked, all Overpass/feature layer pills become interactive curation tools: toggling a pill fetches data for that specific view extent (not statewide), dramatically reducing API load
+3. Per-feature visibility toggles: click any road, waterway, city label, or peak to show/hide it in the locked view
+4. View-scoped label overrides saved in `data_config.viewLabels` — a map of `{ zoom, bounds, hiddenFeatureIds[], styleOverrides[] }`
+5. Multiple locked views can be saved per map (e.g., statewide overview + Denver metro detail)
+6. On published/embed render, the active view's curation rules apply — hidden features are suppressed, style overrides are applied
+7. Multi-select / marquee tool for batch styling: lasso-select multiple road segments or waterway pieces to apply style changes (color, weight, visibility) in bulk
+
+### Relevant Files
+
+- New: `src/components/ViewLocker.tsx` — lock/unlock UI, view extent management
+- Modify: `src/components/DesignSidebar.tsx` — locked-view section, per-view saved configurations
+- Modify: `src/components/layers/RoadLayer.tsx`, `WaterwayLayer.tsx`, `CityLayer.tsx` — filter by view-scoped curation rules
+- Modify: `src/lib/vectorTiles.ts` — accept bbox parameter for view-scoped Overpass queries
+- Modify: `src/types.ts` — ViewCuration, ViewLabel types
+
+### Verification
+
+- Lock view at Denver metro zoom → toggle Motorways pill → only roads in visible extent are fetched
+- Click a road segment → "Hide" button → segment disappears, saved to view config
+- Unlock view → all features visible again (curation only applies when locked)
+- Publish map → embed respects the locked view's curation rules
+- Multi-select tool → lasso 5 waterway segments → change color → all 5 update
+
+---
+
 ## Phase Dependencies
 
 ```
-Phase 1 (Database + Management)   ← foundation, must come first
+Phase 1 (Database + Management)        ✅
     │
-    ├── Phase 2 (Design Sidebar)  ← container for all future controls
+    ├── Phase 2 (Design Sidebar)       ✅
     │       │
-    │       ├── Phase 3 (Map Layers & Base Styling) ← fills sidebar sections
+    │       ├── Phase 3 (Map Layers)   ✅ + post-merge fixes
     │       │
-    │       └── Phase 5 (Drawing Tools) ← uses sidebar for style controls
+    │       └── Phase 5 (Drawing)      ✅
     │
-    ├── Phase 4 (Data Tab)        ← depends on Phase 1 API, parallel with 2/3
+    ├── Phase 4 (Data Tab)             ✅
     │
-    ├── Phase 6 (Locator Wizard)  ← depends on Phases 1–5 features
+    ├── Phase 6 (Locator Wizard)       🔲 depends on 3+5
     │
-    └── Phase 7 (Embed + Caching) ← depends on Phase 1 Worker, polish last
+    ├── Phase 7 (Embed + Caching)      🔄 PR #11 open
+    │
+    └── Phase 8 (View Label Curation)  🔲 depends on 3
 ```
 
-**Efficient execution order**:
-- **Phase 1** → sequential (foundation)
-- **Phases 2 + 4** → can overlap (sidebar is UI-only; data tab uses API)
-- **Phase 3** → after Phase 2 (needs sidebar sections)
-- **Phase 5** → after Phase 2, can overlap with Phase 3
-- **Phase 6** → after Phases 1–5 (uses all built features)
-- **Phase 7** → last (polish + performance)
+**Remaining execution order**:
+- **Phase 7** → review PR #11 next (Copilot-generated, needs merge conflict resolution + review)
+- **Phase 8** → after Phase 7 (view-scoped curation builds on feature layers)
+- **Phase 6** → can proceed in parallel with Phase 8 (locator wizard uses existing features)
 
 ---
 
