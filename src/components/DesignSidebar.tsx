@@ -570,70 +570,6 @@ export default function DesignSidebar({ onClose, categories = [] }: DesignSideba
             </div>
           </AccordionSection>
 
-          {/* ── Layout ── */}
-          <AccordionSection title="Layout">
-            <div className="space-y-4">
-              <Field label="Border Radius">
-                <Slider
-                  min={0}
-                  max={24}
-                  step={1}
-                  value={parseInt(design.borderRadius)}
-                  onChange={(v) => set("borderRadius", `${v}px`)}
-                  suffix="px"
-                />
-              </Field>
-              <Field label="CO150 Border">
-                <ToggleSwitch
-                  checked={design.showBorder}
-                  onChange={(v) => set("showBorder", v)}
-                />
-              </Field>
-
-              {/* Embed Aspect Ratio */}
-              <div className="space-y-2">
-                <span className="text-xs font-medium text-gray-600">Embed Aspect Ratio</span>
-                <AspectRatioSelector
-                  desktopValue={design.embedAspectRatio}
-                  mobileValue={design.embedMobileAspectRatio}
-                  onDesktopChange={(v) => set("embedAspectRatio", v)}
-                  onMobileChange={(v) => set("embedMobileAspectRatio", v)}
-                />
-              </div>
-
-              {/* Embed Height */}
-              <div className="space-y-2">
-                <span className="text-xs font-medium text-gray-600">Embed Height</span>
-                <div className="flex items-center gap-2">
-                  {design.embedHeightUnit !== "auto" && (
-                    <input
-                      type="number"
-                      min={100}
-                      max={2000}
-                      value={design.embedHeight}
-                      onChange={(e) => set("embedHeight", e.target.value)}
-                      className="w-20 rounded-md border border-gray-300 bg-white px-2 py-1.5 text-xs text-gray-700"
-                    />
-                  )}
-                  <select
-                    value={design.embedHeightUnit}
-                    onChange={(e) => set("embedHeightUnit", e.target.value)}
-                    className="rounded-md border border-gray-300 bg-white px-2.5 py-1.5 text-xs text-gray-700"
-                  >
-                    <option value="auto">Auto (from ratio)</option>
-                    <option value="px">px</option>
-                    <option value="vh">vh</option>
-                  </select>
-                </div>
-                <p className="text-[11px] text-gray-400 italic">
-                  {design.embedHeightUnit === "auto"
-                    ? "Height calculated from width \u00D7 aspect ratio."
-                    : `Fixed height: ${design.embedHeight}${design.embedHeightUnit}.`}
-                </p>
-              </div>
-            </div>
-          </AccordionSection>
-
           {/* ── Typography ── */}
           <AccordionSection title="Typography">
             <div className="space-y-3">
@@ -691,23 +627,150 @@ export default function DesignSidebar({ onClose, categories = [] }: DesignSideba
         {/* ════════════ EMBED ════════════ */}
         <SidebarGroup title="Embed" defaultOpen={false}>
 
-          {/* ── Demo ── */}
-          <AccordionSection title="Auto-Rotate Demo">
-            <div className="space-y-3">
-              <p className="text-xs text-gray-500">
-                Add <code className="rounded bg-gray-100 px-1 py-0.5 font-mono text-[10px]">?demo=1</code> to
-                the embed URL to activate auto-rotate mode.
-              </p>
-              <Field label="Rotation Interval">
+          {/* ── Layout ── */}
+          <AccordionSection title="Layout">
+            <div className="space-y-4">
+              <Field label="Border Radius">
                 <Slider
-                  min={2000}
-                  max={10000}
-                  step={500}
-                  value={design.demoIntervalMs}
-                  onChange={(v) => set("demoIntervalMs", v)}
-                  format={(v) => `${(v / 1000).toFixed(1)}s`}
+                  min={0}
+                  max={24}
+                  step={1}
+                  value={parseInt(design.borderRadius)}
+                  onChange={(v) => set("borderRadius", `${v}px`)}
+                  suffix="px"
                 />
               </Field>
+              <Field label="Embed Padding">
+                <Slider
+                  min={0}
+                  max={32}
+                  step={2}
+                  value={design.embedPadding}
+                  onChange={(v) => set("embedPadding", v)}
+                  suffix="px"
+                />
+              </Field>
+
+              {/* Border options */}
+              <Field label="CO150 Border">
+                <ToggleSwitch
+                  checked={design.showBorder}
+                  onChange={(v) => {
+                    set("showBorder", v);
+                    if (v) set("showCustomBorder", false);
+                  }}
+                />
+              </Field>
+              <Field label="Custom Border">
+                <ToggleSwitch
+                  checked={design.showCustomBorder}
+                  onChange={(v) => {
+                    set("showCustomBorder", v);
+                    if (v) set("showBorder", false);
+                  }}
+                />
+              </Field>
+              {design.showCustomBorder && (
+                <>
+                  <Field label="Border Style">
+                    <select
+                      value={design.customBorderStyle}
+                      onChange={(e) => set("customBorderStyle", e.target.value)}
+                      className="w-full rounded-md border border-gray-300 bg-white px-2.5 py-1.5 text-xs text-gray-700"
+                    >
+                      <option value="solid">Solid</option>
+                      <option value="dashed">Dashed</option>
+                      <option value="dotted">Dotted</option>
+                      <option value="double">Double</option>
+                    </select>
+                  </Field>
+                  <Field label="Border Width">
+                    <Slider
+                      min={1}
+                      max={8}
+                      step={1}
+                      value={design.customBorderWidth}
+                      onChange={(v) => set("customBorderWidth", v)}
+                      suffix="px"
+                    />
+                  </Field>
+                  <Field label="Border Color">
+                    <ColorPicker
+                      value={design.customBorderColor}
+                      onChange={(v) => set("customBorderColor", v)}
+                    />
+                  </Field>
+                </>
+              )}
+
+              {/* Embed Aspect Ratio */}
+              <div className="space-y-2">
+                <span className="text-xs font-medium text-gray-600">Embed Aspect Ratio</span>
+                <AspectRatioSelector
+                  desktopValue={design.embedAspectRatio}
+                  mobileValue={design.embedMobileAspectRatio}
+                  onDesktopChange={(v) => set("embedAspectRatio", v)}
+                  onMobileChange={(v) => set("embedMobileAspectRatio", v)}
+                />
+              </div>
+
+              {/* Embed Height */}
+              <div className="space-y-2">
+                <span className="text-xs font-medium text-gray-600">Embed Height</span>
+                <div className="flex items-center gap-2">
+                  {design.embedHeightUnit !== "auto" && (
+                    <input
+                      type="number"
+                      min={100}
+                      max={2000}
+                      value={design.embedHeight}
+                      onChange={(e) => set("embedHeight", e.target.value)}
+                      className="w-20 rounded-md border border-gray-300 bg-white px-2 py-1.5 text-xs text-gray-700"
+                    />
+                  )}
+                  <select
+                    value={design.embedHeightUnit}
+                    onChange={(e) => set("embedHeightUnit", e.target.value)}
+                    className="rounded-md border border-gray-300 bg-white px-2.5 py-1.5 text-xs text-gray-700"
+                  >
+                    <option value="auto">Auto (from ratio)</option>
+                    <option value="px">px</option>
+                    <option value="vh">vh</option>
+                  </select>
+                </div>
+                <p className="text-[11px] text-gray-400 italic">
+                  {design.embedHeightUnit === "auto"
+                    ? "Height calculated from width \u00D7 aspect ratio."
+                    : `Fixed height: ${design.embedHeight}${design.embedHeightUnit}.`}
+                </p>
+              </div>
+            </div>
+          </AccordionSection>
+
+          {/* ── Auto-Rotate Demo ── */}
+          <AccordionSection title="Auto-Rotate Demo">
+            <div className="space-y-3">
+              <Field label="Enable Auto-Rotate">
+                <ToggleSwitch
+                  checked={design.enableDemoMode}
+                  onChange={(v) => set("enableDemoMode", v)}
+                />
+              </Field>
+              <p className="text-[11px] text-gray-400 italic">
+                When enabled, the embed automatically cycles through each category, spotlighting points one group at a time.
+              </p>
+              {design.enableDemoMode && (
+                <Field label="Rotation Interval">
+                  <Slider
+                    min={2000}
+                    max={10000}
+                    step={500}
+                    value={design.demoIntervalMs}
+                    onChange={(v) => set("demoIntervalMs", v)}
+                    format={(v) => `${(v / 1000).toFixed(1)}s`}
+                  />
+                </Field>
+              )}
             </div>
           </AccordionSection>
 

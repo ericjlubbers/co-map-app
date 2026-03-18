@@ -16,8 +16,8 @@ export default function EmbedCodeBanner({
   const [copiedIdx, setCopiedIdx] = useState<number | null>(null);
 
   const origin = window.location.origin;
-  const embedUrl = `${origin}/embed/${mapId}`;
-  const demoEmbedUrl = `${embedUrl}?demo=1`;
+  const baseEmbedUrl = `${origin}/embed/${mapId}`;
+  const embedUrl = design.enableDemoMode ? `${baseEmbedUrl}?demo=1` : baseEmbedUrl;
   const scriptUrl = `${origin}/embed.js`;
 
   const dataAttrs = [
@@ -34,15 +34,13 @@ export default function EmbedCodeBanner({
       ? `${design.embedHeight}vh`
       : `${design.embedHeight}px`;
 
-  const iframeTag = (src: string) =>
-    `<iframe src="${src}" ${dataAttrs} width="100%" height="${fallbackHeight}" frameborder="0" style="border:0" allowfullscreen></iframe>`;
+  const iframeTag = `<iframe src="${embedUrl}" ${dataAttrs} width="100%" height="${fallbackHeight}" frameborder="0" style="border:0" allowfullscreen></iframe>`;
 
-  const embedCode = `${iframeTag(embedUrl)}\n<script src="${scriptUrl}" defer><\/script>`;
-  const demoEmbedCode = `${iframeTag(demoEmbedUrl)}\n<script src="${scriptUrl}" defer><\/script>`;
+  const embedCode = `${iframeTag}\n<script src="${scriptUrl}" defer><\/script>`;
 
-  const handleCopy = (text: string, idx: number) => {
-    navigator.clipboard.writeText(text);
-    setCopiedIdx(idx);
+  const handleCopy = () => {
+    navigator.clipboard.writeText(embedCode);
+    setCopiedIdx(0);
     setTimeout(() => setCopiedIdx(null), 2000);
   };
 
@@ -52,17 +50,12 @@ export default function EmbedCodeBanner({
         label="Embed code (paste into WordPress)"
         value={embedCode}
         copied={copiedIdx === 0}
-        onCopy={() => handleCopy(embedCode, 0)}
-      />
-      <SnippetRow
-        label="Demo embed (auto-rotates categories)"
-        value={demoEmbedCode}
-        copied={copiedIdx === 1}
-        onCopy={() => handleCopy(demoEmbedCode, 1)}
+        onCopy={handleCopy}
       />
       <p className="text-[10px] text-gray-400">
         Desktop ratio {design.embedAspectRatio} · Mobile ratio {design.embedMobileAspectRatio}
         {design.embedHeightUnit !== "auto" && ` · Height ${design.embedHeight}${design.embedHeightUnit}`}
+        {design.enableDemoMode && " · Auto-rotate enabled"}
       </p>
     </div>
   );

@@ -19,7 +19,7 @@ export default function SidebarGroup({
     <div>
       <button
         onClick={() => setOpen(!open)}
-        className="flex w-full items-center gap-2 bg-gray-100 px-4 py-2 text-xs font-bold uppercase tracking-wider text-gray-500 hover:bg-gray-150 transition-colors"
+        className="flex w-full items-center gap-2 border-b border-gray-200 bg-gray-800 px-4 py-2.5 text-[11px] font-bold uppercase tracking-widest text-gray-100 hover:bg-gray-700 transition-colors"
       >
         <FontAwesomeIcon
           icon={open ? faChevronDown : faChevronRight}

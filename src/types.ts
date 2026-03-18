@@ -117,6 +117,12 @@ export interface DesignState {
   textMuted: string;
   showLabels: boolean;
   showBorder: boolean;
+  // Custom border
+  showCustomBorder: boolean;
+  customBorderColor: string;
+  customBorderWidth: number;
+  customBorderStyle: string;
+  embedPadding: number;
   markerSize: number;
   // County lines
   showCountyLines: boolean;
@@ -132,6 +138,7 @@ export interface DesignState {
   outsideFadeOpacity: number;
   // Demo auto-rotate
   demoIntervalMs: number;
+  enableDemoMode: boolean;
   // Units
   useMetricUnits: boolean;
   // Roads layer

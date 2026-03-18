@@ -260,7 +260,20 @@ export default function MapEditorContent({
             Design
           </button>
         )}
-        <div className={`${design.showBorder ? "co150" : ""} min-h-0 flex-1`}>
+        <div
+          className={`${design.showBorder ? "co150" : ""} min-h-0 flex-1`}
+          style={{
+            ...(design.showCustomBorder && !design.showBorder
+              ? {
+                  border: `${design.customBorderWidth}px ${design.customBorderStyle} ${design.customBorderColor}`,
+                  margin: `${design.customBorderWidth}px`,
+                }
+              : {}),
+            ...(design.embedPadding > 0
+              ? { padding: `${design.embedPadding}px` }
+              : {}),
+          }}
+        >
           <div
             className="design-grid grid h-full"
             style={{
