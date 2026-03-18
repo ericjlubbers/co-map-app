@@ -182,6 +182,7 @@ export const DEFAULT_DESIGN: DesignState = {
   stateBorderWeight: 3,
   showOutsideFade: false,
   outsideFadeOpacity: 0.3,
+  demoIntervalMs: 4500,
   useMetricUnits: false,
   showRoads: false,
   showMotorways: false,

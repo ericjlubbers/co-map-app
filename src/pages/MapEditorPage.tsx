@@ -7,8 +7,10 @@ import {
   faRotateRight,
   faArrowLeft,
   faCode,
+  faGlobe,
+  faCheck,
 } from "@fortawesome/free-solid-svg-icons";
-import { getMap, updateMap, type MapDetail } from "../lib/api";
+import { getMap, updateMap, publishMap, type MapDetail } from "../lib/api";
 import { DesignProvider } from "../context/DesignContext";
 import MapEditorContent from "../components/MapEditorContent";
 import DataTabBar from "../components/DataTabBar";
@@ -48,6 +50,8 @@ export default function MapEditorPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [showEmbedCode, setShowEmbedCode] = useState(false);
+  const [publishing, setPublishing] = useState(false);
+  const [publishError, setPublishError] = useState<string | null>(null);
   const drawSaveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const dataSaveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -84,6 +88,20 @@ export default function MapEditorPage() {
   const handleSave = async (designState: Record<string, unknown>) => {
     if (!id) return;
     await updateMap(id, { design_state: designState });
+  };
+
+  const handlePublish = async () => {
+    if (!id || publishing) return;
+    setPublishing(true);
+    setPublishError(null);
+    try {
+      await publishMap(id);
+      setMapData((prev) => prev ? { ...prev, status: 'published' } : prev);
+    } catch (e) {
+      setPublishError(e instanceof Error ? e.message : "Publish failed");
+    } finally {
+      setPublishing(false);
+    }
   };
 
   // ── Persist data_config after each change (debounced) ──────
@@ -167,6 +185,7 @@ export default function MapEditorPage() {
   }, [mapData]);
 
   const embedUrl = `${window.location.origin}/embed/${id}`;
+  const demoEmbedUrl = `${embedUrl}?demo=1`;
   const embedCode = `<iframe src="${embedUrl}" width="100%" height="600" frameborder="0" style="border:0" allowfullscreen></iframe>`;
 
   if (loading) {
@@ -212,8 +231,43 @@ export default function MapEditorPage() {
               Maps
             </button>
             <span className="text-sm font-medium text-gray-900">{mapData.title}</span>
+            {/* Live badge */}
+            {mapData.status === "published" && (
+              <a
+                href={embedUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-1 rounded-full bg-emerald-100 px-2 py-0.5 text-xs font-medium text-emerald-700 hover:bg-emerald-200 transition-colors"
+              >
+                <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
+                Live
+              </a>
+            )}
           </div>
           <div className="flex items-center gap-2">
+            {/* Publish button */}
+            {mapData.status !== "published" ? (
+              <button
+                onClick={handlePublish}
+                disabled={publishing}
+                className="inline-flex items-center gap-1.5 rounded-md bg-emerald-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-emerald-700 disabled:opacity-60 transition-colors"
+              >
+                {publishing ? (
+                  <FontAwesomeIcon icon={faSpinner} spin />
+                ) : (
+                  <FontAwesomeIcon icon={faGlobe} />
+                )}
+                Publish
+              </button>
+            ) : (
+              <span className="inline-flex items-center gap-1.5 rounded-md px-3 py-1.5 text-sm font-medium text-emerald-700">
+                <FontAwesomeIcon icon={faCheck} />
+                Published
+              </span>
+            )}
+            {publishError && (
+              <span className="text-xs text-red-500">{publishError}</span>
+            )}
             <button
               onClick={() => setShowEmbedCode(!showEmbedCode)}
               className="inline-flex items-center gap-1.5 rounded-md px-3 py-1.5 text-sm font-medium text-gray-600 hover:bg-gray-100 transition-colors"
@@ -226,24 +280,46 @@ export default function MapEditorPage() {
 
         {/* Embed code banner */}
         {showEmbedCode && (
-          <div className="border-b border-gray-200 bg-gray-50 px-4 py-3">
-            <label className="mb-1 block text-xs font-medium text-gray-500">
-              Embed code (paste into WordPress)
-            </label>
-            <div className="flex gap-2">
-              <input
-                type="text"
-                readOnly
-                value={embedCode}
-                className="flex-1 rounded-md border border-gray-300 bg-white px-3 py-1.5 text-xs font-mono text-gray-700"
-                onFocus={(e) => e.target.select()}
-              />
-              <button
-                onClick={() => navigator.clipboard.writeText(embedCode)}
-                className="rounded-md bg-blue-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-blue-700"
-              >
-                Copy
-              </button>
+          <div className="border-b border-gray-200 bg-gray-50 px-4 py-3 space-y-2">
+            <div>
+              <label className="mb-1 block text-xs font-medium text-gray-500">
+                Embed code (paste into WordPress)
+              </label>
+              <div className="flex gap-2">
+                <input
+                  type="text"
+                  readOnly
+                  value={embedCode}
+                  className="flex-1 rounded-md border border-gray-300 bg-white px-3 py-1.5 text-xs font-mono text-gray-700"
+                  onFocus={(e) => e.target.select()}
+                />
+                <button
+                  onClick={() => navigator.clipboard.writeText(embedCode)}
+                  className="rounded-md bg-blue-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-blue-700"
+                >
+                  Copy
+                </button>
+              </div>
+            </div>
+            <div>
+              <label className="mb-1 block text-xs font-medium text-gray-500">
+                Demo embed (auto-rotates categories)
+              </label>
+              <div className="flex gap-2">
+                <input
+                  type="text"
+                  readOnly
+                  value={`<iframe src="${demoEmbedUrl}" width="100%" height="600" frameborder="0" style="border:0" allowfullscreen></iframe>`}
+                  className="flex-1 rounded-md border border-gray-300 bg-white px-3 py-1.5 text-xs font-mono text-gray-700"
+                  onFocus={(e) => e.target.select()}
+                />
+                <button
+                  onClick={() => navigator.clipboard.writeText(`<iframe src="${demoEmbedUrl}" width="100%" height="600" frameborder="0" style="border:0" allowfullscreen></iframe>`)}
+                  className="rounded-md bg-blue-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-blue-700"
+                >
+                  Copy
+                </button>
+              </div>
             </div>
           </div>
         )}
