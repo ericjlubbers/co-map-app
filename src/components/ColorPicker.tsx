@@ -123,6 +123,7 @@ export default function ColorPicker({ value, onChange }: ColorPickerProps) {
   const [open, setOpen] = useState(false);
   const popoverRef = useRef<HTMLDivElement>(null);
   const triggerRef = useRef<HTMLButtonElement>(null);
+  const [flipUp, setFlipUp] = useState(false);
 
   // Close on outside click
   useEffect(() => {
@@ -141,11 +142,21 @@ export default function ColorPicker({ value, onChange }: ColorPickerProps) {
     return () => document.removeEventListener("mousedown", handleClick);
   }, [open]);
 
+  // Determine if popover should flip upward
+  const handleOpen = () => {
+    if (!open && triggerRef.current) {
+      const rect = triggerRef.current.getBoundingClientRect();
+      const spaceBelow = window.innerHeight - rect.bottom;
+      setFlipUp(spaceBelow < 360);
+    }
+    setOpen(!open);
+  };
+
   return (
     <div className="relative">
       <button
         ref={triggerRef}
-        onClick={() => setOpen(!open)}
+        onClick={handleOpen}
         className="flex items-center gap-1.5"
       >
         <div
@@ -158,7 +169,9 @@ export default function ColorPicker({ value, onChange }: ColorPickerProps) {
       {open && (
         <div
           ref={popoverRef}
-          className="absolute right-0 top-8 z-50 w-56 rounded-lg border border-gray-200 bg-white p-3 shadow-xl"
+          className={`absolute right-0 z-50 w-56 rounded-lg border border-gray-200 bg-white p-3 shadow-xl ${
+            flipUp ? "bottom-8" : "top-8"
+          }`}
         >
           <ColorPickerPanel value={value} onChange={onChange} />
         </div>
@@ -251,7 +264,7 @@ export function ColorPickerPanel({
       </div>
 
       {/* Palettes */}
-      <div className="space-y-1.5">
+      <div className="max-h-36 space-y-1.5 overflow-y-auto">
         {PALETTES.map((p) => (
           <div key={p.name}>
             <span className="text-[9px] font-medium uppercase tracking-wide text-gray-400">{p.name}</span>

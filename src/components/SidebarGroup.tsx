@@ -6,28 +6,42 @@ interface SidebarGroupProps {
   title: string;
   children: ReactNode;
   defaultOpen?: boolean;
+  /** Controlled mode: if provided, overrides internal state. */
+  open?: boolean;
+  onToggle?: () => void;
 }
 
 export default function SidebarGroup({
   title,
   children,
   defaultOpen = true,
+  open: controlledOpen,
+  onToggle,
 }: SidebarGroupProps) {
-  const [open, setOpen] = useState(defaultOpen);
+  const [internalOpen, setInternalOpen] = useState(defaultOpen);
+  const isOpen = controlledOpen !== undefined ? controlledOpen : internalOpen;
+
+  const handleClick = () => {
+    if (onToggle) {
+      onToggle();
+    } else {
+      setInternalOpen(!internalOpen);
+    }
+  };
 
   return (
     <div>
       <button
-        onClick={() => setOpen(!open)}
+        onClick={handleClick}
         className="flex w-full items-center gap-2 border-b border-gray-200 bg-gray-800 px-4 py-2.5 text-[11px] font-bold uppercase tracking-widest text-gray-100 hover:bg-gray-700 transition-colors"
       >
         <FontAwesomeIcon
-          icon={open ? faChevronDown : faChevronRight}
+          icon={isOpen ? faChevronDown : faChevronRight}
           className="text-[9px] text-gray-400"
         />
         {title}
       </button>
-      {open && <div>{children}</div>}
+      {isOpen && <div>{children}</div>}
     </div>
   );
 }

@@ -88,6 +88,7 @@ interface DesignSidebarProps {
 export default function DesignSidebar({ onClose, categories = [] }: DesignSidebarProps) {
   const { design, set, reset, getShareURL } = useDesign();
   const [copied, setCopied] = useState<"view" | "edit" | null>(null);
+  const [openGroup, setOpenGroup] = useState<"layers" | "design" | "embed">("layers");
 
   const handleCopy = useCallback(
     (mode: "view" | "edit") => {
@@ -138,10 +139,10 @@ export default function DesignSidebar({ onClose, categories = [] }: DesignSideba
       </div>
 
       {/* Scrollable accordion sections */}
-      <div className="flex-1 overflow-y-auto">
+      <div className="flex-1 overflow-y-auto pb-48">
 
         {/* ════════════ LAYERS ════════════ */}
-        <SidebarGroup title="Layers" defaultOpen>
+        <SidebarGroup title="Layers" open={openGroup === "layers"} onToggle={() => setOpenGroup("layers")}>
 
           {/* ── Projection ── */}
           <AccordionSection title="Projection" defaultOpen>
@@ -541,7 +542,7 @@ export default function DesignSidebar({ onClose, categories = [] }: DesignSideba
         </SidebarGroup>
 
         {/* ════════════ DESIGN ════════════ */}
-        <SidebarGroup title="Design">
+        <SidebarGroup title="Design" open={openGroup === "design"} onToggle={() => setOpenGroup("design")}>
 
           {/* ── Data Panel ── */}
           <AccordionSection title="Data Panel">
@@ -625,7 +626,7 @@ export default function DesignSidebar({ onClose, categories = [] }: DesignSideba
         </SidebarGroup>
 
         {/* ════════════ EMBED ════════════ */}
-        <SidebarGroup title="Embed" defaultOpen={false}>
+        <SidebarGroup title="Embed" open={openGroup === "embed"} onToggle={() => setOpenGroup("embed")}>
 
           {/* ── Layout ── */}
           <AccordionSection title="Layout">
