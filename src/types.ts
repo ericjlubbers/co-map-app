@@ -158,4 +158,6 @@ export interface DesignState {
   cityColor: string;
   // Labels layer
   labelFont: string;
+  // Data panel visibility
+  showDataPanel: boolean;
 }

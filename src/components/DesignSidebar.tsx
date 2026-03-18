@@ -10,6 +10,7 @@ import {
 import { useDesign } from "../context/DesignContext";
 import type { FontFamily, ClusterStyle, TilePreset } from "../types";
 import AccordionSection from "./AccordionSection";
+import SidebarGroup from "./SidebarGroup";
 
 // ── Option lists ────────────────────────────────────────────
 
@@ -46,7 +47,7 @@ const TILE_PRESETS: { value: TilePreset; label: string }[] = [
 const RATIOS = ["3fr 2fr", "1fr 1fr", "2fr 3fr", "2fr 1fr", "4fr 1fr"];
 
 const LABEL_FONTS: { value: string; label: string }[] = [
-  { value: "inherit", label: "Same as app font" },
+  { value: "inherit", label: "Same as map font" },
   { value: "Libre Franklin", label: "Libre Franklin" },
   { value: "Atkinson Hyperlegible", label: "Atkinson Hyperlegible" },
   { value: "Plus Jakarta Sans", label: "Plus Jakarta Sans" },
@@ -119,490 +120,491 @@ export default function DesignSidebar({ onClose }: DesignSidebarProps) {
 
       {/* Scrollable accordion sections */}
       <div className="flex-1 overflow-y-auto">
-        {/* ── Projection ── */}
-        <AccordionSection title="Projection" defaultOpen>
-          <div className="space-y-3">
-            <Field label="Tile Layer">
-              <select
-                value={design.tilePreset}
-                onChange={(e) => set("tilePreset", e.target.value)}
-                className="w-full rounded-md border border-gray-300 bg-white px-2.5 py-1.5 text-xs text-gray-700"
-              >
-                {TILE_PRESETS.map((t) => (
-                  <option key={t.value} value={t.value}>
-                    {t.label}
-                  </option>
-                ))}
-              </select>
-            </Field>
-            <Field label="Labels Overlay">
-              <ToggleSwitch
-                checked={design.showLabels}
-                onChange={(v) => set("showLabels", v)}
-              />
-            </Field>
-          </div>
-        </AccordionSection>
 
-        {/* ── Labels Layer ── */}
-        <AccordionSection title="Labels layer">
-          <div className="space-y-3">
-            <Field label="Label Font">
-              <select
-                value={design.labelFont}
-                onChange={(e) => set("labelFont", e.target.value)}
-                className="w-full rounded-md border border-gray-300 bg-white px-2.5 py-1.5 text-xs text-gray-700"
-              >
-                {LABEL_FONTS.map((f) => (
-                  <option key={f.value} value={f.value}>
-                    {f.label}
-                  </option>
-                ))}
-              </select>
-            </Field>
-            <Field label="Elevation Units">
-              <SegmentedControl
-                options={[
-                  { value: "false", label: "Feet" },
-                  { value: "true", label: "Meters" },
-                ]}
-                value={String(design.useMetricUnits)}
-                onChange={(v) => set("useMetricUnits", v === "true")}
-              />
-            </Field>
-          </div>
-        </AccordionSection>
+        {/* ════════════ LAYERS ════════════ */}
+        <SidebarGroup title="Layers" defaultOpen>
 
-        {/* ── Regions Layer ── */}
-        <AccordionSection title="Regions layer">
-          <div className="space-y-3">
-            <Field label="County Lines">
-              <ToggleSwitch
-                checked={design.showCountyLines}
-                onChange={(v) => set("showCountyLines", v)}
-              />
-            </Field>
-            {design.showCountyLines && (
-              <>
-                <Field label="Line Color">
-                  <ColorInput
-                    value={design.countyLineColor}
-                    onChange={(v) => set("countyLineColor", v)}
-                  />
-                </Field>
-                <Field label="Line Weight">
-                  <Slider
-                    min={0.5}
-                    max={4}
-                    step={0.5}
-                    value={design.countyLineWeight}
-                    onChange={(v) => set("countyLineWeight", v)}
-                    suffix=""
-                  />
-                </Field>
-                <Field label="Opacity">
+          {/* ── Projection ── */}
+          <AccordionSection title="Projection" defaultOpen>
+            <div className="space-y-3">
+              <Field label="Tile Layer">
+                <select
+                  value={design.tilePreset}
+                  onChange={(e) => set("tilePreset", e.target.value)}
+                  className="w-full rounded-md border border-gray-300 bg-white px-2.5 py-1.5 text-xs text-gray-700"
+                >
+                  {TILE_PRESETS.map((t) => (
+                    <option key={t.value} value={t.value}>
+                      {t.label}
+                    </option>
+                  ))}
+                </select>
+              </Field>
+              <Field label="Labels Overlay">
+                <ToggleSwitch
+                  checked={design.showLabels}
+                  onChange={(v) => set("showLabels", v)}
+                />
+              </Field>
+            </div>
+          </AccordionSection>
+
+          {/* ── Labels Layer ── */}
+          <AccordionSection title="Labels">
+            <div className="space-y-3">
+              <Field label="Label Font">
+                <select
+                  value={design.labelFont}
+                  onChange={(e) => set("labelFont", e.target.value)}
+                  className="w-full rounded-md border border-gray-300 bg-white px-2.5 py-1.5 text-xs text-gray-700"
+                >
+                  {LABEL_FONTS.map((f) => (
+                    <option key={f.value} value={f.value}>
+                      {f.label}
+                    </option>
+                  ))}
+                </select>
+              </Field>
+              <Field label="Elevation Units">
+                <SegmentedControl
+                  options={[
+                    { value: "false", label: "Feet" },
+                    { value: "true", label: "Meters" },
+                  ]}
+                  value={String(design.useMetricUnits)}
+                  onChange={(v) => set("useMetricUnits", v === "true")}
+                />
+              </Field>
+            </div>
+          </AccordionSection>
+
+          {/* ── Regions Layer ── */}
+          <AccordionSection title="Regions">
+            <div className="space-y-3">
+              <Field label="County Lines">
+                <ToggleSwitch
+                  checked={design.showCountyLines}
+                  onChange={(v) => set("showCountyLines", v)}
+                />
+              </Field>
+              {design.showCountyLines && (
+                <>
+                  <Field label="Line Color">
+                    <ColorInput
+                      value={design.countyLineColor}
+                      onChange={(v) => set("countyLineColor", v)}
+                    />
+                  </Field>
+                  <Field label="Line Weight">
+                    <Slider
+                      min={0.5}
+                      max={4}
+                      step={0.5}
+                      value={design.countyLineWeight}
+                      onChange={(v) => set("countyLineWeight", v)}
+                      suffix=""
+                    />
+                  </Field>
+                  <Field label="Opacity">
+                    <Slider
+                      min={0.1}
+                      max={1}
+                      step={0.1}
+                      value={design.countyLineOpacity}
+                      onChange={(v) => set("countyLineOpacity", v)}
+                      format={(v) => v.toFixed(1)}
+                    />
+                  </Field>
+                </>
+              )}
+            </div>
+          </AccordionSection>
+
+          {/* ── Points Layer ── */}
+          <AccordionSection title="Points">
+            <div className="space-y-3">
+              <Field label="Cluster Style">
+                <SegmentedControl
+                  options={CLUSTER_STYLES}
+                  value={design.clusterStyle}
+                  onChange={(v) => set("clusterStyle", v)}
+                />
+              </Field>
+              <Field label="Marker Size">
+                <Slider
+                  min={20}
+                  max={60}
+                  step={1}
+                  value={design.markerSize}
+                  onChange={(v) => set("markerSize", v)}
+                  suffix="px"
+                />
+              </Field>
+            </div>
+          </AccordionSection>
+
+          {/* ── Roads Layer ── */}
+          <AccordionSection title="Roads">
+            <div className="space-y-3">
+              <Field label="Show Roads">
+                <ToggleSwitch
+                  checked={design.showRoads}
+                  onChange={(v) => set("showRoads", v)}
+                />
+              </Field>
+              {design.showRoads && (
+                <>
+                  <Field label="Road Types">
+                    <div className="flex flex-wrap gap-1">
+                      <TogglePill
+                        label="Motorways"
+                        checked={design.showMotorways}
+                        onChange={(v) => set("showMotorways", v)}
+                      />
+                      <TogglePill
+                        label="Trunk"
+                        checked={design.showTrunkRoads}
+                        onChange={(v) => set("showTrunkRoads", v)}
+                      />
+                      <TogglePill
+                        label="Primary"
+                        checked={design.showPrimaryRoads}
+                        onChange={(v) => set("showPrimaryRoads", v)}
+                      />
+                    </div>
+                  </Field>
+                  <Field label="Color">
+                    <ColorInput
+                      value={design.roadColor}
+                      onChange={(v) => set("roadColor", v)}
+                    />
+                  </Field>
+                  <Field label="Weight">
+                    <Slider
+                      min={1}
+                      max={8}
+                      step={0.5}
+                      value={design.roadWeight}
+                      onChange={(v) => set("roadWeight", v)}
+                      suffix="px"
+                    />
+                  </Field>
+                  <Field label="Opacity">
+                    <Slider
+                      min={0.1}
+                      max={1}
+                      step={0.1}
+                      value={design.roadOpacity}
+                      onChange={(v) => set("roadOpacity", v)}
+                      format={(v) => v.toFixed(1)}
+                    />
+                  </Field>
+                  <Field label="Dash Pattern">
+                    <select
+                      value={design.roadDashArray}
+                      onChange={(e) => set("roadDashArray", e.target.value)}
+                      className="w-full rounded-md border border-gray-300 bg-white px-2.5 py-1.5 text-xs text-gray-700"
+                    >
+                      {DASH_PATTERNS.map((d) => (
+                        <option key={d.value} value={d.value}>
+                          {d.label}
+                        </option>
+                      ))}
+                    </select>
+                  </Field>
+                  <p className="text-[11px] text-gray-400 italic">
+                    Click a road on the map to override its style.
+                  </p>
+                </>
+              )}
+            </div>
+          </AccordionSection>
+
+          {/* ── Waterways Layer ── */}
+          <AccordionSection title="Waterways">
+            <div className="space-y-3">
+              <Field label="Show Waterways">
+                <ToggleSwitch
+                  checked={design.showWaterways}
+                  onChange={(v) => set("showWaterways", v)}
+                />
+              </Field>
+              {design.showWaterways && (
+                <>
+                  <Field label="Waterway Types">
+                    <div className="flex flex-wrap gap-1">
+                      <TogglePill
+                        label="Rivers"
+                        checked={design.showRivers}
+                        onChange={(v) => set("showRivers", v)}
+                      />
+                      <TogglePill
+                        label="Streams"
+                        checked={design.showStreams}
+                        onChange={(v) => set("showStreams", v)}
+                      />
+                    </div>
+                  </Field>
+                  <Field label="Color">
+                    <ColorInput
+                      value={design.waterwayColor}
+                      onChange={(v) => set("waterwayColor", v)}
+                    />
+                  </Field>
+                  <Field label="Weight">
+                    <Slider
+                      min={1}
+                      max={8}
+                      step={0.5}
+                      value={design.waterwayWeight}
+                      onChange={(v) => set("waterwayWeight", v)}
+                      suffix="px"
+                    />
+                  </Field>
+                  <Field label="Opacity">
+                    <Slider
+                      min={0.1}
+                      max={1}
+                      step={0.1}
+                      value={design.waterwayOpacity}
+                      onChange={(v) => set("waterwayOpacity", v)}
+                      format={(v) => v.toFixed(1)}
+                    />
+                  </Field>
+                  <p className="text-[11px] text-gray-400 italic">
+                    Click a waterway on the map to override its style.
+                  </p>
+                </>
+              )}
+            </div>
+          </AccordionSection>
+
+          {/* ── Cities Layer ── */}
+          <AccordionSection title="Cities & Peaks">
+            <div className="space-y-3">
+              <Field label="Show Cities & Peaks">
+                <ToggleSwitch
+                  checked={design.showCities}
+                  onChange={(v) => set("showCities", v)}
+                />
+              </Field>
+              {design.showCities && (
+                <>
+                  <Field label="Label Types">
+                    <div className="flex flex-wrap gap-1">
+                      <TogglePill
+                        label="Cities"
+                        checked={design.showCityLabels}
+                        onChange={(v) => set("showCityLabels", v)}
+                      />
+                      <TogglePill
+                        label="Peaks"
+                        checked={design.showPeakLabels}
+                        onChange={(v) => set("showPeakLabels", v)}
+                      />
+                    </div>
+                  </Field>
+                  <Field label="Label Color">
+                    <ColorInput
+                      value={design.cityColor}
+                      onChange={(v) => set("cityColor", v)}
+                    />
+                  </Field>
+                  <Field label="Font Size">
+                    <Slider
+                      min={8}
+                      max={20}
+                      step={1}
+                      value={design.cityFontSize}
+                      onChange={(v) => set("cityFontSize", v)}
+                      suffix="px"
+                    />
+                  </Field>
+                  <p className="text-[11px] text-gray-400 italic">
+                    Click a city or peak label to override its style or hide it.
+                  </p>
+                </>
+              )}
+            </div>
+          </AccordionSection>
+
+          {/* ── Globe & Graticule ── */}
+          <AccordionSection title="Globe & Graticule">
+            <div className="space-y-3">
+              <Field label="State Border">
+                <ToggleSwitch
+                  checked={design.showStateBorder}
+                  onChange={(v) => set("showStateBorder", v)}
+                />
+              </Field>
+              {design.showStateBorder && (
+                <>
+                  <Field label="Border Color">
+                    <ColorInput
+                      value={design.stateBorderColor}
+                      onChange={(v) => set("stateBorderColor", v)}
+                    />
+                  </Field>
+                  <Field label="Border Weight">
+                    <Slider
+                      min={1}
+                      max={8}
+                      step={1}
+                      value={design.stateBorderWeight}
+                      onChange={(v) => set("stateBorderWeight", v)}
+                      suffix="px"
+                    />
+                  </Field>
+                </>
+              )}
+              <Field label="Outside Fade">
+                <ToggleSwitch
+                  checked={design.showOutsideFade}
+                  onChange={(v) => set("showOutsideFade", v)}
+                />
+              </Field>
+              {design.showOutsideFade && (
+                <Field label="Fade Opacity">
                   <Slider
                     min={0.1}
-                    max={1}
-                    step={0.1}
-                    value={design.countyLineOpacity}
-                    onChange={(v) => set("countyLineOpacity", v)}
-                    format={(v) => v.toFixed(1)}
+                    max={0.8}
+                    step={0.05}
+                    value={design.outsideFadeOpacity}
+                    onChange={(v) => set("outsideFadeOpacity", v)}
+                    format={(v) => v.toFixed(2)}
                   />
                 </Field>
-              </>
-            )}
-          </div>
-        </AccordionSection>
+              )}
+            </div>
+          </AccordionSection>
 
-        {/* ── Points Layer ── */}
-        <AccordionSection title="Points layer">
-          <div className="space-y-3">
-            <Field label="Cluster Style">
-              <SegmentedControl
-                options={CLUSTER_STYLES}
-                value={design.clusterStyle}
-                onChange={(v) => set("clusterStyle", v)}
-              />
-            </Field>
-            <Field label="Marker Size">
-              <Slider
-                min={20}
-                max={60}
-                step={1}
-                value={design.markerSize}
-                onChange={(v) => set("markerSize", v)}
-                suffix="px"
-              />
-            </Field>
-          </div>
-        </AccordionSection>
+        </SidebarGroup>
 
-        {/* ── Roads Layer ── */}
-        <AccordionSection title="Roads layer">
-          <div className="space-y-3">
-            <Field label="Show Roads">
-              <ToggleSwitch
-                checked={design.showRoads}
-                onChange={(v) => set("showRoads", v)}
-              />
-            </Field>
-            {design.showRoads && (
-              <>
-                <Field label="Road Types">
-                  <div className="flex flex-wrap gap-1">
-                    <TogglePill
-                      label="Motorways"
-                      checked={design.showMotorways}
-                      onChange={(v) => set("showMotorways", v)}
-                    />
-                    <TogglePill
-                      label="Trunk"
-                      checked={design.showTrunkRoads}
-                      onChange={(v) => set("showTrunkRoads", v)}
-                    />
-                    <TogglePill
-                      label="Primary"
-                      checked={design.showPrimaryRoads}
-                      onChange={(v) => set("showPrimaryRoads", v)}
-                    />
-                  </div>
-                </Field>
-                <Field label="Color">
-                  <ColorInput
-                    value={design.roadColor}
-                    onChange={(v) => set("roadColor", v)}
-                  />
-                </Field>
-                <Field label="Weight">
-                  <Slider
-                    min={1}
-                    max={8}
-                    step={0.5}
-                    value={design.roadWeight}
-                    onChange={(v) => set("roadWeight", v)}
-                    suffix="px"
-                  />
-                </Field>
-                <Field label="Opacity">
-                  <Slider
-                    min={0.1}
-                    max={1}
-                    step={0.1}
-                    value={design.roadOpacity}
-                    onChange={(v) => set("roadOpacity", v)}
-                    format={(v) => v.toFixed(1)}
-                  />
-                </Field>
-                <Field label="Dash Pattern">
+        {/* ════════════ DESIGN ════════════ */}
+        <SidebarGroup title="Design">
+
+          {/* ── Layout ── */}
+          <AccordionSection title="Layout">
+            <div className="space-y-3">
+              <Field label="Show Data Panel">
+                <ToggleSwitch
+                  checked={design.showDataPanel}
+                  onChange={(v) => set("showDataPanel", v)}
+                />
+              </Field>
+              {design.showDataPanel && (
+                <Field label="Map / Table Ratio">
                   <select
-                    value={design.roadDashArray}
-                    onChange={(e) => set("roadDashArray", e.target.value)}
+                    value={design.mapTableRatio}
+                    onChange={(e) => set("mapTableRatio", e.target.value)}
                     className="w-full rounded-md border border-gray-300 bg-white px-2.5 py-1.5 text-xs text-gray-700"
                   >
-                    {DASH_PATTERNS.map((d) => (
-                      <option key={d.value} value={d.value}>
-                        {d.label}
+                    {RATIOS.map((r) => (
+                      <option key={r} value={r}>
+                        {r}
                       </option>
                     ))}
                   </select>
                 </Field>
-                <p className="text-[11px] text-gray-400 italic">
-                  Click a road on the map to override its style.
-                </p>
-              </>
-            )}
-          </div>
-        </AccordionSection>
-
-        {/* ── Waterways Layer ── */}
-        <AccordionSection title="Waterways layer">
-          <div className="space-y-3">
-            <Field label="Show Waterways">
-              <ToggleSwitch
-                checked={design.showWaterways}
-                onChange={(v) => set("showWaterways", v)}
-              />
-            </Field>
-            {design.showWaterways && (
-              <>
-                <Field label="Waterway Types">
-                  <div className="flex flex-wrap gap-1">
-                    <TogglePill
-                      label="Rivers"
-                      checked={design.showRivers}
-                      onChange={(v) => set("showRivers", v)}
-                    />
-                    <TogglePill
-                      label="Streams"
-                      checked={design.showStreams}
-                      onChange={(v) => set("showStreams", v)}
-                    />
-                  </div>
-                </Field>
-                <Field label="Color">
-                  <ColorInput
-                    value={design.waterwayColor}
-                    onChange={(v) => set("waterwayColor", v)}
-                  />
-                </Field>
-                <Field label="Weight">
-                  <Slider
-                    min={1}
-                    max={8}
-                    step={0.5}
-                    value={design.waterwayWeight}
-                    onChange={(v) => set("waterwayWeight", v)}
-                    suffix="px"
-                  />
-                </Field>
-                <Field label="Opacity">
-                  <Slider
-                    min={0.1}
-                    max={1}
-                    step={0.1}
-                    value={design.waterwayOpacity}
-                    onChange={(v) => set("waterwayOpacity", v)}
-                    format={(v) => v.toFixed(1)}
-                  />
-                </Field>
-                <p className="text-[11px] text-gray-400 italic">
-                  Click a waterway on the map to override its style.
-                </p>
-              </>
-            )}
-          </div>
-        </AccordionSection>
-
-        {/* ── Cities Layer ── */}
-        <AccordionSection title="Cities layer">
-          <div className="space-y-3">
-            <Field label="Show Cities & Peaks">
-              <ToggleSwitch
-                checked={design.showCities}
-                onChange={(v) => set("showCities", v)}
-              />
-            </Field>
-            {design.showCities && (
-              <>
-                <Field label="Label Types">
-                  <div className="flex flex-wrap gap-1">
-                    <TogglePill
-                      label="Cities"
-                      checked={design.showCityLabels}
-                      onChange={(v) => set("showCityLabels", v)}
-                    />
-                    <TogglePill
-                      label="Peaks"
-                      checked={design.showPeakLabels}
-                      onChange={(v) => set("showPeakLabels", v)}
-                    />
-                  </div>
-                </Field>
-                <Field label="Label Color">
-                  <ColorInput
-                    value={design.cityColor}
-                    onChange={(v) => set("cityColor", v)}
-                  />
-                </Field>
-                <Field label="Font Size">
-                  <Slider
-                    min={8}
-                    max={20}
-                    step={1}
-                    value={design.cityFontSize}
-                    onChange={(v) => set("cityFontSize", v)}
-                    suffix="px"
-                  />
-                </Field>
-                <p className="text-[11px] text-gray-400 italic">
-                  Click a city or peak label to override its style or hide it.
-                </p>
-              </>
-            )}
-          </div>
-        </AccordionSection>
-
-        {/* ── Globe & Graticule Layers ── */}
-        <AccordionSection title="Globe & graticule layers">
-          <div className="space-y-3">
-            <Field label="State Border">
-              <ToggleSwitch
-                checked={design.showStateBorder}
-                onChange={(v) => set("showStateBorder", v)}
-              />
-            </Field>
-            {design.showStateBorder && (
-              <>
-                <Field label="Border Color">
-                  <ColorInput
-                    value={design.stateBorderColor}
-                    onChange={(v) => set("stateBorderColor", v)}
-                  />
-                </Field>
-                <Field label="Border Weight">
-                  <Slider
-                    min={1}
-                    max={8}
-                    step={1}
-                    value={design.stateBorderWeight}
-                    onChange={(v) => set("stateBorderWeight", v)}
-                    suffix="px"
-                  />
-                </Field>
-              </>
-            )}
-            <Field label="Outside Fade">
-              <ToggleSwitch
-                checked={design.showOutsideFade}
-                onChange={(v) => set("showOutsideFade", v)}
-              />
-            </Field>
-            {design.showOutsideFade && (
-              <Field label="Fade Opacity">
+              )}
+              <Field label="Border Radius">
                 <Slider
-                  min={0.1}
-                  max={0.8}
-                  step={0.05}
-                  value={design.outsideFadeOpacity}
-                  onChange={(v) => set("outsideFadeOpacity", v)}
-                  format={(v) => v.toFixed(2)}
+                  min={0}
+                  max={24}
+                  step={1}
+                  value={parseInt(design.borderRadius)}
+                  onChange={(v) => set("borderRadius", `${v}px`)}
+                  suffix="px"
                 />
               </Field>
-            )}
-          </div>
-        </AccordionSection>
+              <Field label="CO150 Border">
+                <ToggleSwitch
+                  checked={design.showBorder}
+                  onChange={(v) => set("showBorder", v)}
+                />
+              </Field>
+            </div>
+          </AccordionSection>
 
-        {/* ── Layout ── */}
-        <AccordionSection title="Layout">
-          <div className="space-y-3">
-            <Field label="Map / Table Ratio">
-              <select
-                value={design.mapTableRatio}
-                onChange={(e) => set("mapTableRatio", e.target.value)}
-                className="w-full rounded-md border border-gray-300 bg-white px-2.5 py-1.5 text-xs text-gray-700"
-              >
-                {RATIOS.map((r) => (
-                  <option key={r} value={r}>
-                    {r}
-                  </option>
-                ))}
-              </select>
-            </Field>
-            <Field label="Font">
-              <select
-                value={design.fontFamily}
-                onChange={(e) => set("fontFamily", e.target.value)}
-                className="w-full rounded-md border border-gray-300 bg-white px-2.5 py-1.5 text-xs text-gray-700"
-              >
-                {FONTS.map((f) => (
-                  <option key={f.value} value={f.value}>
-                    {f.label}
-                  </option>
-                ))}
-              </select>
-            </Field>
-            <Field label="Border Radius">
-              <Slider
-                min={0}
-                max={24}
-                step={1}
-                value={parseInt(design.borderRadius)}
-                onChange={(v) => set("borderRadius", `${v}px`)}
-                suffix="px"
-              />
-            </Field>
-            <Field label="CO150 Border">
-              <ToggleSwitch
-                checked={design.showBorder}
-                onChange={(v) => set("showBorder", v)}
-              />
-            </Field>
-          </div>
-        </AccordionSection>
+          {/* ── Typography ── */}
+          <AccordionSection title="Typography">
+            <div className="space-y-3">
+              <Field label="Map Font">
+                <select
+                  value={design.fontFamily}
+                  onChange={(e) => set("fontFamily", e.target.value)}
+                  className="w-full rounded-md border border-gray-300 bg-white px-2.5 py-1.5 text-xs text-gray-700"
+                >
+                  {FONTS.map((f) => (
+                    <option key={f.value} value={f.value}>
+                      {f.label}
+                    </option>
+                  ))}
+                </select>
+              </Field>
+              <p className="text-[11px] text-gray-400 italic">
+                Controls the default font for map popups and labels (when label font is set to &ldquo;Same as map font&rdquo;).
+              </p>
+            </div>
+          </AccordionSection>
 
-        {/* ── Colors ── */}
-        <AccordionSection title="Colors">
-          <div className="space-y-3">
-            <Field label="Panel Background">
-              <ColorInput
-                value={design.panelBg}
-                onChange={(v) => set("panelBg", v)}
-              />
-            </Field>
-            <Field label="Page Background">
-              <ColorInput
-                value={design.pageBg}
-                onChange={(v) => set("pageBg", v)}
-              />
-            </Field>
-            <Field label="Text Color">
-              <ColorInput
-                value={design.textColor}
-                onChange={(v) => set("textColor", v)}
-              />
-            </Field>
-            <Field label="Muted Text">
-              <ColorInput
-                value={design.textMuted}
-                onChange={(v) => set("textMuted", v)}
-              />
-            </Field>
-          </div>
-        </AccordionSection>
+          {/* ── Colors ── */}
+          <AccordionSection title="Colors">
+            <div className="space-y-3">
+              <Field label="Panel Background">
+                <ColorInput
+                  value={design.panelBg}
+                  onChange={(v) => set("panelBg", v)}
+                />
+              </Field>
+              <Field label="Page Background">
+                <ColorInput
+                  value={design.pageBg}
+                  onChange={(v) => set("pageBg", v)}
+                />
+              </Field>
+              <Field label="Text Color">
+                <ColorInput
+                  value={design.textColor}
+                  onChange={(v) => set("textColor", v)}
+                />
+              </Field>
+              <Field label="Muted Text">
+                <ColorInput
+                  value={design.textMuted}
+                  onChange={(v) => set("textMuted", v)}
+                />
+              </Field>
+            </div>
+          </AccordionSection>
 
-        {/* Placeholder sections for future phases */}
-        <AccordionSection title="Controls">
-          <p className="text-xs text-gray-400 italic">Coming soon</p>
-        </AccordionSection>
+        </SidebarGroup>
 
-        <AccordionSection title="Popups & panels">
-          <p className="text-xs text-gray-400 italic">Coming soon</p>
-        </AccordionSection>
+        {/* ════════════ EMBED ════════════ */}
+        <SidebarGroup title="Embed" defaultOpen={false}>
 
-        <AccordionSection title="Search box">
-          <p className="text-xs text-gray-400 italic">Coming soon</p>
-        </AccordionSection>
+          {/* ── Demo ── */}
+          <AccordionSection title="Auto-Rotate Demo">
+            <div className="space-y-3">
+              <p className="text-xs text-gray-500">
+                Add <code className="rounded bg-gray-100 px-1 py-0.5 font-mono text-[10px]">?demo=1</code> to
+                the embed URL to activate auto-rotate mode.
+              </p>
+              <Field label="Rotation Interval">
+                <Slider
+                  min={2000}
+                  max={10000}
+                  step={500}
+                  value={design.demoIntervalMs}
+                  onChange={(v) => set("demoIntervalMs", v)}
+                  format={(v) => `${(v / 1000).toFixed(1)}s`}
+                />
+              </Field>
+            </div>
+          </AccordionSection>
 
-        <AccordionSection title="Legend">
-          <p className="text-xs text-gray-400 italic">Coming soon</p>
-        </AccordionSection>
+        </SidebarGroup>
 
-        <AccordionSection title="Zoom">
-          <p className="text-xs text-gray-400 italic">Coming soon</p>
-        </AccordionSection>
-
-        <AccordionSection title="Header">
-          <p className="text-xs text-gray-400 italic">Coming soon</p>
-        </AccordionSection>
-
-        <AccordionSection title="Footer">
-          <p className="text-xs text-gray-400 italic">Coming soon</p>
-        </AccordionSection>
-
-        <AccordionSection title="Accessibility">
-          <p className="text-xs text-gray-400 italic">Coming soon</p>
-        </AccordionSection>
-
-        {/* ── Demo ── */}
-        <AccordionSection title="Demo">
-          <div className="space-y-3">
-            <p className="text-xs text-gray-500">
-              Add <code className="rounded bg-gray-100 px-1 py-0.5 font-mono text-[10px]">?demo=1</code> to
-              the embed URL to activate auto-rotate mode.
-            </p>
-            <Field label="Rotation Interval">
-              <Slider
-                min={2000}
-                max={10000}
-                step={500}
-                value={design.demoIntervalMs}
-                onChange={(v) => set("demoIntervalMs", v)}
-                format={(v) => `${(v / 1000).toFixed(1)}s`}
-              />
-            </Field>
-          </div>
-        </AccordionSection>
       </div>
     </div>
   );

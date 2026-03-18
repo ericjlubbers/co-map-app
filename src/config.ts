@@ -204,6 +204,7 @@ export const DEFAULT_DESIGN: DesignState = {
   cityFontSize: 12,
   cityColor: "#1f2937",
   labelFont: "inherit",
+  showDataPanel: true,
 };
 
 // ── Clustering Settings ─────────────────────────────────────────────

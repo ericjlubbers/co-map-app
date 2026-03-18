@@ -3,9 +3,6 @@ import { useDesign } from "../context/DesignContext";
 import { useLocationData } from "../hooks/useLocationData";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
-  faSpinner,
-  faExclamationTriangle,
-  faRotateRight,
   faGear,
 } from "@fortawesome/free-solid-svg-icons";
 import MapView from "./MapView";
@@ -51,7 +48,7 @@ export default function MapEditorContent({
   onDrawnFeaturesChange,
 }: MapEditorContentProps) {
   const { design, designMode } = useDesign();
-  const { data, loading, error, retry } = useLocationData();
+  const { data, loadExampleData, clearData } = useLocationData();
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [sidebarOpen, setSidebarOpen] = useState(designMode);
 
@@ -220,37 +217,6 @@ export default function MapEditorContent({
     [drawnFeatures, editingFeatureId],
   );
 
-  // ── Loading state ──
-  if (loading) {
-    return (
-      <div className="flex h-full items-center justify-center bg-gray-50">
-        <div className="text-center">
-          <FontAwesomeIcon icon={faSpinner} spin className="mb-3 text-3xl text-blue-500" />
-          <p className="text-sm font-medium text-gray-500">Loading locations…</p>
-        </div>
-      </div>
-    );
-  }
-
-  // ── Error state ──
-  if (error) {
-    return (
-      <div className="flex h-full items-center justify-center bg-gray-50">
-        <div className="text-center">
-          <FontAwesomeIcon icon={faExclamationTriangle} className="mb-3 text-3xl text-amber-500" />
-          <p className="mb-3 text-sm font-medium text-gray-700">{error}</p>
-          <button
-            onClick={retry}
-            className="inline-flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700"
-          >
-            <FontAwesomeIcon icon={faRotateRight} />
-            Try Again
-          </button>
-        </div>
-      </div>
-    );
-  }
-
   // ── Embed mode: map only ──
   if (embedMode) {
     return (
@@ -291,7 +257,7 @@ export default function MapEditorContent({
             className="design-grid grid h-full"
             style={{
               "--design-map-h": design.mobileMapHeight,
-              "--design-cols": design.mapTableRatio,
+              "--design-cols": design.showDataPanel ? design.mapTableRatio : "1fr",
             } as React.CSSProperties}
           >
             {/* Map panel */}
@@ -338,6 +304,7 @@ export default function MapEditorContent({
             </div>
 
             {/* Table panel */}
+            {design.showDataPanel && (
             <div
               className="flex min-h-0 flex-col overflow-hidden border-t border-gray-200 lg:border-l lg:border-t-0"
               style={{ backgroundColor: design.panelBg }}
@@ -385,11 +352,23 @@ export default function MapEditorContent({
                     totalCount={data.length}
                   />
                   <div className="min-h-0 flex-1">
-                    <DataTable
-                      points={filteredPoints}
-                      selectedId={selectedId}
-                      onSelectPoint={handleSelectPoint}
-                    />
+                    {data.length === 0 ? (
+                      <div className="flex h-full flex-col items-center justify-center gap-3 p-6 text-center">
+                        <p className="text-sm text-gray-500">No point data loaded yet.</p>
+                        <button
+                          onClick={loadExampleData}
+                          className="rounded-md bg-blue-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-blue-700"
+                        >
+                          Load Example Data
+                        </button>
+                      </div>
+                    ) : (
+                      <DataTable
+                        points={filteredPoints}
+                        selectedId={selectedId}
+                        onSelectPoint={handleSelectPoint}
+                      />
+                    )}
                   </div>
                 </>
               ) : (
@@ -404,6 +383,7 @@ export default function MapEditorContent({
                 </div>
               )}
             </div>
+            )}
           </div>
         </div>
       </div>
