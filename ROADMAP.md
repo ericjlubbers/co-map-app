@@ -25,8 +25,8 @@ Internal mapping platform for The Colorado Sun newsroom. Reporters and data visu
 |--------|--------|-------|
 | S1 — Editor UX Polish | ✅ | Font isolation, sidebar reorg (3 groups, single-open), table toggle, empty-by-default, example data, custom ColorPicker, category colors, custom border controls, embed padding/margin/background |
 | S2 — Responsive Embed | ✅ | Independent desktop/mobile aspect ratios, responsive embed.js loader, live embed code snippets, auto-rotate demo toggle |
-| S3 — View-Scoped Curation | 🔲 | Lock view, bbox-scoped Overpass, per-feature show/hide |
-| S4 — Auth & Deployment | 🔲 | User login, admin panel, Cloudflare Pages, DNS, production config |
+| S3 — Auth & Deployment | 🔲 | User login, admin panel, Cloudflare Pages, DNS, production config |
+| S4 — View-Scoped Curation | 🔲 | Lock view, bbox-scoped Overpass, per-feature show/hide |
 
 ### Deferred
 
@@ -181,63 +181,11 @@ Lightweight JS script (~1KB) hosted at `maps.coloradosun.com/embed.js` that:
 
 ---
 
-## Sprint 3 — View-Scoped Curation (Phase 8 Lite)
-
-**Goal**: Lock a view and curate which features are visible for publication-quality maps. Overpass queries scoped to visible extent instead of statewide.
-
-### S3.1: Lock View Toggle
-
-1. "Lock view" button in the editor toolbar — freezes current zoom level and map bounds
-2. Visual indicator (border glow or badge) when view is locked
-3. Pan/zoom disabled while locked; unlock to navigate freely again
-
-### S3.2: View-Extent Overpass Queries
-
-1. When view is locked, Overpass sub-toggle pills fetch data only for the visible bounding box
-2. Modify `vectorTiles.ts` Overpass query builder to accept optional bbox parameter
-3. Dramatically reduces API load and response time vs. statewide queries
-
-### S3.3: Per-Feature Visibility
-
-1. Click any road, waterway, city label, or peak while view is locked → show/hide toggle
-2. Hidden features stored in `data_config.viewCuration: { hiddenFeatureIds: string[] }`
-3. Curation rules applied on published/embed render — hidden features suppressed
-
-### S3.4: Save & Apply Curation
-
-1. View curation (zoom, bounds, hidden features) saved as part of the map's data_config
-2. Published/embed maps load the curated view — same zoom, bounds, and visibility rules
-3. Editor can unlock, navigate, re-lock to curate a different view
-
-### Deferred to later
-
-- Multiple saved views per map
-- Multi-select / marquee tool for batch styling
-- Per-feature style overrides (color, weight) — only show/hide for now
-
-### Relevant Files
-
-- New: `src/components/ViewLocker.tsx` — lock/unlock UI
-- Modify: `src/lib/vectorTiles.ts` — bbox parameter for Overpass queries
-- Modify: `src/components/layers/RoadLayer.tsx`, `WaterwayLayer.tsx`, `CityLayer.tsx` — filter hidden features
-- Modify: `src/types.ts` — `ViewCuration` type
-- Modify: `src/pages/EmbedPage.tsx` — apply curation rules on load
-
-### Verification
-
-- Lock view at Denver metro zoom → toggle Motorways → only roads in visible extent fetched
-- Click a road → hide → road disappears, saved to config
-- Publish map → embed loads at locked zoom/bounds with hidden features suppressed
-- Unlock → all features visible again
-- Re-lock at different zoom → curate a different set of features
-
----
-
-## Sprint 4 — Auth & Deployment
+## Sprint 3 — Auth & Deployment
 
 **Goal**: Replace shared API key with user login, add admin panel, deploy to `maps.coloradosun.com`.
 
-### S4.1: User Authentication
+### S3.1: User Authentication
 
 1. D1 `users` table: `id`, `email`, `password_hash`, `name`, `created_at`, `updated_at`
 2. Password hashing via Web Crypto API (PBKDF2 or similar — available in Workers runtime)
@@ -247,21 +195,21 @@ Lightweight JS script (~1KB) hosted at `maps.coloradosun.com/embed.js` that:
 6. Session stored in httpOnly cookie for security; frontend reads auth state from a `/api/auth/me` endpoint
 7. Logout endpoint clears session
 
-### S4.2: Admin Panel
+### S3.2: Admin Panel
 
 1. Admin route at `/admin` — protected, only accessible to authenticated users
 2. **User management**: list users, create new user (email + temporary password), reset password
 3. No roles/privileges — all authenticated users have full access
 4. Simple table UI consistent with the rest of the app (Libre Franklin, same styling)
 
-### S4.3: Cloudflare Pages + Worker Deployment
+### S3.3: Cloudflare Pages + Worker Deployment
 
 1. Cloudflare Pages project for the Vite frontend build
 2. Worker deployed with production D1 database (separate from local dev)
 3. Production wrangler.toml config: custom route, production D1 binding, CORS for `maps.coloradosun.com`
 4. API_KEY env var removed (replaced by user auth); seed an initial admin user via migration or CLI
 
-### S4.4: DNS & Domain
+### S3.4: DNS & Domain
 
 1. CNAME record: `maps.coloradosun.com` → Cloudflare Pages domain
 2. Cloudflare handles SSL automatically
@@ -269,7 +217,7 @@ Lightweight JS script (~1KB) hosted at `maps.coloradosun.com/embed.js` that:
 4. Update CORS_ORIGIN to `https://maps.coloradosun.com`
 5. Embed script URL: `https://maps.coloradosun.com/embed.js`
 
-### S4.5: Production Hardening
+### S3.5: Production Hardening
 
 1. Error boundary component — catch React crashes with friendly "Something went wrong" UI
 2. API error handling — toast notifications for save failures, network errors
@@ -297,6 +245,58 @@ Lightweight JS script (~1KB) hosted at `maps.coloradosun.com/embed.js` that:
 - Embed at `maps.coloradosun.com/embed/:id` → loads without auth (public)
 - SSL working, no mixed content warnings
 - API errors show toast notifications, not silent failures
+
+---
+
+## Sprint 4 — View-Scoped Curation
+
+**Goal**: Lock a view and curate which features are visible for publication-quality maps. Overpass queries scoped to visible extent instead of statewide.
+
+### S4.1: Lock View Toggle
+
+1. "Lock view" button in the editor toolbar — freezes current zoom level and map bounds
+2. Visual indicator (border glow or badge) when view is locked
+3. Pan/zoom disabled while locked; unlock to navigate freely again
+
+### S4.2: View-Extent Overpass Queries
+
+1. When view is locked, Overpass sub-toggle pills fetch data only for the visible bounding box
+2. Modify `vectorTiles.ts` Overpass query builder to accept optional bbox parameter
+3. Dramatically reduces API load and response time vs. statewide queries
+
+### S4.3: Per-Feature Visibility
+
+1. Click any road, waterway, city label, or peak while view is locked → show/hide toggle
+2. Hidden features stored in `data_config.viewCuration: { hiddenFeatureIds: string[] }`
+3. Curation rules applied on published/embed render — hidden features suppressed
+
+### S4.4: Save & Apply Curation
+
+1. View curation (zoom, bounds, hidden features) saved as part of the map's data_config
+2. Published/embed maps load the curated view — same zoom, bounds, and visibility rules
+3. Editor can unlock, navigate, re-lock to curate a different view
+
+### Deferred to later
+
+- Multiple saved views per map
+- Multi-select / marquee tool for batch styling
+- Per-feature style overrides (color, weight) — only show/hide for now
+
+### Relevant Files
+
+- New: `src/components/ViewLocker.tsx` — lock/unlock UI
+- Modify: `src/lib/vectorTiles.ts` — bbox parameter for Overpass queries
+- Modify: `src/components/layers/RoadLayer.tsx`, `WaterwayLayer.tsx`, `CityLayer.tsx` — filter hidden features
+- Modify: `src/types.ts` — `ViewCuration` type
+- Modify: `src/pages/EmbedPage.tsx` — apply curation rules on load
+
+### Verification
+
+- Lock view at Denver metro zoom → toggle Motorways → only roads in visible extent fetched
+- Click a road → hide → road disappears, saved to config
+- Publish map → embed loads at locked zoom/bounds with hidden features suppressed
+- Unlock → all features visible again
+- Re-lock at different zoom → curate a different set of features
 
 ---
 
@@ -495,24 +495,24 @@ Lightweight JS script (~1KB) hosted at `maps.coloradosun.com/embed.js` that:
 ```
 Completed Phases (1-5, 7)              ✅ all merged to main
     │
-    ├── Sprint 1 (Editor UX Polish)    → unblocks usability testing
+    ├── Sprint 1 (Editor UX Polish)    ✅ merged
     │
-    ├── Sprint 2 (Responsive Embed)    → unblocks WordPress integration
+    ├── Sprint 2 (Responsive Embed)    ✅ merged
     │
-    ├── Sprint 3 (View Curation)       → unblocks publication-quality maps
-    │
-    └── Sprint 4 (Auth & Deployment)   → production launch
+    └── Sprint 3 (Auth & Deployment)   → production launch ← NEXT
             │
-            ├── Phase 6 (Wizard)       → deferred post-launch optimization
+            ├── Sprint 4 (View Curation)  → publication-quality maps
             │
-            ├── Sprint 5 (Choropleth)  → deferred; region data + gradient fills
+            ├── Sprint 5 (Choropleth)     → region data + gradient fills
             │
-            ├── Sprint 6 (Vector/Local)→ deferred; vector labels + local data cache
+            ├── Sprint 6 (Vector/Local)   → vector labels + local data cache
             │
-            └── Sprint 7 (Preview)     → deferred; responsive preview toolbar
+            ├── Sprint 7 (Preview)        → responsive preview toolbar
+            │
+            └── Phase 6 (Wizard)          → deferred post-launch optimization
 ```
 
-Sprints 1–3 can proceed in any order; Sprint 4 depends on S1–S3 being stable. Sprints 5–6 are post-launch enhancements.
+Sprint 3 is the next milestone — production deployment unblocks real map publishing. Sprints 4–7 are post-launch enhancements.
 
 ---
 
