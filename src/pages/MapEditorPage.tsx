@@ -13,6 +13,7 @@ import {
 import { getMap, updateMap, publishMap, type MapDetail } from "../lib/api";
 import { DesignProvider } from "../context/DesignContext";
 import MapEditorContent from "../components/MapEditorContent";
+import EmbedCodeBanner from "../components/EmbedCodeBanner";
 import DataTabBar from "../components/DataTabBar";
 import DataEditor from "../components/DataEditor";
 import DataSidebar from "../components/DataSidebar";
@@ -226,8 +227,6 @@ export default function MapEditorPage() {
   }, [mapData]);
 
   const embedUrl = `${window.location.origin}/embed/${id}`;
-  const demoEmbedUrl = `${embedUrl}?demo=1`;
-  const embedCode = `<iframe src="${embedUrl}" width="100%" height="600" frameborder="0" style="border:0" allowfullscreen></iframe>`;
 
   if (loading) {
     return (
@@ -320,50 +319,7 @@ export default function MapEditorPage() {
         </header>
 
         {/* Embed code banner */}
-        {showEmbedCode && (
-          <div className="border-b border-gray-200 bg-gray-50 px-4 py-3 space-y-2">
-            <div>
-              <label className="mb-1 block text-xs font-medium text-gray-500">
-                Embed code (paste into WordPress)
-              </label>
-              <div className="flex gap-2">
-                <input
-                  type="text"
-                  readOnly
-                  value={embedCode}
-                  className="flex-1 rounded-md border border-gray-300 bg-white px-3 py-1.5 text-xs font-mono text-gray-700"
-                  onFocus={(e) => e.target.select()}
-                />
-                <button
-                  onClick={() => navigator.clipboard.writeText(embedCode)}
-                  className="rounded-md bg-blue-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-blue-700"
-                >
-                  Copy
-                </button>
-              </div>
-            </div>
-            <div>
-              <label className="mb-1 block text-xs font-medium text-gray-500">
-                Demo embed (auto-rotates categories)
-              </label>
-              <div className="flex gap-2">
-                <input
-                  type="text"
-                  readOnly
-                  value={`<iframe src="${demoEmbedUrl}" width="100%" height="600" frameborder="0" style="border:0" allowfullscreen></iframe>`}
-                  className="flex-1 rounded-md border border-gray-300 bg-white px-3 py-1.5 text-xs font-mono text-gray-700"
-                  onFocus={(e) => e.target.select()}
-                />
-                <button
-                  onClick={() => navigator.clipboard.writeText(`<iframe src="${demoEmbedUrl}" width="100%" height="600" frameborder="0" style="border:0" allowfullscreen></iframe>`)}
-                  className="rounded-md bg-blue-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-blue-700"
-                >
-                  Copy
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
+        {showEmbedCode && id && <EmbedCodeBanner mapId={id} />}
 
         {/* Tab bar: Preview | Data */}
         <DataTabBar

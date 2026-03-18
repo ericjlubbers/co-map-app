@@ -37,6 +37,7 @@ Internal mapping platform for The Colorado Sun newsroom. Reporters and data visu
 | CSV file upload | 🔲 | Data import alternative to Google Sheets |
 | Sprint 5 — Region Choropleth Layer | 🔲 | Gradient fills for county regions, auto-toggle region layer, design controls |
 | Sprint 6 — Vector Tile Labels & Local Data | 🔲 | Client-side vector labels, local CO data cache, tile caching |
+| Sprint 7 — Responsive Preview Toolbar | 🔲 | Desktop/mobile/article preview modes in the editor |
 
 ### Post-merge refinements (applied to main 2026-03-17)
 - Label font fix: CityLayer applies `design.labelFont` to DivIcon styles
@@ -405,6 +406,59 @@ Lightweight JS script (~1KB) hosted at `maps.coloradosun.com/embed.js` that:
 
 ---
 
+## Sprint 7 — Responsive Preview Toolbar (Deferred)
+
+**Goal**: Let editors preview exactly how their map embed will look at different screen sizes and in the context of a Colorado Sun article — without leaving the editor.
+
+### S7.1: Preview Mode Toolbar
+
+1. Add a toolbar above the map preview panel with mode buttons: **Desktop**, **Mobile**, **Custom**, **Article**
+2. Default mode is "Desktop" — map preview fills the available panel width as it does today
+3. Switching modes resizes the preview container to simulate the target viewport
+4. Active mode button is visually highlighted; only one mode active at a time
+
+### S7.2: Desktop & Mobile Previews
+
+1. **Desktop**: Preview container uses `design.embedAspectRatio` to set width:height, constrained to the available panel space
+2. **Mobile**: Preview container uses `design.embedMobileAspectRatio`, narrowed to simulate a phone-width viewport (e.g. 375px logical width) centered in the panel
+3. Both modes apply the corresponding embed height setting (`design.embedHeight` / `design.embedHeightUnit`) when not set to "auto"
+4. Container shows a subtle device-frame outline (rounded corners, light border) to reinforce the preview context
+
+### S7.3: Custom Preview
+
+1. **Custom**: User enters arbitrary width × height (in px) via two number inputs in the toolbar
+2. Preview container resizes to the specified dimensions, centered in the panel
+3. Values persist for the session but are not saved to design_state
+
+### S7.4: Article Preview
+
+1. **Article**: Renders the map embedded within a mock Colorado Sun article layout
+2. Mock layout includes:
+   - A dummy headline and byline in The Sun's typography
+   - A column of placeholder body text at The Sun's content width (~680px)
+   - The map embed inserted between paragraphs, using the map's `embedAspectRatio` and height settings
+   - Sun-style margins, padding, and max-width constraints
+3. The article preview scrolls vertically so editors can see the map in context
+4. Styles sourced from The Sun's actual CSS where possible (font stacks, line heights, column widths)
+
+### Relevant Files
+
+- New: `src/components/PreviewToolbar.tsx` — mode switcher buttons + custom size inputs
+- New: `src/components/ArticlePreview.tsx` — mock Sun article layout with embedded map
+- Modify: `src/components/MapEditorContent.tsx` — wrap map panel in preview container that responds to active mode
+- Modify: `src/styles/index.css` — article preview typography styles (Sun font stack, column width)
+
+### Verification
+
+- Click "Desktop" → preview shows map at desktop aspect ratio, filling panel width
+- Click "Mobile" → preview narrows to phone width, uses mobile aspect ratio
+- Click "Custom" → enter 800×450 → preview resizes to exactly those dimensions
+- Click "Article" → map appears inside a mock Sun article with headline, body text, and correct column width
+- Change embed aspect ratio in sidebar → preview updates immediately in all modes
+- Preview modes do not affect saved design state (purely visual)
+
+---
+
 ## Deferred: Phase 6 — Locator Map Wizard & Map Templates
 
 **Goal**: Guided multi-step workflow for creating simple locator maps, plus a template system. Deferred because editors can create locator maps manually with the current tools — the wizard is a workflow optimization.
@@ -442,7 +496,9 @@ Completed Phases (1-5, 7)              ✅ all merged to main
             │
             ├── Sprint 5 (Choropleth)  → deferred; region data + gradient fills
             │
-            └── Sprint 6 (Vector/Local)→ deferred; vector labels + local data cache
+            ├── Sprint 6 (Vector/Local)→ deferred; vector labels + local data cache
+            │
+            └── Sprint 7 (Preview)     → deferred; responsive preview toolbar
 ```
 
 Sprints 1–3 can proceed in any order; Sprint 4 depends on S1–S3 being stable. Sprints 5–6 are post-launch enhancements.

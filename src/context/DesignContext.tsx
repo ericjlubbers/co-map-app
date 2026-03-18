@@ -56,6 +56,13 @@ const PARAM_MAP: Record<keyof DesignState, string> = {
   cityColor: "cityColor",
   labelFont: "labelFont",
   showDataPanel: "dataPanel",
+  pointColor: "ptColor",
+  pointColorMode: "ptMode",
+  categoryColors: "catColors",
+  embedAspectRatio: "eRatio",
+  embedMobileAspectRatio: "eMobileRatio",
+  embedHeight: "eHeight",
+  embedHeightUnit: "eHeightUnit",
 };
 
 // ── Font shorthand mapping ──────────────────────────────────
