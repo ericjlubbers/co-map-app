@@ -4,7 +4,6 @@ import {
   faMagnifyingGlass,
   faXmark,
 } from "@fortawesome/free-solid-svg-icons";
-import { getCategoryInfo } from "../config";
 
 interface Props {
   categories: string[];
@@ -15,6 +14,11 @@ interface Props {
   onSearchChange: (query: string) => void;
   resultCount: number;
   totalCount: number;
+  /** Single color for all category pills (from design.pointColor) */
+  pointColor?: string;
+  /** When "by-category", use categoryColors map instead of single pointColor */
+  pointColorMode?: "single" | "by-category";
+  categoryColors?: Record<string, string>;
 }
 
 export default function FilterBar({
@@ -26,6 +30,9 @@ export default function FilterBar({
   onSearchChange,
   resultCount,
   totalCount,
+  pointColor = "#2563eb",
+  pointColorMode = "single",
+  categoryColors = {},
 }: Props) {
   const allActive = activeCategories.size === 0;
 
@@ -73,16 +80,18 @@ export default function FilterBar({
           All
         </button>
         {categories.map((cat) => {
-          const info = getCategoryInfo(cat);
           const isActive = activeCategories.has(cat);
+          const color = pointColorMode === "by-category" && categoryColors[cat]
+            ? categoryColors[cat]
+            : pointColor;
           return (
             <button
               key={cat}
               onClick={() => onToggleCategory(cat)}
               className="rounded-full px-3 py-1 text-xs font-medium transition"
               style={{
-                backgroundColor: isActive ? info.color : info.bgColor,
-                color: isActive ? "white" : info.color,
+                backgroundColor: isActive ? color : `${color}18`,
+                color: isActive ? "white" : color,
               }}
             >
               {cat}

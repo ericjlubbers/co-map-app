@@ -117,6 +117,13 @@ export interface DesignState {
   textMuted: string;
   showLabels: boolean;
   showBorder: boolean;
+  // Custom border
+  showCustomBorder: boolean;
+  customBorderColor: string;
+  customBorderWidth: number;
+  customBorderStyle: string;
+  embedPadding: number;
+  embedMargin: number;
   markerSize: number;
   // County lines
   showCountyLines: boolean;
@@ -132,6 +139,7 @@ export interface DesignState {
   outsideFadeOpacity: number;
   // Demo auto-rotate
   demoIntervalMs: number;
+  enableDemoMode: boolean;
   // Units
   useMetricUnits: boolean;
   // Roads layer
@@ -158,4 +166,15 @@ export interface DesignState {
   cityColor: string;
   // Labels layer
   labelFont: string;
+  // Points layer
+  pointColor: string;
+  pointColorMode: "single" | "by-category";
+  categoryColors: Record<string, string>;
+  // Data panel visibility
+  showDataPanel: boolean;
+  // Embed sizing
+  embedAspectRatio: string;
+  embedMobileAspectRatio: string;
+  embedHeight: string;
+  embedHeightUnit: "auto" | "px" | "vh";
 }

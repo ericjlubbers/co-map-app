@@ -12,7 +12,7 @@ import MapEditorContent from "../components/MapEditorContent";
 export default function EmbedPage() {
   const { id } = useParams<{ id: string }>();
   const [searchParams] = useSearchParams();
-  const demoMode = searchParams.get("demo") === "1";
+  const demoOverride = searchParams.get("demo") === "1";
   const [mapData, setMapData] = useState<MapDetail | null>(null);
   const [error, setError] = useState<string | null>(null);
 
@@ -42,7 +42,10 @@ export default function EmbedPage() {
   return (
     <DesignProvider initialDesignState={mapData.design_state} embedMode>
       <div className="h-dvh w-dvw">
-        <MapEditorContent embedMode demoMode={demoMode} />
+        <MapEditorContent
+          embedMode
+          demoMode={demoOverride || !!(mapData.design_state as Record<string, unknown>)?.enableDemoMode}
+        />
       </div>
     </DesignProvider>
   );

@@ -19,12 +19,12 @@ Internal mapping platform for The Colorado Sun newsroom. Reporters and data visu
 | 5 — Drawing & Sketching Tools | ✅ | Point/line/polygon, vertex editing, style controls |
 | 7 — Embed & Edge Caching | ✅ | Auto-rotate demo, 24h edge cache, publish flow |
 
-### Production Sprints (new)
+### Production Sprints
 
 | Sprint | Status | Focus |
 |--------|--------|-------|
-| S1 — Editor UX Polish | 🔲 | Font isolation, sidebar reorg, table toggle, empty-by-default, example data |
-| S2 — Responsive Embed | 🔲 | Aspect ratio control, responsive loader script for WordPress |
+| S1 — Editor UX Polish | ✅ | Font isolation, sidebar reorg (3 groups, single-open), table toggle, empty-by-default, example data, custom ColorPicker, category colors, custom border controls, embed padding/margin/background |
+| S2 — Responsive Embed | ✅ | Independent desktop/mobile aspect ratios, responsive embed.js loader, live embed code snippets, auto-rotate demo toggle |
 | S3 — View-Scoped Curation | 🔲 | Lock view, bbox-scoped Overpass, per-feature show/hide |
 | S4 — Auth & Deployment | 🔲 | User login, admin panel, Cloudflare Pages, DNS, production config |
 
@@ -35,11 +35,25 @@ Internal mapping platform for The Colorado Sun newsroom. Reporters and data visu
 | Phase 6 — Locator Map Wizard | 🔲 | Workflow shortcut; editors can create locator maps manually today |
 | Multi-select / marquee tool | 🔲 | Batch-style road/waterway segments; Phase 3 polish |
 | CSV file upload | 🔲 | Data import alternative to Google Sheets |
+| Sprint 5 — Region Choropleth Layer | 🔲 | Gradient fills for county regions, auto-toggle region layer, design controls |
+| Sprint 6 — Vector Tile Labels & Local Data | 🔲 | Client-side vector labels, local CO data cache, tile caching |
+| Sprint 7 — Responsive Preview Toolbar | 🔲 | Desktop/mobile/article preview modes in the editor |
 
 ### Post-merge refinements (applied to main 2026-03-17)
 - Label font fix: CityLayer applies `design.labelFont` to DivIcon styles
 - Overpass API reliability: timeout 60→120s, retry with backoff on 429/504
 - On-demand sub-toggles: Roads (Motorways/Trunk/Primary), Waterways (Rivers/Streams), Cities (Cities/Peaks) — all default off
+
+### Sprint 1 & 2 extras (merged 2026-03-18)
+- Custom ColorPicker: HSV color space, hex/RGB inputs, Carbon Design palettes, flip-up positioning near screen bottom
+- Category colors: per-category color assignment with unique default palette
+- SidebarGroup: 3 collapsible super-groups (Layers, Design, Embed) with single-open behavior
+- Custom border: style/width/color controls, mutually exclusive with CO150
+- Embed controls: padding + padding background color, margin, border radius
+- Responsive embed.js: ~1KB iframe loader, reads data-co-map attributes
+- EmbedCodeBanner: live design-aware embed snippets with auto `?demo=1`
+- Auto-rotate demo converted from separate embed type to design toggle
+- Renamed "Projection" sidebar section to "Tiles"
 
 ---
 
@@ -286,6 +300,176 @@ Lightweight JS script (~1KB) hosted at `maps.coloradosun.com/embed.js` that:
 
 ---
 
+## Sprint 5 — Region Choropleth Layer (Deferred)
+
+**Goal**: Turn region/county data into a visual choropleth layer with gradient fills, giving reporters the ability to create data-driven county maps.
+
+### S5.1: Auto-Toggle Region Layer on Data Load
+
+1. When "Color-coded Regions" starter data is loaded (or region data is populated), automatically enable the region layer and expand the Regions design menu
+2. Region layer toggle: `showRegions: boolean` in DesignState (default `false`)
+3. Loading region data sets `showRegions = true` and opens the Regions accordion
+
+### S5.2: Gradient Fill from Region Values
+
+1. Read the value column from `dataConfig.regions` rows (matched to county GeoJSON features by name)
+2. Compute min/max across all region values
+3. Generate a linear color gradient between two configurable colors (e.g. light → dark)
+4. Fill each county polygon with the interpolated color based on its value
+5. County polygons with no matching data row remain unfilled or use a "no data" color
+
+### S5.3: Region Design Controls
+
+1. Add to the Regions accordion in DesignSidebar:
+   - **Fill Color Range**: two ColorInput fields (low value color, high value color)
+   - **Fill Opacity**: Slider 0.1–1.0
+   - **No-Data Color**: ColorInput for counties without values
+   - **Show Region Labels**: toggle to display value/name on each county
+   - **Legend**: toggle to show a gradient legend bar on the map
+2. New DesignState fields: `regionFillLow`, `regionFillHigh`, `regionFillOpacity`, `regionNoDataColor`, `showRegionLabels`, `showRegionLegend`
+
+### S5.4: Region Hover & Popup
+
+1. Hovering a county highlights it (increased opacity or outline)
+2. Clicking shows a popup with the county name and data value
+3. Popup styled with the map's font and color settings
+
+### Relevant Files
+
+- Modify: `src/components/layers/DrawnFeaturesLayer.tsx` or new `RegionLayer.tsx` — render filled county polygons
+- Modify: `src/components/DesignSidebar.tsx` — region design controls in Regions accordion
+- Modify: `src/types.ts`, `src/config.ts` — new DesignState fields
+- Modify: `src/pages/MapEditorPage.tsx` — auto-toggle region layer on data load
+- New: `src/components/RegionLegend.tsx` — gradient legend overlay
+
+### Verification
+
+- Load "Color-coded Regions" starter → region layer turns on, counties fill with gradient
+- Adjust fill colors → map updates live
+- Counties without data show "no data" color
+- Hover county → highlight, click → popup with name and value
+- Toggle legend on/off → gradient bar appears/disappears on map
+
+---
+
+## Sprint 6 — Vector Tile Labels & Local Data Infrastructure (Deferred)
+
+**Goal**: Replace raster label overlay tiles with client-rendered vector tile labels for full font/style control, and build a local Colorado data cache for faster, API-independent map creation.
+
+### S6.1: Vector Tile Labels
+
+1. Switch from raster label overlay (CARTO `light_only_labels`, Stadia `stamen_terrain_labels`) to vector tile source (e.g. OpenMapTiles, Protomaps)
+2. Render labels client-side using a vector tile library (e.g. `maplibre-gl` layer on top of Leaflet, or Leaflet vector tile plugin)
+3. Label fonts now come from `design.labelFont` — full control over typeface, size, color, halo
+4. Label density and zoom-level visibility controlled by the design sidebar
+
+### S6.2: Local Colorado Data Cache
+
+1. Build a local data file (GeoJSON or protobuf) containing all Colorado features: roads, waterways, cities, landmarks, peaks
+2. Source data from OpenStreetMap (one-time Overpass export) and/or other open sources
+3. Store in `public/data/` or serve from the Worker — no per-map Overpass API calls needed
+4. Map editor loads features from local cache instantly instead of live Overpass queries
+5. Feature data includes: geometry, name, type (motorway/trunk/primary, river/stream, city/peak), and other relevant attributes
+
+### S6.3: Data Freshness Pipeline
+
+1. Scheduled Worker (Cloudflare Cron Trigger) runs periodically (e.g. weekly) to refresh local data from Overpass/OSM
+2. Compares diff with existing cache, applies updates
+3. Version stamp on the data file — editor checks for updates on load
+4. Manual "Refresh data" button in admin panel for on-demand updates
+
+### S6.4: Map Tile Caching
+
+1. Proxy base map tiles through the Cloudflare Worker with edge caching (cf.cacheTtl)
+2. Reduces external API calls to tile providers (CARTO, Stadia, etc.)
+3. Tiles cached at the edge — subsequent requests served from cache
+4. Cache warming: pre-fetch tiles for common Colorado zoom levels and extents
+5. Fallback to live tile API if cache miss
+
+### S6.5: Label Style Controls
+
+1. Extended label design controls in the sidebar:
+   - Font family (from design.labelFont)
+   - Font size per label type (cities, roads, waterways)
+   - Text color and halo (outline) color/width
+   - Label density / min zoom level
+   - Collision detection toggle (prevent label overlap)
+2. Labels update instantly on the map as design values change
+
+### Relevant Files
+
+- New: `src/components/layers/VectorLabelLayer.tsx` — client-rendered vector labels
+- Modify: `src/components/DesignSidebar.tsx` — extended label controls
+- New: `worker/src/data-pipeline.ts` — scheduled Overpass data refresh
+- New: `public/data/colorado-features.geojson` or `.pbf` — local feature cache
+- Modify: `worker/src/index.ts` — tile proxy endpoint, data cache endpoint
+- Modify: `src/lib/vectorTiles.ts` — read from local cache instead of live Overpass
+- Modify: `worker/wrangler.toml` — cron trigger for data refresh
+
+### Verification
+
+- Switch label font → map labels re-render in new font instantly
+- Change label color/size → live preview on map
+- Map loads without any Overpass API calls (features from local cache)
+- Tile requests cached at edge — subsequent loads are faster
+- Weekly cron updates local data — version bumps reported in admin
+- Manual refresh button works for on-demand data updates
+
+---
+
+## Sprint 7 — Responsive Preview Toolbar (Deferred)
+
+**Goal**: Let editors preview exactly how their map embed will look at different screen sizes and in the context of a Colorado Sun article — without leaving the editor.
+
+### S7.1: Preview Mode Toolbar
+
+1. Add a toolbar above the map preview panel with mode buttons: **Desktop**, **Mobile**, **Custom**, **Article**
+2. Default mode is "Desktop" — map preview fills the available panel width as it does today
+3. Switching modes resizes the preview container to simulate the target viewport
+4. Active mode button is visually highlighted; only one mode active at a time
+
+### S7.2: Desktop & Mobile Previews
+
+1. **Desktop**: Preview container uses `design.embedAspectRatio` to set width:height, constrained to the available panel space
+2. **Mobile**: Preview container uses `design.embedMobileAspectRatio`, narrowed to simulate a phone-width viewport (e.g. 375px logical width) centered in the panel
+3. Both modes apply the corresponding embed height setting (`design.embedHeight` / `design.embedHeightUnit`) when not set to "auto"
+4. Container shows a subtle device-frame outline (rounded corners, light border) to reinforce the preview context
+
+### S7.3: Custom Preview
+
+1. **Custom**: User enters arbitrary width × height (in px) via two number inputs in the toolbar
+2. Preview container resizes to the specified dimensions, centered in the panel
+3. Values persist for the session but are not saved to design_state
+
+### S7.4: Article Preview
+
+1. **Article**: Renders the map embedded within a mock Colorado Sun article layout
+2. Mock layout includes:
+   - A dummy headline and byline in The Sun's typography
+   - A column of placeholder body text at The Sun's content width (~680px)
+   - The map embed inserted between paragraphs, using the map's `embedAspectRatio` and height settings
+   - Sun-style margins, padding, and max-width constraints
+3. The article preview scrolls vertically so editors can see the map in context
+4. Styles sourced from The Sun's actual CSS where possible (font stacks, line heights, column widths)
+
+### Relevant Files
+
+- New: `src/components/PreviewToolbar.tsx` — mode switcher buttons + custom size inputs
+- New: `src/components/ArticlePreview.tsx` — mock Sun article layout with embedded map
+- Modify: `src/components/MapEditorContent.tsx` — wrap map panel in preview container that responds to active mode
+- Modify: `src/styles/index.css` — article preview typography styles (Sun font stack, column width)
+
+### Verification
+
+- Click "Desktop" → preview shows map at desktop aspect ratio, filling panel width
+- Click "Mobile" → preview narrows to phone width, uses mobile aspect ratio
+- Click "Custom" → enter 800×450 → preview resizes to exactly those dimensions
+- Click "Article" → map appears inside a mock Sun article with headline, body text, and correct column width
+- Change embed aspect ratio in sidebar → preview updates immediately in all modes
+- Preview modes do not affect saved design state (purely visual)
+
+---
+
 ## Deferred: Phase 6 — Locator Map Wizard & Map Templates
 
 **Goal**: Guided multi-step workflow for creating simple locator maps, plus a template system. Deferred because editors can create locator maps manually with the current tools — the wizard is a workflow optimization.
@@ -319,10 +503,16 @@ Completed Phases (1-5, 7)              ✅ all merged to main
     │
     └── Sprint 4 (Auth & Deployment)   → production launch
             │
-            └── Phase 6 (Wizard)       → deferred post-launch optimization
+            ├── Phase 6 (Wizard)       → deferred post-launch optimization
+            │
+            ├── Sprint 5 (Choropleth)  → deferred; region data + gradient fills
+            │
+            ├── Sprint 6 (Vector/Local)→ deferred; vector labels + local data cache
+            │
+            └── Sprint 7 (Preview)     → deferred; responsive preview toolbar
 ```
 
-Sprints 1–3 can proceed in any order; Sprint 4 depends on S1–S3 being stable.
+Sprints 1–3 can proceed in any order; Sprint 4 depends on S1–S3 being stable. Sprints 5–6 are post-launch enhancements.
 
 ---
 

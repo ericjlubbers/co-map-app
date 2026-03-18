@@ -23,6 +23,12 @@ const PARAM_MAP: Record<keyof DesignState, string> = {
   textMuted: "textMuted",
   showLabels: "labels",
   showBorder: "border",
+  showCustomBorder: "customBorder",
+  customBorderColor: "cbColor",
+  customBorderWidth: "cbWidth",
+  customBorderStyle: "cbStyle",
+  embedPadding: "ePadding",
+  embedMargin: "eMargin",
   markerSize: "marker",
   showCountyLines: "county",
   countyLineColor: "countyColor",
@@ -34,6 +40,7 @@ const PARAM_MAP: Record<keyof DesignState, string> = {
   showOutsideFade: "fade",
   outsideFadeOpacity: "fadeOp",
   demoIntervalMs: "demoMs",
+  enableDemoMode: "demoOn",
   useMetricUnits: "metric",
   showRoads: "roads",
   showMotorways: "motorways",
@@ -55,6 +62,14 @@ const PARAM_MAP: Record<keyof DesignState, string> = {
   cityFontSize: "citySize",
   cityColor: "cityColor",
   labelFont: "labelFont",
+  showDataPanel: "dataPanel",
+  pointColor: "ptColor",
+  pointColorMode: "ptMode",
+  categoryColors: "catColors",
+  embedAspectRatio: "eRatio",
+  embedMobileAspectRatio: "eMobileRatio",
+  embedHeight: "eHeight",
+  embedHeightUnit: "eHeightUnit",
 };
 
 // ── Font shorthand mapping ──────────────────────────────────
@@ -214,6 +229,9 @@ function parseFromURL(): Partial<DesignState> {
   const labelFont = params.get(PARAM_MAP.labelFont);
   if (labelFont) partial.labelFont = decodeURIComponent(labelFont);
 
+  const dataPanel = params.get(PARAM_MAP.showDataPanel);
+  if (dataPanel) partial.showDataPanel = dataPanel === "1";
+
   return partial;
 }
 
@@ -319,6 +337,9 @@ function serializeToURL(state: DesignState, includeDesignMode: boolean): string 
   if (state.labelFont !== DEFAULT_DESIGN.labelFont)
     params.set(PARAM_MAP.labelFont, encodeURIComponent(state.labelFont));
 
+  if (state.showDataPanel !== DEFAULT_DESIGN.showDataPanel)
+    params.set(PARAM_MAP.showDataPanel, state.showDataPanel ? "1" : "0");
+
   if (includeDesignMode) params.set("design", "1");
 
   const qs = params.toString();
@@ -403,10 +424,10 @@ export function DesignProvider({
     root.style.setProperty("--design-text-muted", design.textMuted);
     root.style.setProperty("--design-border-radius", design.borderRadius);
 
-    // Font family on body
+    // Map-only font (used by LabelLayer/CityLayer via "inherit" fallback)
     const fontStack = `"${design.fontFamily}", ui-sans-serif, system-ui, sans-serif`;
     root.style.setProperty("--design-font", fontStack);
-    document.body.style.fontFamily = fontStack;
+    // App UI always uses Libre Franklin via CSS --font-sans; do NOT set body font here
   }, [design]);
 
   const set = useCallback(

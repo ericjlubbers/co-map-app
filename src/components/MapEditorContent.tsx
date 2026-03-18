@@ -1,11 +1,7 @@
 import { useState, useMemo, useCallback, useEffect, useRef } from "react";
 import { useDesign } from "../context/DesignContext";
-import { useLocationData } from "../hooks/useLocationData";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
-  faSpinner,
-  faExclamationTriangle,
-  faRotateRight,
   faGear,
 } from "@fortawesome/free-solid-svg-icons";
 import MapView from "./MapView";
@@ -30,7 +26,9 @@ import type {
   DrawingMode,
   DrawnFeatureCollection,
   DrawnFeatureProperties,
+  PointData,
 } from "../types";
+import type { StarterType } from "../lib/starterData";
 import type { LatLng } from "leaflet";
 
 interface MapEditorContentProps {
@@ -38,6 +36,10 @@ interface MapEditorContentProps {
   /** Activates auto-rotate demo mode (embed `?demo=1`) */
   demoMode?: boolean;
   mapId?: string;
+  /** Points derived from dataConfig.points (persisted) */
+  points?: PointData[];
+  onLoadStarter?: (type: StarterType) => void;
+  onClearPoints?: () => void;
   initialDrawnFeatures?: DrawnFeatureCollection;
   onDrawnFeaturesChange?: (features: DrawnFeatureCollection) => void;
 }
@@ -47,11 +49,14 @@ type DataTab = "points" | "drawn";
 export default function MapEditorContent({
   embedMode = false,
   demoMode = false,
+  points: externalPoints,
+  onLoadStarter,
+  onClearPoints,
   initialDrawnFeatures,
   onDrawnFeaturesChange,
 }: MapEditorContentProps) {
   const { design, designMode } = useDesign();
-  const { data, loading, error, retry } = useLocationData();
+  const data = externalPoints ?? [];
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [sidebarOpen, setSidebarOpen] = useState(designMode);
 
@@ -220,37 +225,6 @@ export default function MapEditorContent({
     [drawnFeatures, editingFeatureId],
   );
 
-  // ── Loading state ──
-  if (loading) {
-    return (
-      <div className="flex h-full items-center justify-center bg-gray-50">
-        <div className="text-center">
-          <FontAwesomeIcon icon={faSpinner} spin className="mb-3 text-3xl text-blue-500" />
-          <p className="text-sm font-medium text-gray-500">Loading locations…</p>
-        </div>
-      </div>
-    );
-  }
-
-  // ── Error state ──
-  if (error) {
-    return (
-      <div className="flex h-full items-center justify-center bg-gray-50">
-        <div className="text-center">
-          <FontAwesomeIcon icon={faExclamationTriangle} className="mb-3 text-3xl text-amber-500" />
-          <p className="mb-3 text-sm font-medium text-gray-700">{error}</p>
-          <button
-            onClick={retry}
-            className="inline-flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700"
-          >
-            <FontAwesomeIcon icon={faRotateRight} />
-            Try Again
-          </button>
-        </div>
-      </div>
-    );
-  }
-
   // ── Embed mode: map only ──
   if (embedMode) {
     return (
@@ -286,12 +260,27 @@ export default function MapEditorContent({
             Design
           </button>
         )}
-        <div className={`${design.showBorder ? "co150" : ""} min-h-0 flex-1`}>
+        <div
+          className={`${design.showBorder ? "co150" : ""} min-h-0 flex-1`}
+          style={{
+            ...(design.embedMargin > 0
+              ? { margin: `${design.embedMargin}px` }
+              : {}),
+            ...(design.showCustomBorder && !design.showBorder
+              ? {
+                  border: `${design.customBorderWidth}px ${design.customBorderStyle} ${design.customBorderColor}`,
+                }
+              : {}),
+            ...(design.embedPadding > 0
+              ? { padding: `${design.embedPadding}px`, backgroundColor: design.pageBg }
+              : {}),
+          }}
+        >
           <div
             className="design-grid grid h-full"
             style={{
               "--design-map-h": design.mobileMapHeight,
-              "--design-cols": design.mapTableRatio,
+              "--design-cols": design.showDataPanel ? design.mapTableRatio : "1fr",
             } as React.CSSProperties}
           >
             {/* Map panel */}
@@ -338,6 +327,7 @@ export default function MapEditorContent({
             </div>
 
             {/* Table panel */}
+            {design.showDataPanel && (
             <div
               className="flex min-h-0 flex-col overflow-hidden border-t border-gray-200 lg:border-l lg:border-t-0"
               style={{ backgroundColor: design.panelBg }}
@@ -383,13 +373,55 @@ export default function MapEditorContent({
                     onSearchChange={handleSearchChange}
                     resultCount={filteredPoints.length}
                     totalCount={data.length}
+                    pointColor={design.pointColor}
+                    pointColorMode={design.pointColorMode}
+                    categoryColors={design.categoryColors}
                   />
+                  {data.length > 0 && onClearPoints && (
+                    <div className="flex justify-end px-3 pb-1">
+                      <button
+                        onClick={onClearPoints}
+                        className="text-xs text-red-500 hover:text-red-700"
+                      >
+                        Clear Point Data
+                      </button>
+                    </div>
+                  )}
                   <div className="min-h-0 flex-1">
-                    <DataTable
-                      points={filteredPoints}
-                      selectedId={selectedId}
-                      onSelectPoint={handleSelectPoint}
-                    />
+                    {data.length === 0 ? (
+                      <div className="flex h-full flex-col items-center justify-center gap-4 p-6 text-center">
+                        <p className="text-sm text-gray-500">No point data loaded yet.</p>
+                        {onLoadStarter && (
+                          <div className="flex flex-col gap-2">
+                            <p className="text-xs font-medium text-gray-400">Load starter data:</p>
+                            <button
+                              onClick={() => onLoadStarter("single-point")}
+                              className="rounded-md bg-blue-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-blue-700"
+                            >
+                              Single Point
+                            </button>
+                            <button
+                              onClick={() => onLoadStarter("categorized-points")}
+                              className="rounded-md bg-blue-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-blue-700"
+                            >
+                              Multiple Points with Categories
+                            </button>
+                            <button
+                              onClick={() => onLoadStarter("color-coded-regions")}
+                              className="rounded-md bg-blue-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-blue-700"
+                            >
+                              Color-coded Regions
+                            </button>
+                          </div>
+                        )}
+                      </div>
+                    ) : (
+                      <DataTable
+                        points={filteredPoints}
+                        selectedId={selectedId}
+                        onSelectPoint={handleSelectPoint}
+                      />
+                    )}
                   </div>
                 </>
               ) : (
@@ -404,13 +436,14 @@ export default function MapEditorContent({
                 </div>
               )}
             </div>
+            )}
           </div>
         </div>
       </div>
 
       {/* Design sidebar */}
       {!embedMode && sidebarOpen && (
-        <DesignSidebar onClose={() => setSidebarOpen(false)} />
+        <DesignSidebar onClose={() => setSidebarOpen(false)} categories={categories} />
       )}
     </div>
   );
