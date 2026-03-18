@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { useParams } from "react-router-dom";
+import { useParams, useSearchParams } from "react-router-dom";
 import { getMap, type MapDetail } from "../lib/api";
 import { DesignProvider } from "../context/DesignContext";
 import MapEditorContent from "../components/MapEditorContent";
@@ -7,9 +7,12 @@ import MapEditorContent from "../components/MapEditorContent";
 /**
  * Embed page — renders just the map with no editor chrome.
  * Loaded via /embed/:id
+ * Add ?demo=1 to activate auto-rotate category demo mode.
  */
 export default function EmbedPage() {
   const { id } = useParams<{ id: string }>();
+  const [searchParams] = useSearchParams();
+  const demoMode = searchParams.get("demo") === "1";
   const [mapData, setMapData] = useState<MapDetail | null>(null);
   const [error, setError] = useState<string | null>(null);
 
@@ -39,7 +42,7 @@ export default function EmbedPage() {
   return (
     <DesignProvider initialDesignState={mapData.design_state} embedMode>
       <div className="h-dvh w-dvw">
-        <MapEditorContent embedMode />
+        <MapEditorContent embedMode demoMode={demoMode} />
       </div>
     </DesignProvider>
   );

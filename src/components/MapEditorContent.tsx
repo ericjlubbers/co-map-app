@@ -12,6 +12,7 @@ import MapView from "./MapView";
 import DataTable from "./DataTable";
 import FilterBar from "./FilterBar";
 import DesignSidebar from "./DesignSidebar";
+import AutoRotateDemo from "./AutoRotateDemo";
 import DrawingToolbar from "./DrawingToolbar";
 import DrawnFeatureForm from "./DrawnFeatureForm";
 import DrawnFeaturesTable from "./DrawnFeaturesTable";
@@ -34,6 +35,8 @@ import type { LatLng } from "leaflet";
 
 interface MapEditorContentProps {
   embedMode?: boolean;
+  /** Activates auto-rotate demo mode (embed `?demo=1`) */
+  demoMode?: boolean;
   mapId?: string;
   initialDrawnFeatures?: DrawnFeatureCollection;
   onDrawnFeaturesChange?: (features: DrawnFeatureCollection) => void;
@@ -43,6 +46,7 @@ type DataTab = "points" | "drawn";
 
 export default function MapEditorContent({
   embedMode = false,
+  demoMode = false,
   initialDrawnFeatures,
   onDrawnFeaturesChange,
 }: MapEditorContentProps) {
@@ -57,6 +61,8 @@ export default function MapEditorContent({
 
   // ── Filtering ──────────────────────────────────────────────
   const [activeCategories, setActiveCategories] = useState<Set<string>>(new Set());
+  // Demo mode: current spotlighted category (null = show all)
+  const [demoCategoryFilter, setDemoCategoryFilter] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
 
@@ -77,6 +83,13 @@ export default function MapEditorContent({
 
   const filteredPoints = useMemo(() => {
     let result = data;
+
+    // Demo mode overrides manual category filter
+    if (demoMode && demoCategoryFilter !== null) {
+      return result.filter((p) => p.category === demoCategoryFilter);
+    }
+
+    // Category filter
     if (activeCategories.size > 0) {
       result = result.filter((p) => activeCategories.has(p.category));
     }
@@ -90,7 +103,7 @@ export default function MapEditorContent({
       );
     }
     return result;
-  }, [data, activeCategories, debouncedSearch]);
+  }, [data, activeCategories, debouncedSearch, demoMode, demoCategoryFilter]);
 
   const handleToggleCategory = useCallback((category: string) => {
     setActiveCategories((prev) => {
@@ -241,13 +254,20 @@ export default function MapEditorContent({
   // ── Embed mode: map only ──
   if (embedMode) {
     return (
-      <div className="h-full w-full" style={{ backgroundColor: design.pageBg }}>
+      <div className="relative h-full w-full" style={{ backgroundColor: design.pageBg }}>
         <MapView
           points={filteredPoints}
           selectedId={selectedId}
           onSelectPoint={handleSelectPoint}
           drawnFeatures={drawnFeatures}
         />
+        {demoMode && categories.length > 0 && (
+          <AutoRotateDemo
+            categories={categories}
+            intervalMs={design.demoIntervalMs}
+            onCategoryChange={setDemoCategoryFilter}
+          />
+        )}
       </div>
     );
   }

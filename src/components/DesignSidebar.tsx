@@ -583,6 +583,26 @@ export default function DesignSidebar({ onClose }: DesignSidebarProps) {
         <AccordionSection title="Accessibility">
           <p className="text-xs text-gray-400 italic">Coming soon</p>
         </AccordionSection>
+
+        {/* ── Demo ── */}
+        <AccordionSection title="Demo">
+          <div className="space-y-3">
+            <p className="text-xs text-gray-500">
+              Add <code className="rounded bg-gray-100 px-1 py-0.5 font-mono text-[10px]">?demo=1</code> to
+              the embed URL to activate auto-rotate mode.
+            </p>
+            <Field label="Rotation Interval">
+              <Slider
+                min={2000}
+                max={10000}
+                step={500}
+                value={design.demoIntervalMs}
+                onChange={(v) => set("demoIntervalMs", v)}
+                format={(v) => `${(v / 1000).toFixed(1)}s`}
+              />
+            </Field>
+          </div>
+        </AccordionSection>
       </div>
     </div>
   );

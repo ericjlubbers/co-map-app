@@ -130,6 +130,8 @@ export interface DesignState {
   // Outside-state fade/mask
   showOutsideFade: boolean;
   outsideFadeOpacity: number;
+  // Demo auto-rotate
+  demoIntervalMs: number;
   // Units
   useMetricUnits: boolean;
   // Roads layer

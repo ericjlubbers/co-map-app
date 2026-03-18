@@ -33,6 +33,7 @@ const PARAM_MAP: Record<keyof DesignState, string> = {
   stateBorderWeight: "stateW",
   showOutsideFade: "fade",
   outsideFadeOpacity: "fadeOp",
+  demoIntervalMs: "demoMs",
   useMetricUnits: "metric",
   showRoads: "roads",
   showMotorways: "motorways",
@@ -151,6 +152,9 @@ function parseFromURL(): Partial<DesignState> {
   const fadeOp = params.get(PARAM_MAP.outsideFadeOpacity);
   if (fadeOp) partial.outsideFadeOpacity = parseFloat(fadeOp);
 
+  const demoMs = params.get(PARAM_MAP.demoIntervalMs);
+  if (demoMs) partial.demoIntervalMs = parseInt(demoMs, 10);
+
   const metric = params.get(PARAM_MAP.useMetricUnits);
   if (metric) partial.useMetricUnits = metric === "1";
 
@@ -265,6 +269,9 @@ function serializeToURL(state: DesignState, includeDesignMode: boolean): string 
     params.set(PARAM_MAP.showOutsideFade, state.showOutsideFade ? "1" : "0");
   if (state.outsideFadeOpacity !== DEFAULT_DESIGN.outsideFadeOpacity)
     params.set(PARAM_MAP.outsideFadeOpacity, String(state.outsideFadeOpacity));
+
+  if (state.demoIntervalMs !== DEFAULT_DESIGN.demoIntervalMs)
+    params.set(PARAM_MAP.demoIntervalMs, String(state.demoIntervalMs));
 
   if (state.useMetricUnits !== DEFAULT_DESIGN.useMetricUnits)
     params.set(PARAM_MAP.useMetricUnits, state.useMetricUnits ? "1" : "0");
