@@ -158,6 +158,15 @@ export interface DesignState {
   cityColor: string;
   // Labels layer
   labelFont: string;
+  // Points layer
+  pointColor: string;
+  pointColorMode: "single" | "by-category";
+  categoryColors: Record<string, string>;
   // Data panel visibility
   showDataPanel: boolean;
+  // Embed sizing
+  embedAspectRatio: string;
+  embedMobileAspectRatio: string;
+  embedHeight: string;
+  embedHeightUnit: "auto" | "px" | "vh";
 }

@@ -1,6 +1,5 @@
 import { useState, useMemo, useCallback, useEffect, useRef } from "react";
 import { useDesign } from "../context/DesignContext";
-import { useLocationData } from "../hooks/useLocationData";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
   faGear,
@@ -27,7 +26,9 @@ import type {
   DrawingMode,
   DrawnFeatureCollection,
   DrawnFeatureProperties,
+  PointData,
 } from "../types";
+import type { StarterType } from "../lib/starterData";
 import type { LatLng } from "leaflet";
 
 interface MapEditorContentProps {
@@ -35,6 +36,10 @@ interface MapEditorContentProps {
   /** Activates auto-rotate demo mode (embed `?demo=1`) */
   demoMode?: boolean;
   mapId?: string;
+  /** Points derived from dataConfig.points (persisted) */
+  points?: PointData[];
+  onLoadStarter?: (type: StarterType) => void;
+  onClearPoints?: () => void;
   initialDrawnFeatures?: DrawnFeatureCollection;
   onDrawnFeaturesChange?: (features: DrawnFeatureCollection) => void;
 }
@@ -44,11 +49,14 @@ type DataTab = "points" | "drawn";
 export default function MapEditorContent({
   embedMode = false,
   demoMode = false,
+  points: externalPoints,
+  onLoadStarter,
+  onClearPoints,
   initialDrawnFeatures,
   onDrawnFeaturesChange,
 }: MapEditorContentProps) {
   const { design, designMode } = useDesign();
-  const { data, loadExampleData, clearData } = useLocationData();
+  const data = externalPoints ?? [];
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [sidebarOpen, setSidebarOpen] = useState(designMode);
 
@@ -350,17 +358,47 @@ export default function MapEditorContent({
                     onSearchChange={handleSearchChange}
                     resultCount={filteredPoints.length}
                     totalCount={data.length}
+                    pointColor={design.pointColor}
+                    pointColorMode={design.pointColorMode}
+                    categoryColors={design.categoryColors}
                   />
+                  {data.length > 0 && onClearPoints && (
+                    <div className="flex justify-end px-3 pb-1">
+                      <button
+                        onClick={onClearPoints}
+                        className="text-xs text-red-500 hover:text-red-700"
+                      >
+                        Clear Point Data
+                      </button>
+                    </div>
+                  )}
                   <div className="min-h-0 flex-1">
                     {data.length === 0 ? (
-                      <div className="flex h-full flex-col items-center justify-center gap-3 p-6 text-center">
+                      <div className="flex h-full flex-col items-center justify-center gap-4 p-6 text-center">
                         <p className="text-sm text-gray-500">No point data loaded yet.</p>
-                        <button
-                          onClick={loadExampleData}
-                          className="rounded-md bg-blue-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-blue-700"
-                        >
-                          Load Example Data
-                        </button>
+                        {onLoadStarter && (
+                          <div className="flex flex-col gap-2">
+                            <p className="text-xs font-medium text-gray-400">Load starter data:</p>
+                            <button
+                              onClick={() => onLoadStarter("single-point")}
+                              className="rounded-md bg-blue-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-blue-700"
+                            >
+                              Single Point
+                            </button>
+                            <button
+                              onClick={() => onLoadStarter("categorized-points")}
+                              className="rounded-md bg-blue-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-blue-700"
+                            >
+                              Multiple Points with Categories
+                            </button>
+                            <button
+                              onClick={() => onLoadStarter("color-coded-regions")}
+                              className="rounded-md bg-blue-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-blue-700"
+                            >
+                              Color-coded Regions
+                            </button>
+                          </div>
+                        )}
                       </div>
                     ) : (
                       <DataTable
@@ -390,7 +428,7 @@ export default function MapEditorContent({
 
       {/* Design sidebar */}
       {!embedMode && sidebarOpen && (
-        <DesignSidebar onClose={() => setSidebarOpen(false)} />
+        <DesignSidebar onClose={() => setSidebarOpen(false)} categories={categories} />
       )}
     </div>
   );

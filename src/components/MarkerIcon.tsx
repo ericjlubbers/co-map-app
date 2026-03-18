@@ -40,11 +40,12 @@ function getViewBox(iconName: string): string {
 export function createMarkerIcon(
   category: string,
   isSelected = false,
-  baseSize = 34
+  baseSize = 34,
+  colorOverride?: string,
 ): L.DivIcon {
   const info = getCategoryInfo(category);
   const size = isSelected ? baseSize * 1.24 : baseSize;
-  const pinColor = info.color;
+  const pinColor = colorOverride || info.color;
 
   const iconPath = getPathData(info.icon);
   const viewBox = getViewBox(info.icon);

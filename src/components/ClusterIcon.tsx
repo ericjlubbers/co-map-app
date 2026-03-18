@@ -14,7 +14,7 @@ function getCategoryCounts(cluster: L.MarkerCluster): Record<string, number> {
 }
 
 // ── Donut-style cluster icon ────────────────────────────────
-function createDonutIcon(cluster: L.MarkerCluster): L.DivIcon {
+function createDonutIcon(cluster: L.MarkerCluster, resolveColor: (cat: string) => string): L.DivIcon {
   const counts = getCategoryCounts(cluster);
   const total = cluster.getChildCount();
   const size = total < 10 ? 44 : total < 50 ? 52 : 60;
@@ -28,7 +28,7 @@ function createDonutIcon(cluster: L.MarkerCluster): L.DivIcon {
   const entries = Object.entries(counts).sort((a, b) => b[1] - a[1]);
 
   for (const [cat, count] of entries) {
-    const info = getCategoryInfo(cat);
+    const color = resolveColor(cat);
     const sweep = (count / total) * 360;
     const startRad = (angle * Math.PI) / 180;
     const endRad = ((angle + sweep) * Math.PI) / 180;
@@ -46,9 +46,9 @@ function createDonutIcon(cluster: L.MarkerCluster): L.DivIcon {
 
     if (entries.length === 1) {
       // Full circle — use two arcs
-      segments += `<circle cx="${r}" cy="${r}" r="${(r + innerR) / 2}" fill="none" stroke="${info.color}" stroke-width="${ringWidth}" />`;
+      segments += `<circle cx="${r}" cy="${r}" r="${(r + innerR) / 2}" fill="none" stroke="${color}" stroke-width="${ringWidth}" />`;
     } else {
-      segments += `<path d="M${x1},${y1} L${ox1},${oy1} A${r},${r} 0 ${largeArc},1 ${ox2},${oy2} L${x2},${y2} A${innerR},${innerR} 0 ${largeArc},0 ${x1},${y1}" fill="${info.color}" />`;
+      segments += `<path d="M${x1},${y1} L${ox1},${oy1} A${r},${r} 0 ${largeArc},1 ${ox2},${oy2} L${x2},${y2} A${innerR},${innerR} 0 ${largeArc},0 ${x1},${y1}" fill="${color}" />`;
     }
     angle += sweep;
   }
@@ -71,25 +71,25 @@ function createDonutIcon(cluster: L.MarkerCluster): L.DivIcon {
 }
 
 // ── Gradient-style cluster icon ─────────────────────────────
-function createGradientIcon(cluster: L.MarkerCluster): L.DivIcon {
+function createGradientIcon(cluster: L.MarkerCluster, resolveColor: (cat: string) => string): L.DivIcon {
   const counts = getCategoryCounts(cluster);
   const total = cluster.getChildCount();
   const size = total < 10 ? 44 : total < 50 ? 52 : 60;
 
   // Dominant category color
   const dominant = Object.entries(counts).sort((a, b) => b[1] - a[1])[0];
-  const info = getCategoryInfo(dominant[0]);
+  const color = resolveColor(dominant[0]);
 
   const svg = `
     <svg width="${size}" height="${size}" viewBox="0 0 ${size} ${size}" xmlns="http://www.w3.org/2000/svg">
       <defs>
         <radialGradient id="cg-${total}" cx="50%" cy="50%" r="50%">
-          <stop offset="0%" stop-color="${info.color}" stop-opacity="0.25" />
-          <stop offset="70%" stop-color="${info.color}" stop-opacity="0.5" />
-          <stop offset="100%" stop-color="${info.color}" stop-opacity="0.8" />
+          <stop offset="0%" stop-color="${color}" stop-opacity="0.25" />
+          <stop offset="70%" stop-color="${color}" stop-opacity="0.5" />
+          <stop offset="100%" stop-color="${color}" stop-opacity="0.8" />
         </radialGradient>
       </defs>
-      <circle cx="${size / 2}" cy="${size / 2}" r="${size / 2 - 1}" fill="url(#cg-${total})" stroke="${info.color}" stroke-width="2" />
+      <circle cx="${size / 2}" cy="${size / 2}" r="${size / 2 - 1}" fill="url(#cg-${total})" stroke="${color}" stroke-width="2" />
       <text x="${size / 2}" y="${size / 2}" text-anchor="middle" dominant-baseline="central"
             font-family="'Libre Franklin', sans-serif" font-weight="700"
             font-size="${total > 99 ? 12 : 14}" fill="white">${total}</text>
@@ -127,17 +127,19 @@ function createMinimalIcon(cluster: L.MarkerCluster): L.DivIcon {
 // ── Public factory ──────────────────────────────────────────
 export function createClusterIcon(
   cluster: L.MarkerCluster,
-  style?: ClusterStyle
+  style?: ClusterStyle,
+  colorMap?: Record<string, string>,
 ): L.DivIcon {
   const s = style ?? CLUSTER_STYLE;
+  const resolver = (cat: string) => colorMap?.[cat] || getCategoryInfo(cat).color;
   switch (s) {
     case "gradient":
-      return createGradientIcon(cluster);
+      return createGradientIcon(cluster, resolver);
     case "minimal":
       return createMinimalIcon(cluster);
     case "donut":
     default:
-      return createDonutIcon(cluster);
+      return createDonutIcon(cluster, resolver);
   }
 }
 

@@ -17,6 +17,14 @@ import DataTabBar from "../components/DataTabBar";
 import DataEditor from "../components/DataEditor";
 import DataSidebar from "../components/DataSidebar";
 import { emptyCollection } from "../lib/drawing";
+import {
+  layerDataToPoints,
+  defaultCountyRegions,
+  singlePointStarter,
+  categorizedPointsStarter,
+  colorCodedRegionsStarter,
+  type StarterType,
+} from "../lib/starterData";
 import type {
   DrawnFeatureCollection,
   EditorTab,
@@ -37,9 +45,12 @@ function emptyLayer(): LayerData {
 }
 
 function parseDataConfig(raw: Record<string, unknown>): DataConfig {
+  const regions = (raw?.regions as LayerData | undefined);
+  const points = (raw?.points as LayerData | undefined);
   return {
-    regions: (raw?.regions as LayerData) ?? emptyLayer(),
-    points: (raw?.points as LayerData) ?? emptyLayer(),
+    // Pre-populate regions with county data when empty
+    regions: (regions && regions.rows.length > 0) ? regions : defaultCountyRegions(),
+    points: points ?? emptyLayer(),
   };
 }
 
@@ -155,6 +166,36 @@ export default function MapEditorPage() {
       updateLayer(activeLayer, (l) => ({ ...l, ...data })),
     [activeLayer, updateLayer],
   );
+
+  // ── Derive map points from dataConfig.points ──────────────
+  const mapPoints = useMemo(
+    () => layerDataToPoints(dataConfig.points),
+    [dataConfig.points],
+  );
+
+  // ── Starter data loading ──────────────────────────────────
+  const handleLoadStarter = useCallback(
+    (type: StarterType) => {
+      setDataConfig((prev) => {
+        let next: DataConfig;
+        if (type === "single-point") {
+          next = { ...prev, points: singlePointStarter() };
+        } else if (type === "categorized-points") {
+          next = { ...prev, points: categorizedPointsStarter() };
+        } else {
+          // color-coded-regions: populate regions with sample values
+          next = { ...prev, regions: colorCodedRegionsStarter() };
+        }
+        saveDataConfig(next);
+        return next;
+      });
+    },
+    [saveDataConfig],
+  );
+
+  const handleClearPoints = useCallback(() => {
+    updateLayer("points", () => emptyLayer());
+  }, [updateLayer]);
 
   // ── Debounced save for drawn features ──────────────────────
   const handleDrawnFeaturesChange = useCallback(
@@ -337,6 +378,9 @@ export default function MapEditorPage() {
           {activeTab === "preview" ? (
             <MapEditorContent
               mapId={id}
+              points={mapPoints}
+              onLoadStarter={handleLoadStarter}
+              onClearPoints={handleClearPoints}
               initialDrawnFeatures={initialDrawnFeatures}
               onDrawnFeaturesChange={handleDrawnFeaturesChange}
             />

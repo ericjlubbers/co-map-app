@@ -351,7 +351,11 @@ export default function MapView({
         <MarkerClusterGroup
           key={design.clusterStyle}
           iconCreateFunction={(cluster: unknown) =>
-            createClusterIcon(cluster as Parameters<typeof createClusterIcon>[0], design.clusterStyle)
+            createClusterIcon(
+              cluster as Parameters<typeof createClusterIcon>[0],
+              design.clusterStyle,
+              design.pointColorMode === "by-category" ? design.categoryColors : undefined,
+            )
           }
           maxClusterRadius={CLUSTER_SETTINGS.maxClusterRadius}
           disableClusteringAtZoom={CLUSTER_SETTINGS.disableClusteringAtZoom}
@@ -365,7 +369,14 @@ export default function MapView({
             <Marker
               key={point.id}
               position={[point.lat, point.lng]}
-              icon={createMarkerIcon(point.category, point.id === selectedId, design.markerSize)}
+              icon={createMarkerIcon(
+                point.category,
+                point.id === selectedId,
+                design.markerSize,
+                design.pointColorMode === "by-category"
+                  ? design.categoryColors[point.category]
+                  : design.pointColor,
+              )}
               category={point.category}
               ref={handleMarkerRef(point.id)}
               eventHandlers={{

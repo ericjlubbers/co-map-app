@@ -35,6 +35,8 @@ Internal mapping platform for The Colorado Sun newsroom. Reporters and data visu
 | Phase 6 — Locator Map Wizard | 🔲 | Workflow shortcut; editors can create locator maps manually today |
 | Multi-select / marquee tool | 🔲 | Batch-style road/waterway segments; Phase 3 polish |
 | CSV file upload | 🔲 | Data import alternative to Google Sheets |
+| Sprint 5 — Region Choropleth Layer | 🔲 | Gradient fills for county regions, auto-toggle region layer, design controls |
+| Sprint 6 — Vector Tile Labels & Local Data | 🔲 | Client-side vector labels, local CO data cache, tile caching |
 
 ### Post-merge refinements (applied to main 2026-03-17)
 - Label font fix: CityLayer applies `design.labelFont` to DivIcon styles
@@ -286,6 +288,123 @@ Lightweight JS script (~1KB) hosted at `maps.coloradosun.com/embed.js` that:
 
 ---
 
+## Sprint 5 — Region Choropleth Layer (Deferred)
+
+**Goal**: Turn region/county data into a visual choropleth layer with gradient fills, giving reporters the ability to create data-driven county maps.
+
+### S5.1: Auto-Toggle Region Layer on Data Load
+
+1. When "Color-coded Regions" starter data is loaded (or region data is populated), automatically enable the region layer and expand the Regions design menu
+2. Region layer toggle: `showRegions: boolean` in DesignState (default `false`)
+3. Loading region data sets `showRegions = true` and opens the Regions accordion
+
+### S5.2: Gradient Fill from Region Values
+
+1. Read the value column from `dataConfig.regions` rows (matched to county GeoJSON features by name)
+2. Compute min/max across all region values
+3. Generate a linear color gradient between two configurable colors (e.g. light → dark)
+4. Fill each county polygon with the interpolated color based on its value
+5. County polygons with no matching data row remain unfilled or use a "no data" color
+
+### S5.3: Region Design Controls
+
+1. Add to the Regions accordion in DesignSidebar:
+   - **Fill Color Range**: two ColorInput fields (low value color, high value color)
+   - **Fill Opacity**: Slider 0.1–1.0
+   - **No-Data Color**: ColorInput for counties without values
+   - **Show Region Labels**: toggle to display value/name on each county
+   - **Legend**: toggle to show a gradient legend bar on the map
+2. New DesignState fields: `regionFillLow`, `regionFillHigh`, `regionFillOpacity`, `regionNoDataColor`, `showRegionLabels`, `showRegionLegend`
+
+### S5.4: Region Hover & Popup
+
+1. Hovering a county highlights it (increased opacity or outline)
+2. Clicking shows a popup with the county name and data value
+3. Popup styled with the map's font and color settings
+
+### Relevant Files
+
+- Modify: `src/components/layers/DrawnFeaturesLayer.tsx` or new `RegionLayer.tsx` — render filled county polygons
+- Modify: `src/components/DesignSidebar.tsx` — region design controls in Regions accordion
+- Modify: `src/types.ts`, `src/config.ts` — new DesignState fields
+- Modify: `src/pages/MapEditorPage.tsx` — auto-toggle region layer on data load
+- New: `src/components/RegionLegend.tsx` — gradient legend overlay
+
+### Verification
+
+- Load "Color-coded Regions" starter → region layer turns on, counties fill with gradient
+- Adjust fill colors → map updates live
+- Counties without data show "no data" color
+- Hover county → highlight, click → popup with name and value
+- Toggle legend on/off → gradient bar appears/disappears on map
+
+---
+
+## Sprint 6 — Vector Tile Labels & Local Data Infrastructure (Deferred)
+
+**Goal**: Replace raster label overlay tiles with client-rendered vector tile labels for full font/style control, and build a local Colorado data cache for faster, API-independent map creation.
+
+### S6.1: Vector Tile Labels
+
+1. Switch from raster label overlay (CARTO `light_only_labels`, Stadia `stamen_terrain_labels`) to vector tile source (e.g. OpenMapTiles, Protomaps)
+2. Render labels client-side using a vector tile library (e.g. `maplibre-gl` layer on top of Leaflet, or Leaflet vector tile plugin)
+3. Label fonts now come from `design.labelFont` — full control over typeface, size, color, halo
+4. Label density and zoom-level visibility controlled by the design sidebar
+
+### S6.2: Local Colorado Data Cache
+
+1. Build a local data file (GeoJSON or protobuf) containing all Colorado features: roads, waterways, cities, landmarks, peaks
+2. Source data from OpenStreetMap (one-time Overpass export) and/or other open sources
+3. Store in `public/data/` or serve from the Worker — no per-map Overpass API calls needed
+4. Map editor loads features from local cache instantly instead of live Overpass queries
+5. Feature data includes: geometry, name, type (motorway/trunk/primary, river/stream, city/peak), and other relevant attributes
+
+### S6.3: Data Freshness Pipeline
+
+1. Scheduled Worker (Cloudflare Cron Trigger) runs periodically (e.g. weekly) to refresh local data from Overpass/OSM
+2. Compares diff with existing cache, applies updates
+3. Version stamp on the data file — editor checks for updates on load
+4. Manual "Refresh data" button in admin panel for on-demand updates
+
+### S6.4: Map Tile Caching
+
+1. Proxy base map tiles through the Cloudflare Worker with edge caching (cf.cacheTtl)
+2. Reduces external API calls to tile providers (CARTO, Stadia, etc.)
+3. Tiles cached at the edge — subsequent requests served from cache
+4. Cache warming: pre-fetch tiles for common Colorado zoom levels and extents
+5. Fallback to live tile API if cache miss
+
+### S6.5: Label Style Controls
+
+1. Extended label design controls in the sidebar:
+   - Font family (from design.labelFont)
+   - Font size per label type (cities, roads, waterways)
+   - Text color and halo (outline) color/width
+   - Label density / min zoom level
+   - Collision detection toggle (prevent label overlap)
+2. Labels update instantly on the map as design values change
+
+### Relevant Files
+
+- New: `src/components/layers/VectorLabelLayer.tsx` — client-rendered vector labels
+- Modify: `src/components/DesignSidebar.tsx` — extended label controls
+- New: `worker/src/data-pipeline.ts` — scheduled Overpass data refresh
+- New: `public/data/colorado-features.geojson` or `.pbf` — local feature cache
+- Modify: `worker/src/index.ts` — tile proxy endpoint, data cache endpoint
+- Modify: `src/lib/vectorTiles.ts` — read from local cache instead of live Overpass
+- Modify: `worker/wrangler.toml` — cron trigger for data refresh
+
+### Verification
+
+- Switch label font → map labels re-render in new font instantly
+- Change label color/size → live preview on map
+- Map loads without any Overpass API calls (features from local cache)
+- Tile requests cached at edge — subsequent loads are faster
+- Weekly cron updates local data — version bumps reported in admin
+- Manual refresh button works for on-demand data updates
+
+---
+
 ## Deferred: Phase 6 — Locator Map Wizard & Map Templates
 
 **Goal**: Guided multi-step workflow for creating simple locator maps, plus a template system. Deferred because editors can create locator maps manually with the current tools — the wizard is a workflow optimization.
@@ -319,10 +438,14 @@ Completed Phases (1-5, 7)              ✅ all merged to main
     │
     └── Sprint 4 (Auth & Deployment)   → production launch
             │
-            └── Phase 6 (Wizard)       → deferred post-launch optimization
+            ├── Phase 6 (Wizard)       → deferred post-launch optimization
+            │
+            ├── Sprint 5 (Choropleth)  → deferred; region data + gradient fills
+            │
+            └── Sprint 6 (Vector/Local)→ deferred; vector labels + local data cache
 ```
 
-Sprints 1–3 can proceed in any order; Sprint 4 depends on S1–S3 being stable.
+Sprints 1–3 can proceed in any order; Sprint 4 depends on S1–S3 being stable. Sprints 5–6 are post-launch enhancements.
 
 ---
 

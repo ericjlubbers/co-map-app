@@ -204,7 +204,14 @@ export const DEFAULT_DESIGN: DesignState = {
   cityFontSize: 12,
   cityColor: "#1f2937",
   labelFont: "inherit",
+  pointColor: "#2563eb",
+  pointColorMode: "single" as const,
+  categoryColors: {} as Record<string, string>,
   showDataPanel: true,
+  embedAspectRatio: "16:9",
+  embedMobileAspectRatio: "3:4",
+  embedHeight: "600",
+  embedHeightUnit: "auto",
 };
 
 // ── Clustering Settings ─────────────────────────────────────────────

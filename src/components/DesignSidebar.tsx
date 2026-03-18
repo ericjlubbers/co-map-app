@@ -6,11 +6,13 @@ import {
   faCheck,
   faLink,
   faTimes,
+  faChevronRight,
 } from "@fortawesome/free-solid-svg-icons";
 import { useDesign } from "../context/DesignContext";
 import type { FontFamily, ClusterStyle, TilePreset } from "../types";
 import AccordionSection from "./AccordionSection";
 import SidebarGroup from "./SidebarGroup";
+import ColorPicker, { CARBON_CATEGORICAL } from "./ColorPicker";
 
 // ── Option lists ────────────────────────────────────────────
 
@@ -46,6 +48,21 @@ const TILE_PRESETS: { value: TilePreset; label: string }[] = [
 
 const RATIOS = ["3fr 2fr", "1fr 1fr", "2fr 3fr", "2fr 1fr", "4fr 1fr"];
 
+const DESKTOP_ASPECT_RATIOS = [
+  { value: "16:9", label: "16:9 — Widescreen" },
+  { value: "3:2", label: "3:2 — Standard" },
+  { value: "4:3", label: "4:3 — Classic" },
+  { value: "1:1", label: "1:1 — Square" },
+  { value: "2:3", label: "2:3 — Tall" },
+];
+
+const MOBILE_ASPECT_RATIOS = [
+  { value: "1:1", label: "1:1 — Square" },
+  { value: "3:4", label: "3:4 — Compact" },
+  { value: "9:16", label: "9:16 — Full Screen" },
+  { value: "2:3", label: "2:3 — Tall" },
+];
+
 const LABEL_FONTS: { value: string; label: string }[] = [
   { value: "inherit", label: "Same as map font" },
   { value: "Libre Franklin", label: "Libre Franklin" },
@@ -64,9 +81,11 @@ const DASH_PATTERNS: { value: string; label: string }[] = [
 
 interface DesignSidebarProps {
   onClose: () => void;
+  /** Distinct categories from current point data, used for by-category color mode */
+  categories?: string[];
 }
 
-export default function DesignSidebar({ onClose }: DesignSidebarProps) {
+export default function DesignSidebar({ onClose, categories = [] }: DesignSidebarProps) {
   const { design, set, reset, getShareURL } = useDesign();
   const [copied, setCopied] = useState<"view" | "edit" | null>(null);
 
@@ -190,7 +209,7 @@ export default function DesignSidebar({ onClose }: DesignSidebarProps) {
               {design.showCountyLines && (
                 <>
                   <Field label="Line Color">
-                    <ColorInput
+                    <ColorPicker
                       value={design.countyLineColor}
                       onChange={(v) => set("countyLineColor", v)}
                     />
@@ -223,6 +242,47 @@ export default function DesignSidebar({ onClose }: DesignSidebarProps) {
           {/* ── Points Layer ── */}
           <AccordionSection title="Points">
             <div className="space-y-3">
+              <Field label="Color Mode">
+                <SegmentedControl
+                  options={[
+                    { value: "single" as const, label: "Single" },
+                    { value: "by-category" as const, label: "By Category" },
+                  ]}
+                  value={design.pointColorMode}
+                  onChange={(v) => {
+                    set("pointColorMode", v);
+                    // Auto-assign category colors on first switch
+                    if (v === "by-category" && categories.length > 0) {
+                      const existing = design.categoryColors;
+                      const updated = { ...existing };
+                      let needsUpdate = false;
+                      categories.forEach((cat, i) => {
+                        if (!updated[cat]) {
+                          updated[cat] = CARBON_CATEGORICAL[i % CARBON_CATEGORICAL.length];
+                          needsUpdate = true;
+                        }
+                      });
+                      if (needsUpdate) set("categoryColors", updated);
+                    }
+                  }}
+                />
+              </Field>
+              {design.pointColorMode === "single" ? (
+                <Field label="Point Color">
+                  <ColorPicker
+                    value={design.pointColor}
+                    onChange={(v) => set("pointColor", v)}
+                  />
+                </Field>
+              ) : (
+                <CategoryColorList
+                  categories={categories}
+                  categoryColors={design.categoryColors}
+                  onChangeColor={(cat, color) => {
+                    set("categoryColors", { ...design.categoryColors, [cat]: color });
+                  }}
+                />
+              )}
               <Field label="Cluster Style">
                 <SegmentedControl
                   options={CLUSTER_STYLES}
@@ -274,7 +334,7 @@ export default function DesignSidebar({ onClose }: DesignSidebarProps) {
                     </div>
                   </Field>
                   <Field label="Color">
-                    <ColorInput
+                    <ColorPicker
                       value={design.roadColor}
                       onChange={(v) => set("roadColor", v)}
                     />
@@ -346,7 +406,7 @@ export default function DesignSidebar({ onClose }: DesignSidebarProps) {
                     </div>
                   </Field>
                   <Field label="Color">
-                    <ColorInput
+                    <ColorPicker
                       value={design.waterwayColor}
                       onChange={(v) => set("waterwayColor", v)}
                     />
@@ -405,7 +465,7 @@ export default function DesignSidebar({ onClose }: DesignSidebarProps) {
                     </div>
                   </Field>
                   <Field label="Label Color">
-                    <ColorInput
+                    <ColorPicker
                       value={design.cityColor}
                       onChange={(v) => set("cityColor", v)}
                     />
@@ -428,8 +488,8 @@ export default function DesignSidebar({ onClose }: DesignSidebarProps) {
             </div>
           </AccordionSection>
 
-          {/* ── Globe & Graticule ── */}
-          <AccordionSection title="Globe & Graticule">
+          {/* ── State Border ── */}
+          <AccordionSection title="State Border">
             <div className="space-y-3">
               <Field label="State Border">
                 <ToggleSwitch
@@ -440,7 +500,7 @@ export default function DesignSidebar({ onClose }: DesignSidebarProps) {
               {design.showStateBorder && (
                 <>
                   <Field label="Border Color">
-                    <ColorInput
+                    <ColorPicker
                       value={design.stateBorderColor}
                       onChange={(v) => set("stateBorderColor", v)}
                     />
@@ -483,8 +543,8 @@ export default function DesignSidebar({ onClose }: DesignSidebarProps) {
         {/* ════════════ DESIGN ════════════ */}
         <SidebarGroup title="Design">
 
-          {/* ── Layout ── */}
-          <AccordionSection title="Layout">
+          {/* ── Data Panel ── */}
+          <AccordionSection title="Data Panel">
             <div className="space-y-3">
               <Field label="Show Data Panel">
                 <ToggleSwitch
@@ -507,6 +567,12 @@ export default function DesignSidebar({ onClose }: DesignSidebarProps) {
                   </select>
                 </Field>
               )}
+            </div>
+          </AccordionSection>
+
+          {/* ── Layout ── */}
+          <AccordionSection title="Layout">
+            <div className="space-y-4">
               <Field label="Border Radius">
                 <Slider
                   min={0}
@@ -523,6 +589,48 @@ export default function DesignSidebar({ onClose }: DesignSidebarProps) {
                   onChange={(v) => set("showBorder", v)}
                 />
               </Field>
+
+              {/* Embed Aspect Ratio */}
+              <div className="space-y-2">
+                <span className="text-xs font-medium text-gray-600">Embed Aspect Ratio</span>
+                <AspectRatioSelector
+                  desktopValue={design.embedAspectRatio}
+                  mobileValue={design.embedMobileAspectRatio}
+                  onDesktopChange={(v) => set("embedAspectRatio", v)}
+                  onMobileChange={(v) => set("embedMobileAspectRatio", v)}
+                />
+              </div>
+
+              {/* Embed Height */}
+              <div className="space-y-2">
+                <span className="text-xs font-medium text-gray-600">Embed Height</span>
+                <div className="flex items-center gap-2">
+                  {design.embedHeightUnit !== "auto" && (
+                    <input
+                      type="number"
+                      min={100}
+                      max={2000}
+                      value={design.embedHeight}
+                      onChange={(e) => set("embedHeight", e.target.value)}
+                      className="w-20 rounded-md border border-gray-300 bg-white px-2 py-1.5 text-xs text-gray-700"
+                    />
+                  )}
+                  <select
+                    value={design.embedHeightUnit}
+                    onChange={(e) => set("embedHeightUnit", e.target.value)}
+                    className="rounded-md border border-gray-300 bg-white px-2.5 py-1.5 text-xs text-gray-700"
+                  >
+                    <option value="auto">Auto (from ratio)</option>
+                    <option value="px">px</option>
+                    <option value="vh">vh</option>
+                  </select>
+                </div>
+                <p className="text-[11px] text-gray-400 italic">
+                  {design.embedHeightUnit === "auto"
+                    ? "Height calculated from width \u00D7 aspect ratio."
+                    : `Fixed height: ${design.embedHeight}${design.embedHeightUnit}.`}
+                </p>
+              </div>
             </div>
           </AccordionSection>
 
@@ -552,25 +660,25 @@ export default function DesignSidebar({ onClose }: DesignSidebarProps) {
           <AccordionSection title="Colors">
             <div className="space-y-3">
               <Field label="Panel Background">
-                <ColorInput
+                <ColorPicker
                   value={design.panelBg}
                   onChange={(v) => set("panelBg", v)}
                 />
               </Field>
               <Field label="Page Background">
-                <ColorInput
+                <ColorPicker
                   value={design.pageBg}
                   onChange={(v) => set("pageBg", v)}
                 />
               </Field>
               <Field label="Text Color">
-                <ColorInput
+                <ColorPicker
                   value={design.textColor}
                   onChange={(v) => set("textColor", v)}
                 />
               </Field>
               <Field label="Muted Text">
-                <ColorInput
+                <ColorPicker
                   value={design.textMuted}
                   onChange={(v) => set("textMuted", v)}
                 />
@@ -681,20 +789,6 @@ function SegmentedControl<T extends string>({
   );
 }
 
-function ColorInput({ value, onChange }: { value: string; onChange: (v: string) => void }) {
-  return (
-    <div className="flex items-center gap-1.5">
-      <input
-        type="color"
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
-        className="h-6 w-6 cursor-pointer rounded border border-gray-300 bg-transparent p-0"
-      />
-      <span className="text-xs text-gray-500 font-mono">{value}</span>
-    </div>
-  );
-}
-
 function Slider({
   min,
   max,
@@ -727,6 +821,189 @@ function Slider({
       <span className="w-12 text-right text-xs text-gray-500">
         {display}{suffix}
       </span>
+    </div>
+  );
+}
+
+/** Parse "W:H" to a numeric ratio (width / height). Returns 1 for invalid input. */
+function parseRatio(ratio: string): number {
+  const parts = ratio.split(":");
+  if (parts.length !== 2) return 1;
+  const w = parseFloat(parts[0]);
+  const h = parseFloat(parts[1]);
+  if (!w || !h) return 1;
+  return w / h;
+}
+
+/** Small rectangle preview showing the aspect ratio visually. */
+function RatioPreview({ ratio, label, maxW = 48, maxH = 36 }: { ratio: string; label?: string; maxW?: number; maxH?: number }) {
+  const r = parseRatio(ratio);
+  let w: number, h: number;
+  if (r >= 1) {
+    w = maxW;
+    h = maxW / r;
+    if (h > maxH) { h = maxH; w = maxH * r; }
+  } else {
+    h = maxH;
+    w = maxH * r;
+    if (w > maxW) { w = maxW; h = maxW / r; }
+  }
+  return (
+    <div className="flex flex-col items-center gap-0.5">
+      <div
+        className="rounded border border-gray-300 bg-blue-50"
+        style={{ width: `${w}px`, height: `${h}px` }}
+      />
+      {label && <span className="text-[9px] text-gray-400">{label}</span>}
+    </div>
+  );
+}
+
+function AspectRatioSelector({
+  desktopValue,
+  mobileValue,
+  onDesktopChange,
+  onMobileChange,
+}: {
+  desktopValue: string;
+  mobileValue: string;
+  onDesktopChange: (v: string) => void;
+  onMobileChange: (v: string) => void;
+}) {
+  const isDesktopCustom = !DESKTOP_ASPECT_RATIOS.some((o) => o.value === desktopValue);
+  const isMobileCustom = !MOBILE_ASPECT_RATIOS.some((o) => o.value === mobileValue);
+  const [desktopCustomMode, setDesktopCustomMode] = useState(isDesktopCustom);
+  const [mobileCustomMode, setMobileCustomMode] = useState(isMobileCustom);
+
+  return (
+    <div className="space-y-2">
+      {/* Side-by-side desktop and mobile previews */}
+      <div className="flex items-end justify-center gap-4">
+        <RatioPreview ratio={desktopValue} label="Desktop" maxW={56} maxH={40} />
+        <RatioPreview ratio={mobileValue} label="Mobile" maxW={28} maxH={48} />
+      </div>
+
+      {/* Desktop presets */}
+      <div>
+        <span className="text-[10px] font-medium uppercase tracking-wide text-gray-400">Desktop</span>
+        <div className="mt-1 flex flex-wrap gap-1">
+          {DESKTOP_ASPECT_RATIOS.map((o) => (
+            <button
+              key={o.value}
+              onClick={() => { setDesktopCustomMode(false); onDesktopChange(o.value); }}
+              className={`rounded px-2 py-0.5 text-[11px] font-medium transition ${
+                !desktopCustomMode && desktopValue === o.value
+                  ? "bg-blue-600 text-white"
+                  : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+              }`}
+            >
+              {o.value}
+            </button>
+          ))}
+          <button
+            onClick={() => setDesktopCustomMode(true)}
+            className={`rounded px-2 py-0.5 text-[11px] font-medium transition ${
+              desktopCustomMode
+                ? "bg-blue-600 text-white"
+                : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+            }`}
+          >
+            Custom
+          </button>
+          {desktopCustomMode && (
+            <input
+              type="text"
+              value={desktopValue}
+              onChange={(e) => onDesktopChange(e.target.value)}
+              placeholder="W:H"
+              className="w-16 rounded-md border border-gray-300 bg-white px-2 py-1 text-xs text-gray-700"
+            />
+          )}
+        </div>
+      </div>
+
+      {/* Mobile presets */}
+      <div>
+        <span className="text-[10px] font-medium uppercase tracking-wide text-gray-400">Mobile</span>
+        <div className="mt-1 flex flex-wrap gap-1">
+          {MOBILE_ASPECT_RATIOS.map((o) => (
+            <button
+              key={`m-${o.value}`}
+              onClick={() => { setMobileCustomMode(false); onMobileChange(o.value); }}
+              className={`rounded px-2 py-0.5 text-[11px] font-medium transition ${
+                !mobileCustomMode && mobileValue === o.value
+                  ? "bg-blue-600 text-white"
+                  : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+              }`}
+            >
+              {o.value}
+            </button>
+          ))}
+          <button
+            onClick={() => setMobileCustomMode(true)}
+            className={`rounded px-2 py-0.5 text-[11px] font-medium transition ${
+              mobileCustomMode
+                ? "bg-blue-600 text-white"
+                : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+            }`}
+          >
+            Custom
+          </button>
+          {mobileCustomMode && (
+            <input
+              type="text"
+              value={mobileValue}
+              onChange={(e) => onMobileChange(e.target.value)}
+              placeholder="W:H"
+              className="w-16 rounded-md border border-gray-300 bg-white px-2 py-1 text-xs text-gray-700"
+            />
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function CategoryColorList({
+  categories,
+  categoryColors,
+  onChangeColor,
+}: {
+  categories: string[];
+  categoryColors: Record<string, string>;
+  onChangeColor: (cat: string, color: string) => void;
+}) {
+  const [expanded, setExpanded] = useState(false);
+
+  if (categories.length === 0) {
+    return <p className="text-[11px] text-gray-400 italic">Load point data to see categories.</p>;
+  }
+
+  return (
+    <div>
+      <button
+        onClick={() => setExpanded(!expanded)}
+        className="flex items-center gap-1 text-xs font-medium text-gray-600 hover:text-gray-800"
+      >
+        <FontAwesomeIcon
+          icon={faChevronRight}
+          className={`text-[9px] transition-transform ${expanded ? "rotate-90" : ""}`}
+        />
+        Categories ({categories.length})
+      </button>
+      {expanded && (
+        <div className="mt-2 space-y-1.5 pl-1">
+          {categories.map((cat, i) => {
+            const color = categoryColors[cat] || CARBON_CATEGORICAL[i % CARBON_CATEGORICAL.length];
+            return (
+              <div key={cat} className="flex items-center justify-between">
+                <span className="text-[11px] text-gray-600 truncate max-w-[120px]">{cat}</span>
+                <ColorPicker value={color} onChange={(c) => onChangeColor(cat, c)} />
+              </div>
+            );
+          })}
+        </div>
+      )}
     </div>
   );
 }
