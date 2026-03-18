@@ -1,332 +1,328 @@
 # CO Map App — Production Roadmap
 
-Transform the current single-map static prototype into a multi-map platform backed by Cloudflare Workers + D1, with a Flourish-style data editor, accordion design sidebar, multiple feature layers, drawing tools, iframe embedding, and edge caching. Internal team auth only; all published maps are public.
+Internal mapping platform for The Colorado Sun newsroom. Reporters and data visualization staff create maps ranging from simple locator maps to complex choropleth/multi-point visualizations. Maps are embedded in WordPress via iframe. Built with React 19 + Vite + Tailwind v4 + Leaflet, backed by Cloudflare Workers + D1.
+
+**Production target**: `maps.coloradosun.com`
+
+---
 
 ## Status Summary (updated 2026-03-18)
 
+### Completed Phases (merged to main)
+
 | Phase | Status | Notes |
 |-------|--------|-------|
-| 1 — Database & Management | ✅ Complete | Merged to main |
-| 2 — Accordion Design Sidebar | ✅ Complete | Merged to main |
-| 3 — Map Layers & Base Styling | ✅ Complete | Merged (PR #8). Post-merge fixes: label font, Overpass 504/429, sub-toggles |
-| 4 — Data Tab | ✅ Complete | Merged (PR #12). Fixes: row ID consistency, debounced saves |
-| 5 — Drawing & Sketching Tools | ✅ Complete | Merged (PR #9). Manual conflict resolution with Phases 3+4 |
-| 6 — Locator Map Wizard | 🔲 Not started | Depends on Phases 3+5 |
-| 7 — Embed & Edge Caching | ✅ Complete | Merged (PR #13). Auto-rotate demo, edge caching, publish flow |
-| 8 — View-Scoped Label Curation | 🔲 Not started | Roadmap only |
+| 1 — Database & Management | ✅ | Workers + D1 backend, CRUD API, index page, routing |
+| 2 — Accordion Design Sidebar | ✅ | 20 accordion sections, gear toggle, Cmd+Shift+D |
+| 3 — Map Layers & Base Styling | ✅ | Roads/waterways/cities via Overpass, on-demand sub-toggles, label fonts |
+| 4 — Data Tab | ✅ | Spreadsheet editor, Google Sheets connection, debounced saves |
+| 5 — Drawing & Sketching Tools | ✅ | Point/line/polygon, vertex editing, style controls |
+| 7 — Embed & Edge Caching | ✅ | Auto-rotate demo, 24h edge cache, publish flow |
 
-### Post-merge refinements applied to main (2026-03-17):
-- **Label font fix**: CityLayer now applies `design.labelFont` to DivIcon styles
-- **Overpass API reliability**: timeout 60→120s, retry with backoff on 429/504
-- **On-demand sub-toggles**: Roads split into Motorways/Trunk/Primary pills; Waterways split into Rivers/Streams pills; Cities split into Cities/Peaks pills. All default to off — no Overpass calls fire until user explicitly enables a pill
-- **Future refinement**: Multi-select/marquee tool for batch-styling road/waterway segments (noted for Phase 3 polish pass)
+### Production Sprints (new)
+
+| Sprint | Status | Focus |
+|--------|--------|-------|
+| S1 — Editor UX Polish | 🔲 | Font isolation, sidebar reorg, table toggle, empty-by-default, example data |
+| S2 — Responsive Embed | 🔲 | Aspect ratio control, responsive loader script for WordPress |
+| S3 — View-Scoped Curation | 🔲 | Lock view, bbox-scoped Overpass, per-feature show/hide |
+| S4 — Auth & Deployment | 🔲 | User login, admin panel, Cloudflare Pages, DNS, production config |
+
+### Deferred
+
+| Item | Status | Notes |
+|------|--------|-------|
+| Phase 6 — Locator Map Wizard | 🔲 | Workflow shortcut; editors can create locator maps manually today |
+| Multi-select / marquee tool | 🔲 | Batch-style road/waterway segments; Phase 3 polish |
+| CSV file upload | 🔲 | Data import alternative to Google Sheets |
+
+### Post-merge refinements (applied to main 2026-03-17)
+- Label font fix: CityLayer applies `design.labelFont` to DivIcon styles
+- Overpass API reliability: timeout 60→120s, retry with backoff on 429/504
+- On-demand sub-toggles: Roads (Motorways/Trunk/Primary), Waterways (Rivers/Streams), Cities (Cities/Peaks) — all default off
 
 ---
 
-## Phase 1 — Maps Database & Management Interface
+## Sprint 1 — Editor UX Polish
 
-**Goal**: Replace the single hardcoded map with a persistent multi-map system. Editors can create, save, open, duplicate, archive, and delete maps from an index page.
+**Goal**: Make the editor usable for real newsroom workflows — simple locator maps through complex data maps.
 
-### 1A: Backend — Cloudflare Workers + D1
+### S1.1: Lock App UI to Libre Franklin
 
-1. Scaffold a `worker/` directory at repo root with Wrangler config, Worker entry point (Hono), and D1 schema migrations
-2. D1 `maps` table: `id` (nanoid), `title`, `description`, `status` (draft/published/archived), `design_state` (JSON), `data_config` (JSON), `created_at`, `updated_at`
-3. CRUD API routes: list, create, read, update, delete (soft), duplicate
-4. Auth: shared API key via `Authorization: Bearer <token>` (Cloudflare secret). Protects all write endpoints; reads for published maps are public
-5. Wire `useLocationData` hook to fetch data from the API per map id, replacing static `seedLocations`
-6. Adapt `DesignContext` to load/save state from API instead of (only) URL params — keep URL params as fallback/override
+The app UI (sidebar, toolbar, tables, buttons) must always use Libre Franklin regardless of the map's selected font. Only the map canvas (labels, popups on the map itself) should use `design.fontFamily` / `design.labelFont`.
 
-### 1B: Frontend — Index / Management Page
+1. Remove the `document.body.style.fontFamily` assignment from DesignContext — the body font should always be Libre Franklin via CSS
+2. Ensure `design.fontFamily` only applies inside `MapView` and its child layers
+3. Verify all layer components (LabelLayer, CityLayer, etc.) still correctly apply the selected label font
 
-7. Add `react-router-dom` for client-side routing: `/` (index), `/maps/:id` (editor), `/embed/:id` (embed view)
-8. Index page: grid of saved maps with title, status badge, last-updated date. Actions: Open, Duplicate, Archive, Delete. "New Map" button creates via API and navigates to editor
-9. Embed route renders `MapView` only — no toolbar, no FilterBar, no DataTable. 100vw × 100vh
-10. Copyable iframe embed snippet generated in the editor UI
+### S1.2: Table / FilterBar Toggle
+
+Add a `showDataPanel` toggle so simple locator maps can hide the table/filter UI entirely.
+
+1. Add `showDataPanel: boolean` to `DesignState` (default `true`)
+2. Toggle control in the sidebar (under Embed or Layout group)
+3. When `false`, the FilterBar and DataTable/DrawnFeaturesTable are hidden in both editor and embed modes
+4. Map expands to fill the freed space
+
+### S1.3: Sidebar Reorganization
+
+Reorganize the current flat list of 20 accordion sections into 3 collapsible super-groups:
+
+**Layers** — Projection, Labels, Regions, Points, Roads, Waterways, Cities, Globe & Graticule
+**Design** — Layout, Typography, Colors
+**Embed** — Demo, Controls (future: Header, Footer, Legend, Accessibility)
+
+1. Create a `SidebarGroup` wrapper component — collapsible header with nested AccordionSections
+2. Migrate all existing sections into the 3 groups
+3. Remove placeholder "Coming soon" sections that have no controls yet (Search box, Number styles, Zoom) — add them back when implemented
+4. Preserved behavior: each AccordionSection still expands/collapses independently within its group
+
+### S1.4: Label Font Consistency
+
+Audit and fix all label rendering paths to correctly use the selected `design.labelFont`.
+
+1. Verify LabelLayer, CityLayer, peak labels all apply `design.labelFont` (not `design.fontFamily`)
+2. Ensure dynamically-loaded Google Font stylesheets cover all label rendering contexts
+3. Test with each available font — labels should update immediately on font change
+
+### S1.5: Empty-by-Default + Example Data Loader
+
+New maps must start with no data. Provide example datasets for learning/testing.
+
+1. Modify `useLocationData` to read from `data_config.points` stored in the API — if empty/absent, return empty array (not seed data)
+2. Remove the hardcoded `seedLocations` fallback from the data loading path
+3. Add "Load Example Data" button/dropdown on the Data tab with options:
+   - **Category markers** — ~20 representative Colorado locations across 4-5 categories
+   - **Single point** — one location (locator map starting point)
+   - **Choropleth** — Colorado county-level values (uses existing `coloradoCounties.ts`)
+4. Loading example data writes to `data_config.points` via the API (treated as real data from that point)
+5. Add "Clear All Data" button to reset to empty
 
 ### Relevant Files
 
-- New: `worker/` (wrangler.toml, src/index.ts, schema.sql), `src/pages/` (IndexPage, MapEditorPage, EmbedPage), `src/lib/api.ts`
-- Modify: `src/App.tsx`, `src/hooks/useLocationData.ts`, `src/context/DesignContext.tsx`, `vite.config.ts`
+- Modify: `src/context/DesignContext.tsx` — remove body font assignment
+- Modify: `src/styles/index.css` — set Libre Franklin as root font
+- Modify: `src/components/DesignSidebar.tsx` — reorganize into SidebarGroups
+- New: `src/components/SidebarGroup.tsx` — collapsible group wrapper
+- Modify: `src/components/MapEditorContent.tsx` — showDataPanel toggle
+- Modify: `src/hooks/useLocationData.ts` — read from data_config, remove seed fallback
+- Modify: `src/components/DataEditor.tsx` or `DataTable.tsx` — example data loader UI
+- Modify: `src/types.ts` — add `showDataPanel` to DesignState
+- Modify: `src/config.ts` — default value for `showDataPanel`
 
 ### Verification
 
-- Create a map from index page → confirm it exists in D1
-- Open map → design controls work, save persists across reload
-- Duplicate → new map with same config, different id
-- Archive → map disappears from default index view
-- `/embed/:id` renders map-only with no UI chrome
-- Unauthenticated writes return 401
+- New map → loads with empty map, no points
+- Load "Category markers" example → ~20 points appear with categories
+- Load "Single point" → one marker, ideal for locator map
+- Load "Choropleth" → county regions with values
+- Clear data → back to empty
+- App UI always in Libre Franklin regardless of map font setting
+- Change map label font → only map labels change, not sidebar/toolbar
+- Toggle showDataPanel off → table/filter hidden, map fills space
+- Sidebar organized into Layers/Design/Embed groups
+- All label types (city names, peaks, custom labels) use selected labelFont
 
 ---
 
-## Phase 2 — Accordion Design Sidebar
+## Sprint 2 — Responsive Embed
 
-**Goal**: Replace the top-mounted `DesignToolbar` with a Flourish-style collapsible accordion sidebar (~320px, right side). This becomes the home for all current and future design controls.
+**Goal**: Embeds maintain chosen aspect ratios in WordPress Custom HTML blocks across all screen sizes.
 
-> Promoted ahead of the Data Tab because Phases 3–6 all add controls that live in this sidebar. Building the container first avoids rework.
+### S2.1: Aspect Ratio Control
 
-1. New `DesignSidebar.tsx` with accordion sections: Projection, Regions layer, Points layer, Globe & graticule layers, Controls, Popups & panels, Search box, Legend, Zoom, Number styles, Layout, Header, Footer, Accessibility
-2. Migrate all controls from current `DesignToolbar` into corresponding sections
-3. Toggle via gear icon button + retain `Cmd+Shift+D` shortcut
-4. Responsive: slide-over drawer on narrow viewports
-5. Delete `DesignToolbar.tsx` once complete
-6. Set **Voyager** as the default tile preset
+1. Add `embedAspectRatio` to design state — options: 16:9, 4:3, 3:2, 1:1, Custom (w:h input)
+2. Ratio picker in the Embed sidebar group
+3. Ratio stored in design_state, used by the embed loader script
+
+### S2.2: Embed Loader Script
+
+Lightweight JS script (~1KB) hosted at `maps.coloradosun.com/embed.js` that:
+
+1. Finds all co-map iframes by data attribute
+2. Calculates iframe height from container width × aspect ratio
+3. Listens for window resize and recalculates
+4. Handles postMessage from iframe for dynamic content height (optional)
+
+### S2.3: Updated Embed Code Output
+
+1. Generated embed snippet includes `<script>` tag for the loader + iframe with `data-ratio` attribute
+2. Fallback: if script doesn't load, iframe stays at a sensible fixed height (600px)
+3. Demo embed snippet also includes the loader
 
 ### Relevant Files
 
-- New: `src/components/DesignSidebar.tsx`, `AccordionSection.tsx`
-- Modify: `src/context/DesignContext.tsx`, MapEditorPage
-- Delete: `src/components/DesignToolbar.tsx`
+- New: `public/embed.js` — responsive iframe loader
+- Modify: `src/pages/MapEditorPage.tsx` — updated embed snippet generation
+- Modify: `src/components/DesignSidebar.tsx` — ratio picker in Embed group
+- Modify: `src/types.ts`, `src/config.ts` — `embedAspectRatio` field
 
 ### Verification
 
-- All existing design controls accessible in the sidebar
-- Voyager loads as default tile layer
-- Live map updates on every setting change (same as current)
-- Accordion sections expand/collapse correctly
-- Sidebar toggles via button and keyboard shortcut
-- Mobile: renders as drawer without breaking the map
+- Paste embed code into WordPress Custom HTML block → iframe renders at chosen ratio
+- Resize browser → iframe height adjusts to maintain ratio
+- Different ratios (16:9 vs 1:1) render correctly
+- Works without the script (falls back to 600px)
+- Demo embed also responsive
 
 ---
 
-## Phase 3 — Map Layers & Base Styling
+## Sprint 3 — View-Scoped Curation (Phase 8 Lite)
 
-**Goal**: Add configurable vector feature layers (roads, waterways, cities) and a proper label system with custom font support. Fix existing label issues.
+**Goal**: Lock a view and curate which features are visible for publication-quality maps. Overpass queries scoped to visible extent instead of statewide.
 
-### 3A: Label System
+### S3.1: Lock View Toggle
 
-1. Separate label layers from base tiles — labels render as their own overlay so they always appear on top of other features
-2. Non-labeled base tile options (unlabeled Voyager, unlabeled positron, etc.) to avoid label collision when using custom label layers
-3. Custom font support for labels (load from Google Fonts or local @font-face)
-4. **Bug fix**: Peak labels display meters vs. feet — fix to show feet (with optional metric toggle in sidebar)
+1. "Lock view" button in the editor toolbar — freezes current zoom level and map bounds
+2. Visual indicator (border glow or badge) when view is locked
+3. Pan/zoom disabled while locked; unlock to navigate freely again
 
-### 3B: Feature Layers
+### S3.2: View-Extent Overpass Queries
 
-5. **Road layer**: pull road geometries from vector tiles (OpenMapTiles / Protomaps), allow selecting individual road objects/segments to apply custom styles (color, weight, dash pattern)
-6. **Waterway layer**: same select-and-style pattern for rivers, streams, lakes
-7. **City layer**: city points/labels with per-object styling (icon, font size, visibility toggle)
-8. Each feature layer gets its own accordion section in the design sidebar with: visibility toggle, default style, selected-object style overrides
+1. When view is locked, Overpass sub-toggle pills fetch data only for the visible bounding box
+2. Modify `vectorTiles.ts` Overpass query builder to accept optional bbox parameter
+3. Dramatically reduces API load and response time vs. statewide queries
+
+### S3.3: Per-Feature Visibility
+
+1. Click any road, waterway, city label, or peak while view is locked → show/hide toggle
+2. Hidden features stored in `data_config.viewCuration: { hiddenFeatureIds: string[] }`
+3. Curation rules applied on published/embed render — hidden features suppressed
+
+### S3.4: Save & Apply Curation
+
+1. View curation (zoom, bounds, hidden features) saved as part of the map's data_config
+2. Published/embed maps load the curated view — same zoom, bounds, and visibility rules
+3. Editor can unlock, navigate, re-lock to curate a different view
+
+### Deferred to later
+
+- Multiple saved views per map
+- Multi-select / marquee tool for batch styling
+- Per-feature style overrides (color, weight) — only show/hide for now
 
 ### Relevant Files
 
-- New: `src/components/layers/LabelLayer.tsx`, `RoadLayer.tsx`, `WaterwayLayer.tsx`, `CityLayer.tsx`
-- New: `src/lib/vectorTiles.ts` — vector tile source management
-- Modify: `src/components/MapView.tsx` — integrate new layers
-- Modify: `src/components/DesignSidebar.tsx` — add Road, Waterway, City, Labels accordion sections
-- Modify: `src/context/DesignContext.tsx` — add layer visibility/style state
+- New: `src/components/ViewLocker.tsx` — lock/unlock UI
+- Modify: `src/lib/vectorTiles.ts` — bbox parameter for Overpass queries
+- Modify: `src/components/layers/RoadLayer.tsx`, `WaterwayLayer.tsx`, `CityLayer.tsx` — filter hidden features
+- Modify: `src/types.ts` — `ViewCuration` type
+- Modify: `src/pages/EmbedPage.tsx` — apply curation rules on load
 
 ### Verification
 
-- Toggle road layer on → roads appear with default style
-- Click a road segment → style panel opens, change color → only that segment updates
-- Switch to non-labeled base → custom label layer renders on top with chosen font
-- Peak labels show feet by default, meters when toggled
-- Waterway and city layers follow same select-and-style pattern
+- Lock view at Denver metro zoom → toggle Motorways → only roads in visible extent fetched
+- Click a road → hide → road disappears, saved to config
+- Publish map → embed loads at locked zoom/bounds with hidden features suppressed
+- Unlock → all features visible again
+- Re-lock at different zoom → curate a different set of features
 
 ---
 
-## Phase 4 — Data Tab (Flourish-style Editor)
+## Sprint 4 — Auth & Deployment
 
-**Goal**: Add a "Data" tab in the editor. Editors view/edit tabular data, assign columns to visualization roles, and connect a public Google Sheet.
+**Goal**: Replace shared API key with user login, add admin panel, deploy to `maps.coloradosun.com`.
 
-### 4A: Data Tab UI
+### S4.1: User Authentication
 
-1. Tab bar in editor: **Preview** | **Data**
-2. Sub-tabs within Data: **Regions** | **Points** (matching layer types)
-3. Spreadsheet-style table component with `@tanstack/react-virtual` for virtualization — editable cells, add/delete rows, paste from clipboard, column context menus
-4. Right sidebar with "Select columns to visualise" panel — draggable column assignments for Geometry, Name, Label, Value, Group, Metadata
-5. Persist table data + column mappings in the map's `data_config` JSON
+1. D1 `users` table: `id`, `email`, `password_hash`, `name`, `created_at`, `updated_at`
+2. Password hashing via Web Crypto API (PBKDF2 or similar — available in Workers runtime)
+3. Login endpoint: `POST /api/auth/login` — validates credentials, returns session token (JWT or opaque token stored in D1)
+4. Session middleware: replace Bearer API key check with session token validation on all write endpoints
+5. Login page at `/login` — email + password form, redirects to index on success
+6. Session stored in httpOnly cookie for security; frontend reads auth state from a `/api/auth/me` endpoint
+7. Logout endpoint clears session
 
-### 4B: Google Sheets Connection
+### S4.2: Admin Panel
 
-6. User pastes a public Google Sheets URL → fetch published CSV (no auth needed, CORS-friendly)
-7. "Refresh from Google Sheets" button with change-diff summary before applying
-8. Last-synced timestamp and connection status indicator
+1. Admin route at `/admin` — protected, only accessible to authenticated users
+2. **User management**: list users, create new user (email + temporary password), reset password
+3. No roles/privileges — all authenticated users have full access
+4. Simple table UI consistent with the rest of the app (Libre Franklin, same styling)
 
-### 4C: Future (out of scope now)
+### S4.3: Cloudflare Pages + Worker Deployment
 
-- CSV file upload
-- Direct API/JSON endpoint import
+1. Cloudflare Pages project for the Vite frontend build
+2. Worker deployed with production D1 database (separate from local dev)
+3. Production wrangler.toml config: custom route, production D1 binding, CORS for `maps.coloradosun.com`
+4. API_KEY env var removed (replaced by user auth); seed an initial admin user via migration or CLI
+
+### S4.4: DNS & Domain
+
+1. CNAME record: `maps.coloradosun.com` → Cloudflare Pages domain
+2. Cloudflare handles SSL automatically
+3. Worker routes configured for `maps.coloradosun.com/api/*`
+4. Update CORS_ORIGIN to `https://maps.coloradosun.com`
+5. Embed script URL: `https://maps.coloradosun.com/embed.js`
+
+### S4.5: Production Hardening
+
+1. Error boundary component — catch React crashes with friendly "Something went wrong" UI
+2. API error handling — toast notifications for save failures, network errors
+3. Loading skeletons for index page, map editor, data tab
+4. Rate limiting on auth endpoints (login attempts)
 
 ### Relevant Files
 
-- New: `src/components/DataEditor.tsx`, `DataSidebar.tsx`, `DataTabBar.tsx`, `src/lib/googleSheets.ts`
-- Modify: `src/types.ts`, MapEditorPage, worker API
+- New: `worker/migrations/0002_users.sql` — users table
+- New: `src/pages/LoginPage.tsx`, `src/pages/AdminPage.tsx`
+- New: `src/components/ErrorBoundary.tsx`
+- Modify: `worker/src/index.ts` — auth endpoints, session middleware
+- Modify: `worker/src/types.ts` — User type, session types
+- Modify: `worker/wrangler.toml` — production config
+- Modify: `src/App.tsx` — login route, auth guard
+- Modify: `src/lib/api.ts` — switch from Bearer token to cookie-based auth
 
 ### Verification
 
-- Open Data tab → see editable table with current map data
-- Edit a cell → switch to Preview → change reflected on map
-- Assign "Value" column → regions show choropleth coloring
-- Paste Google Sheets URL → data populates
-- "Refresh" pulls updated data with change summary
-- Add/delete rows → save → reload → data persists
+- Navigate to `/` unauthenticated → redirected to `/login`
+- Log in with valid credentials → redirected to index, session persists across refresh
+- Create new user from `/admin` → new user can log in
+- Reset password → old password fails, new password works
+- Deployed to `maps.coloradosun.com` → frontend loads, API responds
+- Embed at `maps.coloradosun.com/embed/:id` → loads without auth (public)
+- SSL working, no mixed content warnings
+- API errors show toast notifications, not silent failures
 
 ---
 
-## Phase 5 — Drawing & Sketching Tools
+## Deferred: Phase 6 — Locator Map Wizard & Map Templates
 
-**Goal**: Let editors draw directly on the map — drop points, draw lines/routes, and sketch region polygons. Drawn features are saved as part of the map's data.
-
-1. Drawing toolbar overlay on the map (left side or top) with mode buttons: **Point** | **Line** | **Polygon** | **Select** | **Delete**
-2. **Drop point**: click map to place a marker, popup form to set label + category + metadata
-3. **Draw line**: click to place vertices, double-click to finish. Popup to set label, style (color, weight, dash), and metadata. Snapping to existing features optional
-4. **Sketch region**: click to place polygon vertices, double-click to close. Fill color, stroke, opacity controls. Can represent custom zones, coverage areas, etc.
-5. All drawn features stored as GeoJSON in the map's `data_config`, rendered as dedicated overlay layers
-6. Select tool: click drawn features to edit vertices (drag), update properties, or delete
-7. Integrate with Data Tab — drawn features appear as rows in a **Drawn** sub-tab, editable from either the map or the table
-
-### Relevant Files
-
-- New: `src/components/DrawingToolbar.tsx`, `src/components/layers/DrawnFeaturesLayer.tsx`
-- New: `src/lib/drawing.ts` — GeoJSON feature CRUD helpers
-- Modify: `src/components/MapView.tsx` — drawing interaction handlers
-- Modify: `src/types.ts` — DrawnFeature, DrawingMode types
-- Modify: worker API — persist drawn features in data_config
-
-### Verification
-
-- Select Point mode → click map → marker appears, popup form works
-- Select Line mode → click vertices → double-click to finish → line renders with chosen style
-- Select Polygon mode → sketch a region → fills with chosen color
-- Select tool → drag a vertex → geometry updates live
-- Delete tool → click a feature → removed from map and data
-- Switch to Data tab → drawn features visible as table rows
-- Save → reload → all drawn features persist
-
----
-
-## Phase 6 — Locator Map Wizard & Map Templates
-
-**Goal**: Guided multi-step workflow for creating simple locator maps, plus a template system for quick-start map creation.
+**Goal**: Guided multi-step workflow for creating simple locator maps, plus a template system. Deferred because editors can create locator maps manually with the current tools — the wizard is a workflow optimization.
 
 ### 6A: Locator Map Wizard
 
-1. "New Locator Map" option on the index page → launches a step-by-step wizard:
-   - **Step 1 — Location**: Search for or click to place the target location on the map. Geocoding via Nominatim (free, no API key)
-   - **Step 2 — Framing**: Set zoom level and map bounds. Option to add a Colorado inset showing where the zoomed area sits within the state
-   - **Step 3 — Labels & Style**: Add location label, choose font, set base tile style, toggle feature layers (roads, waterways). Minimal by default
-   - **Step 4 — Finish**: Preview the final locator map, set title, save. Opens in the full editor for further refinement
-2. Locator maps use the same `maps` table — just a pre-configured starting point. No separate data model needed
+1. "New Locator Map" on index page → step-by-step wizard:
+   - Step 1 — Location: search or click to place point (Nominatim geocoding)
+   - Step 2 — Framing: zoom level, bounds, optional Colorado inset
+   - Step 3 — Labels & Style: location label, font, base tile, feature layers
+   - Step 4 — Finish: preview, title, save → opens in full editor
 
 ### 6B: Map Templates
 
-3. Template system: save any map as a template (copies `design_state` + `data_config` structure, strips actual data)
-4. "New from Template" option on the index page with template gallery
-5. Built-in starter templates: Default (current), Locator, Choropleth, Point Cluster
-
-### Relevant Files
-
-- New: `src/components/LocatorWizard.tsx` (multi-step form)
-- New: `src/pages/NewMapPage.tsx` — "New Map" flow with template selection + wizard entry points
-- Modify: `src/pages/IndexPage.tsx` — "New Locator Map" and "New from Template" buttons
-- Modify: worker API — template CRUD, `POST /api/maps` accepts `template_id`
-
-### Verification
-
-- Click "New Locator Map" → wizard launches
-- Complete all 4 steps → locator map created and opens in editor
-- Edit the locator map with full editor tools (it's a normal map)
-- Save a map as template → appears in template gallery
-- Create new map from template → inherits design but not data
+2. Save any map as a template (copies design_state + data_config structure, strips data)
+3. "New from Template" gallery on index page
+4. Built-in starters: Default, Locator, Choropleth, Point Cluster
 
 ---
 
-## Phase 7 — Embed Enhancements & Edge Caching
-
-**Goal**: Polish the embed experience with an interactive category demo mode and add Cloudflare edge caching for instant loads.
-
-### 7A: Auto-Rotate Category Demo
-
-1. Embed query param `?demo=1` activates auto-rotate mode
-2. On load, map cycles through categories one at a time (e.g., Arts & Culture → Businesses → Hikes) — filtering the visible markers to spotlight each category
-3. Smooth transitions: fly to a representative cluster, show category name overlay, pause 4–5 seconds, fade to next
-4. Pauses auto-rotate when user interacts (click, scroll, touch). Resumes after 10s of inactivity, or stays paused with a "Resume" button
-5. Prevents the overwhelming clustered view on first load — eases viewers into the data
-6. Category rotation order and timing configurable in the design sidebar
-
-### 7B: Cloudflare Edge Caching
-
-7. Cache published map JSON via Worker Cache API (`s-maxage=86400`)
-8. Auto-purge cache on `PUT /api/maps/:id`
-9. "Publish" action in editor: sets status=published, purges cache, shows "Live" badge with public/embed URL
-10. Embed route served with inlined or cached-fetch map JSON + minimal JS bundle
-11. Optional: KV tier for highest-traffic maps
-12. Vite assets served with content-hash filenames and long-lived cache headers
-
-### Relevant Files
-
-- New: `src/components/AutoRotateDemo.tsx` — category cycling logic + UI overlay
-- Modify: `src/pages/EmbedPage.tsx` — `?demo=1` param handling
-- Modify: `src/components/DesignSidebar.tsx` — demo config section (category order, timing)
-- Modify: `worker/src/index.ts` — Cache API logic, purge on write
-- Modify: `src/pages/MapEditorPage.tsx` — "Publish" button, "Live" badge
-
-### Verification
-
-- Load embed with `?demo=1` → categories cycle with smooth transitions
-- Click/scroll during demo → rotation pauses
-- "Resume" button → rotation restarts
-- Second load of published embed → `cf-cache-status: HIT`
-- Edit + save → next load shows updated data
-- TTFB < 100ms for cached loads
-
----
-
-## Phase 8 — View-Scoped Label Curation
-
-**Goal**: Add a locked-view mode where editors can curate which labels, road segments, and feature objects are visible at a specific zoom/bounds. This enables precise "what you see is what you get" label curation for publication-quality maps.
-
-1. "Lock view" toggle in the editor — freezes the current zoom level and map bounds
-2. When locked, all Overpass/feature layer pills become interactive curation tools: toggling a pill fetches data for that specific view extent (not statewide), dramatically reducing API load
-3. Per-feature visibility toggles: click any road, waterway, city label, or peak to show/hide it in the locked view
-4. View-scoped label overrides saved in `data_config.viewLabels` — a map of `{ zoom, bounds, hiddenFeatureIds[], styleOverrides[] }`
-5. Multiple locked views can be saved per map (e.g., statewide overview + Denver metro detail)
-6. On published/embed render, the active view's curation rules apply — hidden features are suppressed, style overrides are applied
-7. Multi-select / marquee tool for batch styling: lasso-select multiple road segments or waterway pieces to apply style changes (color, weight, visibility) in bulk
-
-### Relevant Files
-
-- New: `src/components/ViewLocker.tsx` — lock/unlock UI, view extent management
-- Modify: `src/components/DesignSidebar.tsx` — locked-view section, per-view saved configurations
-- Modify: `src/components/layers/RoadLayer.tsx`, `WaterwayLayer.tsx`, `CityLayer.tsx` — filter by view-scoped curation rules
-- Modify: `src/lib/vectorTiles.ts` — accept bbox parameter for view-scoped Overpass queries
-- Modify: `src/types.ts` — ViewCuration, ViewLabel types
-
-### Verification
-
-- Lock view at Denver metro zoom → toggle Motorways pill → only roads in visible extent are fetched
-- Click a road segment → "Hide" button → segment disappears, saved to view config
-- Unlock view → all features visible again (curation only applies when locked)
-- Publish map → embed respects the locked view's curation rules
-- Multi-select tool → lasso 5 waterway segments → change color → all 5 update
-
----
-
-## Phase Dependencies
+## Sprint Dependencies
 
 ```
-Phase 1 (Database + Management)        ✅
+Completed Phases (1-5, 7)              ✅ all merged to main
     │
-    ├── Phase 2 (Design Sidebar)       ✅
-    │       │
-    │       ├── Phase 3 (Map Layers)   ✅ + post-merge fixes
-    │       │
-    │       └── Phase 5 (Drawing)      ✅
+    ├── Sprint 1 (Editor UX Polish)    → unblocks usability testing
     │
-    ├── Phase 4 (Data Tab)             ✅
+    ├── Sprint 2 (Responsive Embed)    → unblocks WordPress integration
     │
-    ├── Phase 6 (Locator Wizard)       🔲 depends on 3+5
+    ├── Sprint 3 (View Curation)       → unblocks publication-quality maps
     │
-    ├── Phase 7 (Embed + Caching)      🔄 PR #11 open
-    │
-    └── Phase 8 (View Label Curation)  🔲 depends on 3
+    └── Sprint 4 (Auth & Deployment)   → production launch
+            │
+            └── Phase 6 (Wizard)       → deferred post-launch optimization
 ```
 
-**Remaining execution order**:
-- **Phase 7** → review PR #11 next (Copilot-generated, needs merge conflict resolution + review)
-- **Phase 8** → after Phase 7 (view-scoped curation builds on feature layers)
-- **Phase 6** → can proceed in parallel with Phase 8 (locator wizard uses existing features)
+Sprints 1–3 can proceed in any order; Sprint 4 depends on S1–S3 being stable.
 
 ---
 
@@ -335,15 +331,15 @@ Phase 1 (Database + Management)        ✅
 | Decision | Choice |
 |----------|--------|
 | Backend | Cloudflare Workers + D1 |
-| Auth | Shared API key, internal team |
-| Embed | iframe |
+| Auth | User login (email + password), session tokens |
+| Admin | User management (create/reset password), no roles |
+| Frontend hosting | Cloudflare Pages |
+| Production domain | `maps.coloradosun.com` (CNAME → Cloudflare Pages) |
+| App UI font | Libre Franklin (always) |
+| Map fonts | Google Fonts (Libre Franklin, Atkinson Hyperlegible, Plus Jakarta Sans) |
+| Embed | iframe with responsive loader script |
 | Default tile | Voyager |
-| Data sources (now) | Google Sheets (public CSV) + manual entry |
-| Data sources (later) | CSV upload, API/JSON endpoints |
-| Sheets sync | Manual refresh button |
-| Visibility | All published maps public |
-| Vector tiles | OpenMapTiles / Protomaps (for road/waterway/city layers) |
-| Label fonts | Google Fonts + local @font-face |
-| Locator maps | Wizard-style multi-step creation |
-| Auto-rotate demo | Viewer-facing on embed (`?demo=1`) |
-| Hosting domain | TBD |
+| Data sources | Google Sheets (public CSV) + manual entry + example datasets |
+| New map default | Empty (no seed data) |
+| Visibility | All published maps public, editor requires login |
+| Locator wizard | Deferred post-launch |
