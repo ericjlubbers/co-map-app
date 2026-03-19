@@ -185,29 +185,30 @@ Lightweight JS script (~1KB) hosted at `maps.coloradosun.com/embed.js` that:
 
 **Goal**: Replace shared API key with user login, add admin panel, deploy to `maps.coloradosun.com`.
 
-### S3.1: User Authentication
+### S3.1: User Authentication ✅
 
-1. D1 `users` table: `id`, `email`, `password_hash`, `name`, `created_at`, `updated_at`
-2. Password hashing via Web Crypto API (PBKDF2 or similar — available in Workers runtime)
-3. Login endpoint: `POST /api/auth/login` — validates credentials, returns session token (JWT or opaque token stored in D1)
-4. Session middleware: replace Bearer API key check with session token validation on all write endpoints
-5. Login page at `/login` — email + password form, redirects to index on success
-6. Session stored in httpOnly cookie for security; frontend reads auth state from a `/api/auth/me` endpoint
-7. Logout endpoint clears session
+1. ✅ D1 `users` + `sessions` tables (migration `0002_auth.sql`)
+2. ✅ PBKDF2 password hashing via Web Crypto API (`worker/src/auth.ts`)
+3. ✅ Auth endpoints: `POST /api/auth/setup` (first user), `/login`, `/logout`, `GET /me`
+4. ✅ Session middleware: cookie-based (`session` httpOnly cookie), validates via D1
+5. ✅ Login page at `/login` — email + password form, `GuestOnly` redirect guard
+6. ✅ `RequireAuth` guard on all admin routes; `/embed/:id` remains public
+7. ✅ Logout endpoint clears session cookie, deletes D1 row
 
-### S3.2: Admin Panel
+### S3.2: Admin Panel ✅
 
-1. Admin route at `/admin` — protected, only accessible to authenticated users
-2. **User management**: list users, create new user (email + temporary password), reset password
-3. No roles/privileges — all authenticated users have full access
-4. Simple table UI consistent with the rest of the app (Libre Franklin, same styling)
+1. ✅ Admin route at `/admin` — protected via `RequireAuth`
+2. ✅ User management: list, create (email + name + password), reset password, delete
+3. ✅ Self-delete prevention; all authenticated users have full access
+4. ✅ Consistent table UI with Libre Franklin styling
 
-### S3.3: Cloudflare Pages + Worker Deployment
+### S3.3: Cloudflare Worker + Assets Deployment ✅
 
-1. Cloudflare Pages project for the Vite frontend build
-2. Worker deployed with production D1 database (separate from local dev)
-3. Production wrangler.toml config: custom route, production D1 binding, CORS for `maps.coloradosun.com`
-4. API_KEY env var removed (replaced by user auth); seed an initial admin user via migration or CLI
+1. ✅ Single Worker serves API + static assets (`[assets]` in wrangler.toml, SPA fallback)
+2. ✅ Production wrangler environment (`--env production`) with separate D1 binding
+3. ✅ Staging environment (`--env staging`) for PR preview deploys
+4. ✅ GitHub Actions CI/CD: type-check → build → deploy (production on `main`, staging on PR)
+5. ✅ API_KEY env var removed; first admin user created via `/api/auth/setup` endpoint
 
 ### S3.4: DNS & Domain
 
@@ -226,14 +227,16 @@ Lightweight JS script (~1KB) hosted at `maps.coloradosun.com/embed.js` that:
 
 ### Relevant Files
 
-- New: `worker/migrations/0002_users.sql` — users table
+- New: `worker/migrations/0002_auth.sql` — users + sessions tables
+- New: `worker/src/auth.ts` — PBKDF2 hashing, session CRUD, cookie helpers
 - New: `src/pages/LoginPage.tsx`, `src/pages/AdminPage.tsx`
-- New: `src/components/ErrorBoundary.tsx`
-- Modify: `worker/src/index.ts` — auth endpoints, session middleware
-- Modify: `worker/src/types.ts` — User type, session types
-- Modify: `worker/wrangler.toml` — production config
-- Modify: `src/App.tsx` — login route, auth guard
-- Modify: `src/lib/api.ts` — switch from Bearer token to cookie-based auth
+- New: `src/context/AuthContext.tsx` — `AuthProvider`, `useAuth()`, login/logout/refresh
+- Modify: `worker/src/index.ts` — auth routes, user mgmt routes, session middleware, SPA catch-all
+- Modify: `worker/src/types.ts` — `UserRecord`, `UserRow`, `Env.ASSETS`
+- Modify: `worker/wrangler.toml` — `[assets]`, `[env.production]`, `[env.staging]`
+- Modify: `src/App.tsx` — `RequireAuth` / `GuestOnly` guards, login + admin routes
+- Modify: `src/lib/api.ts` — cookie-based auth (`credentials: 'include'`)
+- New: `.github/workflows/deploy.yml` — CI/CD (build + deploy to Cloudflare Workers)
 
 ### Verification
 

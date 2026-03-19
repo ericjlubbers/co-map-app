@@ -1,12 +1,14 @@
 /** Typed API client for the co-map Worker */
 
 const API_BASE = import.meta.env.VITE_API_URL ?? '/api';
-const API_KEY  = import.meta.env.VITE_API_KEY ?? '';
 
-function authHeaders(): Record<string, string> {
-  const headers: Record<string, string> = { 'Content-Type': 'application/json' };
-  if (API_KEY) headers['Authorization'] = `Bearer ${API_KEY}`;
-  return headers;
+/** Standard fetch options — sends session cookie automatically. */
+function opts(extra?: RequestInit): RequestInit {
+  return {
+    credentials: 'include',
+    headers: { 'Content-Type': 'application/json' },
+    ...extra,
+  };
 }
 
 // ── Types (mirror worker/src/types.ts) ──────────────────────
@@ -37,36 +39,32 @@ export interface MapInput {
 
 export async function listMaps(status?: string): Promise<MapSummary[]> {
   const params = status ? `?status=${status}` : '';
-  const res = await fetch(`${API_BASE}/maps${params}`);
+  const res = await fetch(`${API_BASE}/maps${params}`, opts());
   if (!res.ok) throw new Error(`Failed to list maps: ${res.status}`);
   const json = await res.json();
   return json.maps;
 }
 
 export async function getMap(id: string): Promise<MapDetail> {
-  const res = await fetch(`${API_BASE}/maps/${encodeURIComponent(id)}`, {
-    headers: authHeaders(),
-  });
+  const res = await fetch(`${API_BASE}/maps/${encodeURIComponent(id)}`, opts());
   if (!res.ok) throw new Error(`Failed to get map: ${res.status}`);
   return res.json();
 }
 
 export async function createMap(input?: MapInput): Promise<{ id: string }> {
-  const res = await fetch(`${API_BASE}/maps`, {
+  const res = await fetch(`${API_BASE}/maps`, opts({
     method: 'POST',
-    headers: authHeaders(),
     body: JSON.stringify(input ?? {}),
-  });
+  }));
   if (!res.ok) throw new Error(`Failed to create map: ${res.status}`);
   return res.json();
 }
 
 export async function updateMap(id: string, input: MapInput): Promise<void> {
-  const res = await fetch(`${API_BASE}/maps/${encodeURIComponent(id)}`, {
+  const res = await fetch(`${API_BASE}/maps/${encodeURIComponent(id)}`, opts({
     method: 'PUT',
-    headers: authHeaders(),
     body: JSON.stringify(input),
-  });
+  }));
   if (!res.ok) throw new Error(`Failed to update map: ${res.status}`);
 }
 
@@ -76,18 +74,16 @@ export async function publishMap(id: string): Promise<void> {
 }
 
 export async function deleteMap(id: string): Promise<void> {
-  const res = await fetch(`${API_BASE}/maps/${encodeURIComponent(id)}`, {
+  const res = await fetch(`${API_BASE}/maps/${encodeURIComponent(id)}`, opts({
     method: 'DELETE',
-    headers: authHeaders(),
-  });
+  }));
   if (!res.ok) throw new Error(`Failed to delete map: ${res.status}`);
 }
 
 export async function duplicateMap(id: string): Promise<{ id: string }> {
-  const res = await fetch(`${API_BASE}/maps/${encodeURIComponent(id)}/duplicate`, {
+  const res = await fetch(`${API_BASE}/maps/${encodeURIComponent(id)}/duplicate`, opts({
     method: 'POST',
-    headers: authHeaders(),
-  });
+  }));
   if (!res.ok) throw new Error(`Failed to duplicate map: ${res.status}`);
   return res.json();
 }

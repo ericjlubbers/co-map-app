@@ -19,6 +19,18 @@ export interface MapInput {
 
 export interface Env {
   DB: D1Database;
-  API_KEY: string;
   CORS_ORIGIN: string;
+  ASSETS: Fetcher;
+}
+
+export interface UserRecord {
+  id: string;
+  email: string;
+  name: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface UserRow extends UserRecord {
+  password_hash: string;
 }

@@ -2,6 +2,15 @@ name = "co-map-worker"
 main = "src/index.ts"
 compatibility_date = "2025-03-14"
 
+# ── Static assets (Vite build output) ──────────────────────
+# In production, the Worker serves both /api/* and the SPA.
+# Non-API routes fall through to static files, with SPA fallback for client routing.
+[assets]
+directory = "../dist"
+not_found_handling = "single-page-application"
+binding = "ASSETS"
+
+# ── Local / dev D1 database ────────────────────────────────
 [[d1_databases]]
 binding = "DB"
 database_name = "co-map-db"
@@ -10,6 +19,30 @@ migrations_dir = "migrations"
 
 [vars]
 CORS_ORIGIN = "http://localhost:5173"
-API_KEY = "dev-only-key"
 
-# In production, override API_KEY via: wrangler secret put API_KEY
+# ── Production environment ─────────────────────────────────
+# Activated via: wrangler deploy --env production
+# D1 database_id must be set after running: wrangler d1 create co-map-db-prod
+[env.production]
+name = "co-map-worker"
+[env.production.vars]
+CORS_ORIGIN = "https://maps.coloradosun.com"
+
+[[env.production.d1_databases]]
+binding = "DB"
+database_name = "co-map-db-prod"
+database_id = "TO_BE_SET_AFTER_DB_CREATION"
+migrations_dir = "migrations"
+
+# ── Staging environment ────────────────────────────────────
+# Activated via: wrangler deploy --env staging
+[env.staging]
+name = "co-map-worker-staging"
+[env.staging.vars]
+CORS_ORIGIN = "https://staging.maps.coloradosun.com"
+
+[[env.staging.d1_databases]]
+binding = "DB"
+database_name = "co-map-db-staging"
+database_id = "TO_BE_SET_AFTER_DB_CREATION"
+migrations_dir = "migrations"
