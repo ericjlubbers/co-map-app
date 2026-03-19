@@ -9,8 +9,12 @@ import {
   faCode,
   faGlobe,
   faCheck,
+  faPen,
+  faChevronDown,
+  faFileAlt,
+  faBoxArchive,
 } from "@fortawesome/free-solid-svg-icons";
-import { getMap, updateMap, publishMap, type MapDetail } from "../lib/api";
+import { getMap, updateMap, type MapDetail } from "../lib/api";
 import { DesignProvider } from "../context/DesignContext";
 import MapEditorContent from "../components/MapEditorContent";
 import EmbedCodeBanner from "../components/EmbedCodeBanner";
@@ -65,6 +69,12 @@ export default function MapEditorPage() {
   const [showEmbedCode, setShowEmbedCode] = useState(false);
   const [publishing, setPublishing] = useState(false);
   const [publishError, setPublishError] = useState<string | null>(null);
+  const [showStatusMenu, setShowStatusMenu] = useState(false);
+  const [editingTitle, setEditingTitle] = useState(false);
+  const [titleDraft, setTitleDraft] = useState("");
+  const [savingTitle, setSavingTitle] = useState(false);
+  const titleInputRef = useRef<HTMLInputElement | null>(null);
+  const statusMenuRef = useRef<HTMLDivElement | null>(null);
   const drawSaveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const dataSaveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -103,19 +113,57 @@ export default function MapEditorPage() {
     await updateMap(id, { design_state: designState });
   };
 
-  const handlePublish = async () => {
+  const handleStatusChange = async (newStatus: 'draft' | 'published' | 'archived') => {
     if (!id || publishing) return;
     setPublishing(true);
     setPublishError(null);
     try {
-      await publishMap(id);
-      setMapData((prev) => prev ? { ...prev, status: 'published' } : prev);
+      await updateMap(id, { status: newStatus });
+      setMapData((prev) => prev ? { ...prev, status: newStatus } : prev);
     } catch (e) {
-      setPublishError(e instanceof Error ? e.message : "Publish failed");
+      setPublishError(e instanceof Error ? e.message : "Status update failed");
     } finally {
       setPublishing(false);
+      setShowStatusMenu(false);
     }
   };
+
+  const handleTitleSave = async () => {
+    if (!id || !titleDraft.trim() || titleDraft.trim() === mapData?.title) {
+      setEditingTitle(false);
+      return;
+    }
+    setSavingTitle(true);
+    try {
+      await updateMap(id, { title: titleDraft.trim() });
+      setMapData((prev) => prev ? { ...prev, title: titleDraft.trim() } : prev);
+      setEditingTitle(false);
+    } catch {
+      // keep editing open on failure
+    } finally {
+      setSavingTitle(false);
+    }
+  };
+
+  // Close status menu on outside click
+  useEffect(() => {
+    if (!showStatusMenu) return;
+    const handleClick = (e: MouseEvent) => {
+      if (statusMenuRef.current && !statusMenuRef.current.contains(e.target as Node)) {
+        setShowStatusMenu(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClick);
+    return () => document.removeEventListener("mousedown", handleClick);
+  }, [showStatusMenu]);
+
+  // Focus title input when entering edit mode
+  useEffect(() => {
+    if (editingTitle && titleInputRef.current) {
+      titleInputRef.current.focus();
+      titleInputRef.current.select();
+    }
+  }, [editingTitle]);
 
   // ── Persist data_config after each change (debounced) ──────
   const saveDataConfig = useCallback(
@@ -272,7 +320,48 @@ export default function MapEditorPage() {
               <FontAwesomeIcon icon={faArrowLeft} className="text-xs" />
               Maps
             </button>
-            <span className="text-sm font-medium text-gray-900">{mapData.title}</span>
+            {/* Inline title editing */}
+            {editingTitle ? (
+              <div className="flex items-center gap-1.5">
+                <input
+                  ref={titleInputRef}
+                  type="text"
+                  value={titleDraft}
+                  onChange={(e) => setTitleDraft(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") handleTitleSave();
+                    if (e.key === "Escape") setEditingTitle(false);
+                  }}
+                  className="rounded-md border border-gray-300 px-2 py-1 text-sm font-medium text-gray-900 focus:border-blue-400 focus:outline-none focus:ring-1 focus:ring-blue-400"
+                  style={{ width: `${Math.max(titleDraft.length, 10)}ch` }}
+                />
+                <button
+                  onClick={handleTitleSave}
+                  disabled={savingTitle || !titleDraft.trim() || titleDraft.trim() === mapData.title}
+                  className="inline-flex items-center gap-1 rounded-md bg-blue-600 px-2.5 py-1 text-xs font-medium text-white hover:bg-blue-700 disabled:opacity-50 transition-colors"
+                >
+                  {savingTitle ? <FontAwesomeIcon icon={faSpinner} spin /> : "Save"}
+                </button>
+                <button
+                  onClick={() => setEditingTitle(false)}
+                  className="rounded-md px-2 py-1 text-xs text-gray-500 hover:bg-gray-100 transition-colors"
+                >
+                  Cancel
+                </button>
+              </div>
+            ) : (
+              <button
+                onClick={() => {
+                  setTitleDraft(mapData.title);
+                  setEditingTitle(true);
+                }}
+                className="group inline-flex items-center gap-1.5 rounded-md px-1.5 py-1 text-sm font-medium text-gray-900 hover:bg-gray-100 transition-colors"
+                title="Click to rename"
+              >
+                {mapData.title}
+                <FontAwesomeIcon icon={faPen} className="text-[10px] text-gray-400 opacity-0 group-hover:opacity-100 transition-opacity" />
+              </button>
+            )}
             {/* Live badge */}
             {mapData.status === "published" && (
               <a
@@ -287,26 +376,64 @@ export default function MapEditorPage() {
             )}
           </div>
           <div className="flex items-center gap-2">
-            {/* Publish button */}
-            {mapData.status !== "published" ? (
+            {/* Status workflow dropdown */}
+            <div className="relative" ref={statusMenuRef}>
               <button
-                onClick={handlePublish}
-                disabled={publishing}
-                className="inline-flex items-center gap-1.5 rounded-md bg-emerald-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-emerald-700 disabled:opacity-60 transition-colors"
+                onClick={() => setShowStatusMenu(!showStatusMenu)}
+                className={`inline-flex items-center gap-1.5 rounded-md px-3 py-1.5 text-sm font-medium transition-colors ${
+                  mapData.status === "published"
+                    ? "text-emerald-700 hover:bg-emerald-50"
+                    : mapData.status === "archived"
+                      ? "text-gray-500 hover:bg-gray-100"
+                      : "text-amber-700 hover:bg-amber-50"
+                }`}
               >
-                {publishing ? (
-                  <FontAwesomeIcon icon={faSpinner} spin />
-                ) : (
-                  <FontAwesomeIcon icon={faGlobe} />
-                )}
-                Publish
+                <FontAwesomeIcon
+                  icon={
+                    mapData.status === "published"
+                      ? faGlobe
+                      : mapData.status === "archived"
+                        ? faBoxArchive
+                        : faFileAlt
+                  }
+                />
+                {mapData.status === "published"
+                  ? "Published"
+                  : mapData.status === "archived"
+                    ? "Archived"
+                    : "Draft"}
+                <FontAwesomeIcon icon={faChevronDown} className="text-[10px] opacity-60" />
               </button>
-            ) : (
-              <span className="inline-flex items-center gap-1.5 rounded-md px-3 py-1.5 text-sm font-medium text-emerald-700">
-                <FontAwesomeIcon icon={faCheck} />
-                Published
-              </span>
-            )}
+              {showStatusMenu && (
+                <div className="absolute right-0 z-50 mt-1 w-44 rounded-lg border border-gray-200 bg-white py-1 shadow-lg">
+                  {(
+                    [
+                      { value: "draft" as const, label: "Draft", icon: faFileAlt, color: "text-amber-600" },
+                      { value: "published" as const, label: "Published", icon: faGlobe, color: "text-emerald-600" },
+                      { value: "archived" as const, label: "Archived", icon: faBoxArchive, color: "text-gray-500" },
+                    ] as const
+                  ).map((option) => (
+                    <button
+                      key={option.value}
+                      onClick={() => handleStatusChange(option.value)}
+                      disabled={publishing || mapData.status === option.value}
+                      className={`flex w-full items-center gap-2 px-3 py-2 text-sm hover:bg-gray-50 disabled:opacity-40 ${option.color}`}
+                    >
+                      <FontAwesomeIcon icon={option.icon} className="w-4" />
+                      {option.label}
+                      {mapData.status === option.value && (
+                        <FontAwesomeIcon icon={faCheck} className="ml-auto text-xs" />
+                      )}
+                    </button>
+                  ))}
+                  {publishing && (
+                    <div className="flex items-center justify-center py-1">
+                      <FontAwesomeIcon icon={faSpinner} spin className="text-xs text-gray-400" />
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
             {publishError && (
               <span className="text-xs text-red-500">{publishError}</span>
             )}

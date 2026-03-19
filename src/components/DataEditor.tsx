@@ -479,6 +479,8 @@ export default function DataEditor({
                                   src={cellValue}
                                   alt=""
                                   className="mr-1.5 h-5 w-5 shrink-0 rounded object-cover"
+                                  loading="lazy"
+                                  decoding="async"
                                   onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }}
                                 />
                                 <span className="truncate text-xs text-gray-700">{cellValue}</span>

@@ -119,6 +119,10 @@ app.post('/api/auth/login', async (c) => {
     return c.json({ error: 'Invalid email or password' }, 401);
   }
 
+  if (user.status === 'archived') {
+    return c.json({ error: 'This account has been deactivated. Contact an administrator.' }, 403);
+  }
+
   const token = await createSession(c.env.DB, user.id);
 
   // Opportunistic cleanup of expired sessions
@@ -155,7 +159,7 @@ app.get('/api/users', async (c) => {
   if (denied) return denied;
 
   const result = await c.env.DB.prepare(
-    'SELECT id, email, name, created_at, updated_at FROM users ORDER BY created_at',
+    'SELECT id, email, name, status, created_at, updated_at FROM users ORDER BY created_at',
   ).all<UserRecord>();
   return c.json({ users: result.results });
 });
@@ -228,6 +232,74 @@ app.delete('/api/users/:userId', async (c) => {
   const result = await c.env.DB.prepare('DELETE FROM users WHERE id = ?').bind(userId).run();
   if (!result.meta.changes) return c.json({ error: 'User not found' }, 404);
   return c.json({ deleted: true });
+});
+
+// Archive / restore user
+app.put('/api/users/:userId/status', async (c) => {
+  const denied = await requireAuth(c);
+  if (denied) return denied;
+
+  const userId = c.req.param('userId');
+
+  // Prevent archiving yourself
+  if (c.var.user?.id === userId) {
+    return c.json({ error: 'Cannot change your own status' }, 400);
+  }
+
+  const body = await c.req.json<{ status?: string }>().catch(() => ({} as { status?: string }));
+  if (body.status !== 'active' && body.status !== 'archived') {
+    return c.json({ error: 'Status must be "active" or "archived"' }, 400);
+  }
+
+  const now = new Date().toISOString();
+  const result = await c.env.DB.prepare(
+    'UPDATE users SET status = ?, updated_at = ? WHERE id = ?',
+  ).bind(body.status, now, userId).run();
+
+  if (!result.meta.changes) return c.json({ error: 'User not found' }, 404);
+
+  // If archiving, invalidate all sessions for this user
+  if (body.status === 'archived') {
+    await c.env.DB.prepare('DELETE FROM sessions WHERE user_id = ?').bind(userId).run();
+  }
+
+  return c.json({ ok: true });
+});
+
+// ---------- Settings Routes (auth required) ----------
+
+// Get all settings
+app.get('/api/settings', async (c) => {
+  const denied = await requireAuth(c);
+  if (denied) return denied;
+
+  const result = await c.env.DB.prepare('SELECT key, value FROM settings').all<{ key: string; value: string }>();
+  const settings: Record<string, string> = {};
+  for (const row of result.results) {
+    settings[row.key] = row.value;
+  }
+  return c.json({ settings });
+});
+
+// Update a setting
+app.put('/api/settings', async (c) => {
+  const denied = await requireAuth(c);
+  if (denied) return denied;
+
+  const body = await c.req.json<Record<string, string>>().catch(() => ({}));
+  const now = new Date().toISOString();
+
+  const batch = Object.entries(body).map(([key, value]) =>
+    c.env.DB.prepare(
+      'INSERT INTO settings (key, value, updated_at) VALUES (?, ?, ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value, updated_at = excluded.updated_at',
+    ).bind(key, String(value), now),
+  );
+
+  if (batch.length > 0) {
+    await c.env.DB.batch(batch);
+  }
+
+  return c.json({ ok: true });
 });
 
 // ---------- Map Routes ----------

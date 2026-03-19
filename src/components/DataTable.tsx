@@ -69,17 +69,25 @@ export default function DataTable({ points, selectedId, onSelectPoint }: Props) 
                 {/* Thumbnail */}
                 <td className="px-4 py-3">
                   <div className="h-10 w-10 overflow-hidden rounded-lg bg-gray-100">
+                    {point.imageUrl ? (
                     <img
                       src={point.imageUrl}
                       alt=""
                       className="h-full w-full object-cover"
                       loading="lazy"
+                      decoding="async"
+                      sizes="40px"
                       onError={(e) => {
                         const el = e.target as HTMLImageElement;
                         el.style.display = "none";
                         el.parentElement!.innerHTML = `<span class="flex h-full w-full items-center justify-center text-gray-300"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" class="h-4 w-4 fill-current"><path d="${faImage.icon[4]}"/></svg></span>`;
                       }}
                     />
+                    ) : (
+                      <span className="flex h-full w-full items-center justify-center text-gray-300">
+                        <FontAwesomeIcon icon={faImage} className="text-xs" />
+                      </span>
+                    )}
                   </div>
                 </td>
 

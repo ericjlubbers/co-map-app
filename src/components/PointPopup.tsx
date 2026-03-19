@@ -20,6 +20,8 @@ export default function PointPopup({ point }: Props) {
             alt={point.title}
             className="h-32 w-full object-cover"
             loading="lazy"
+            decoding="async"
+            sizes="280px"
             onError={(e) => {
               (e.target as HTMLImageElement).style.display = "none";
             }}

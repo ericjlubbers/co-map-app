@@ -8,7 +8,7 @@ import {
   faBoxArchive,
   faTrash,
   faArrowUpRightFromSquare,
-  faUserGear,
+  faGear,
 } from "@fortawesome/free-solid-svg-icons";
 import {
   listMaps,
@@ -113,11 +113,12 @@ export default function IndexPage() {
           </h1>
           <div className="flex items-center gap-3">
             <button
-              onClick={() => navigate("/admin")}
+              onClick={() => navigate("/settings")}
               className="inline-flex items-center gap-1.5 rounded-lg border border-gray-300 px-3 py-2 text-sm font-medium text-gray-600 hover:bg-gray-50 transition-colors"
-              title="User management"
+              title="Settings"
             >
-              <FontAwesomeIcon icon={faUserGear} />
+              <FontAwesomeIcon icon={faGear} />
+              Settings
             </button>
             <button
               onClick={handleCreate}

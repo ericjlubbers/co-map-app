@@ -9,7 +9,7 @@ import {
   faChevronRight,
 } from "@fortawesome/free-solid-svg-icons";
 import { useDesign } from "../context/DesignContext";
-import type { FontFamily, ClusterStyle, TilePreset } from "../types";
+import type { DesignState, FontFamily, ClusterStyle, TilePreset } from "../types";
 import AccordionSection from "./AccordionSection";
 import SidebarGroup from "./SidebarGroup";
 import ColorPicker, { CARBON_CATEGORICAL } from "./ColorPicker";
@@ -150,7 +150,7 @@ export default function DesignSidebar({ onClose, categories = [] }: DesignSideba
               <Field label="Tile Layer">
                 <select
                   value={design.tilePreset}
-                  onChange={(e) => set("tilePreset", e.target.value)}
+                  onChange={(e) => set("tilePreset", e.target.value as DesignState["tilePreset"])}
                   className="w-full rounded-md border border-gray-300 bg-white px-2.5 py-1.5 text-xs text-gray-700"
                 >
                   {TILE_PRESETS.map((t) => (
@@ -577,7 +577,7 @@ export default function DesignSidebar({ onClose, categories = [] }: DesignSideba
               <Field label="Map Font">
                 <select
                   value={design.fontFamily}
-                  onChange={(e) => set("fontFamily", e.target.value)}
+                  onChange={(e) => set("fontFamily", e.target.value as DesignState["fontFamily"])}
                   className="w-full rounded-md border border-gray-300 bg-white px-2.5 py-1.5 text-xs text-gray-700"
                 >
                   {FONTS.map((f) => (
@@ -749,7 +749,7 @@ export default function DesignSidebar({ onClose, categories = [] }: DesignSideba
                   )}
                   <select
                     value={design.embedHeightUnit}
-                    onChange={(e) => set("embedHeightUnit", e.target.value)}
+                    onChange={(e) => set("embedHeightUnit", e.target.value as DesignState["embedHeightUnit"])}
                     className="rounded-md border border-gray-300 bg-white px-2.5 py-1.5 text-xs text-gray-700"
                   >
                     <option value="auto">Auto (from ratio)</option>

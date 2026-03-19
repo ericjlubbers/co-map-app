@@ -348,7 +348,7 @@ function serializeToURL(state: DesignState, includeDesignMode: boolean): string 
 
 // ── Reducer ─────────────────────────────────────────────────
 type DesignAction =
-  | { type: "SET"; key: keyof DesignState; value: string | boolean | number }
+  | { type: "SET"; key: keyof DesignState; value: DesignState[keyof DesignState] }
   | { type: "RESET" };
 
 function designReducer(state: DesignState, action: DesignAction): DesignState {
@@ -364,7 +364,7 @@ function designReducer(state: DesignState, action: DesignAction): DesignState {
 interface DesignContextValue {
   design: DesignState;
   designMode: boolean;
-  set: (key: keyof DesignState, value: string | boolean | number) => void;
+  set: <K extends keyof DesignState>(key: K, value: DesignState[K]) => void;
   reset: () => void;
   getShareURL: (includeDesignMode?: boolean) => string;
 }
@@ -431,7 +431,7 @@ export function DesignProvider({
   }, [design]);
 
   const set = useCallback(
-    (key: keyof DesignState, value: string | boolean | number) => dispatch({ type: "SET", key, value }),
+    <K extends keyof DesignState>(key: K, value: DesignState[K]) => dispatch({ type: "SET", key, value }),
     []
   );
   const reset = useCallback(() => dispatch({ type: "RESET" }), []);

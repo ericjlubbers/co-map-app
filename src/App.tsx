@@ -4,7 +4,7 @@ import IndexPage from "./pages/IndexPage";
 import MapEditorPage from "./pages/MapEditorPage";
 import EmbedPage from "./pages/EmbedPage";
 import LoginPage from "./pages/LoginPage";
-import AdminPage from "./pages/AdminPage";
+import SettingsPage from "./pages/SettingsPage";
 
 /** Renders children only when authenticated; redirects to /login otherwise. */
 function RequireAuth({ children }: { children: React.ReactNode }) {
@@ -62,10 +62,10 @@ export default function App() {
             }
           />
           <Route
-            path="/admin"
+            path="/settings"
             element={
               <RequireAuth>
-                <AdminPage />
+                <SettingsPage />
               </RequireAuth>
             }
           />
