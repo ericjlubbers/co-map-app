@@ -25,6 +25,7 @@ CORS_ORIGIN = "http://localhost:5173"
 # D1 database_id must be set after running: wrangler d1 create co-map-db-prod
 [env.production]
 name = "co-map-worker"
+workers_dev = true
 [env.production.vars]
 CORS_ORIGIN = "https://maps.coloradosun.com"
 
