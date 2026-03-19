@@ -31,7 +31,7 @@ CORS_ORIGIN = "https://maps.coloradosun.com"
 [[env.production.d1_databases]]
 binding = "DB"
 database_name = "co-map-db-prod"
-database_id = "TO_BE_SET_AFTER_DB_CREATION"
+database_id = "04bd89c7-8d58-46b7-b26f-9565c4f9e3c5"
 migrations_dir = "migrations"
 
 # ── Staging environment ────────────────────────────────────
@@ -44,5 +44,5 @@ CORS_ORIGIN = "https://staging.maps.coloradosun.com"
 [[env.staging.d1_databases]]
 binding = "DB"
 database_name = "co-map-db-staging"
-database_id = "TO_BE_SET_AFTER_DB_CREATION"
+database_id = "34295774-0a81-4978-a0de-8038d2465299"
 migrations_dir = "migrations"
