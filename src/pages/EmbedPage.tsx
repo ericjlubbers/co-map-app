@@ -1,8 +1,9 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useParams, useSearchParams } from "react-router-dom";
 import { getMap, type MapDetail } from "../lib/api";
 import { DesignProvider } from "../context/DesignContext";
 import MapEditorContent from "../components/MapEditorContent";
+import type { ViewCuration } from "../types";
 
 /**
  * Embed page — renders just the map with no editor chrome.
@@ -22,6 +23,16 @@ export default function EmbedPage() {
       .then(setMapData)
       .catch((e) => setError(e instanceof Error ? e.message : "Failed to load map"));
   }, [id]);
+
+  // Extract viewCuration from data_config
+  const viewCuration = useMemo<ViewCuration | null>(() => {
+    if (!mapData?.data_config) return null;
+    const raw = mapData.data_config as Record<string, unknown>;
+    if (raw.viewCuration && typeof raw.viewCuration === "object") {
+      return raw.viewCuration as ViewCuration;
+    }
+    return null;
+  }, [mapData]);
 
   if (error) {
     return (
@@ -45,6 +56,8 @@ export default function EmbedPage() {
         <MapEditorContent
           embedMode
           demoMode={demoOverride || !!(mapData.design_state as Record<string, unknown>)?.enableDemoMode}
+          viewCuration={viewCuration}
+          viewLocked={!!viewCuration}
         />
       </div>
     </DesignProvider>

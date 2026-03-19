@@ -25,8 +25,8 @@ Internal mapping platform for The Colorado Sun newsroom. Reporters and data visu
 |--------|--------|-------|
 | S1 — Editor UX Polish | ✅ | Font isolation, sidebar reorg (3 groups, single-open), table toggle, empty-by-default, example data, custom ColorPicker, category colors, custom border controls, embed padding/margin/background |
 | S2 — Responsive Embed | ✅ | Independent desktop/mobile aspect ratios, responsive embed.js loader, live embed code snippets, auto-rotate demo toggle |
-| S3 — Auth & Deployment | 🔲 | User login, admin panel, Cloudflare Pages, DNS, production config |
-| S4 — View-Scoped Curation | 🔲 | Lock view, bbox-scoped Overpass, per-feature show/hide |
+| S3 — Auth & Deployment | ✅ | User login, admin panel, Cloudflare Pages, DNS, production config |
+| S4 — View-Scoped Curation | ✅ | Lock view, bbox-scoped Overpass, per-feature show/hide |
 
 ### Deferred
 

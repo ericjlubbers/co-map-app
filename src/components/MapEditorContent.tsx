@@ -27,6 +27,7 @@ import type {
   DrawnFeatureCollection,
   DrawnFeatureProperties,
   PointData,
+  ViewCuration,
 } from "../types";
 import type { StarterType } from "../lib/starterData";
 import type { LatLng } from "leaflet";
@@ -42,6 +43,14 @@ interface MapEditorContentProps {
   onClearPoints?: () => void;
   initialDrawnFeatures?: DrawnFeatureCollection;
   onDrawnFeaturesChange?: (features: DrawnFeatureCollection) => void;
+  /** View curation state */
+  viewCuration?: ViewCuration | null;
+  /** Whether the view is currently locked */
+  viewLocked?: boolean;
+  /** Called when a feature should be hidden */
+  onHideFeature?: (id: string) => void;
+  /** Ref callback to expose the Leaflet map instance */
+  onMapRef?: (map: import("leaflet").Map | null) => void;
 }
 
 type DataTab = "points" | "drawn";
@@ -54,6 +63,10 @@ export default function MapEditorContent({
   onClearPoints,
   initialDrawnFeatures,
   onDrawnFeaturesChange,
+  viewCuration,
+  viewLocked = false,
+  onHideFeature,
+  onMapRef,
 }: MapEditorContentProps) {
   const { design, designMode } = useDesign();
   const data = externalPoints ?? [];
@@ -234,6 +247,10 @@ export default function MapEditorContent({
           selectedId={selectedId}
           onSelectPoint={handleSelectPoint}
           drawnFeatures={drawnFeatures}
+          viewCuration={viewCuration}
+          viewLocked={viewLocked}
+          onHideFeature={onHideFeature}
+          onMapRef={onMapRef}
         />
         {demoMode && categories.length > 0 && (
           <AutoRotateDemo
@@ -295,6 +312,10 @@ export default function MapEditorContent({
                 onSelectFeature={handleSelectFeature}
                 onDeleteFeature={handleDeleteFeature}
                 selectedFeatureId={selectedFeatureId}
+                viewCuration={viewCuration}
+                viewLocked={viewLocked}
+                onHideFeature={onHideFeature}
+                onMapRef={onMapRef}
               />
 
               {/* Drawing toolbar overlay */}

@@ -61,7 +61,15 @@ function makeCityIcon(
   });
 }
 
-export default function CityLayer() {
+export default function CityLayer({
+  hiddenFeatureIds,
+  onHideFeature,
+  viewLocked,
+}: {
+  hiddenFeatureIds?: Set<string>;
+  onHideFeature?: (id: string) => void;
+  viewLocked?: boolean;
+}) {
   const { design } = useDesign();
 
   const [styleOverrides, setStyleOverrides] = useState<
@@ -74,6 +82,7 @@ export default function CityLayer() {
   if (!design.showCities) return null;
 
   const visibleCities = COLORADO_CITIES.filter((c) => {
+    if (hiddenFeatureIds?.has(c.id)) return false;
     if (styleOverrides[c.id]?.visible === false) return false;
     if (c.type === "peak" && !design.showPeakLabels) return false;
     if ((c.type === "city" || c.type === "town") && !design.showCityLabels) return false;
@@ -176,10 +185,14 @@ export default function CityLayer() {
                   </button>
                   <button
                     onClick={() => {
-                      setStyleOverrides((prev) => ({
-                        ...prev,
-                        [city.id]: { ...prev[city.id], visible: false },
-                      }));
+                      if (viewLocked && onHideFeature) {
+                        onHideFeature(city.id);
+                      } else {
+                        setStyleOverrides((prev) => ({
+                          ...prev,
+                          [city.id]: { ...prev[city.id], visible: false },
+                        }));
+                      }
                       setSelectedId(null);
                     }}
                     className="rounded border border-red-200 px-2 py-1 text-red-500 hover:bg-red-50"

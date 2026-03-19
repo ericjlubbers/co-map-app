@@ -13,6 +13,9 @@ import {
   faChevronDown,
   faFileAlt,
   faBoxArchive,
+  faLock,
+  faLockOpen,
+  faEye,
 } from "@fortawesome/free-solid-svg-icons";
 import { getMap, updateMap, type MapDetail } from "../lib/api";
 import { DesignProvider } from "../context/DesignContext";
@@ -38,6 +41,7 @@ import type {
   LayerData,
   ColumnMappings,
   DataRow,
+  ViewCuration,
 } from "../types";
 import sunIcon from "../assets/colorado-sun-icon.svg";
 
@@ -70,13 +74,21 @@ export default function MapEditorPage() {
   const [publishing, setPublishing] = useState(false);
   const [publishError, setPublishError] = useState<string | null>(null);
   const [showStatusMenu, setShowStatusMenu] = useState(false);
+  const [showHiddenMenu, setShowHiddenMenu] = useState(false);
   const [editingTitle, setEditingTitle] = useState(false);
   const [titleDraft, setTitleDraft] = useState("");
   const [savingTitle, setSavingTitle] = useState(false);
   const titleInputRef = useRef<HTMLInputElement | null>(null);
   const statusMenuRef = useRef<HTMLDivElement | null>(null);
+  const hiddenMenuRef = useRef<HTMLDivElement | null>(null);
   const drawSaveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const dataSaveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const curationSaveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const leafletMapRef = useRef<import("leaflet").Map | null>(null);
+
+  // ── View curation state ────────────────────────────────────
+  const [viewCuration, setViewCuration] = useState<ViewCuration | null>(null);
+  const [viewLocked, setViewLocked] = useState(false);
 
   // ── Tab state ─────────────────────────────────────────────
   const [activeTab, setActiveTab] = useState<EditorTab>("preview");
@@ -96,6 +108,13 @@ export default function MapEditorPage() {
       const data = await getMap(id);
       setMapData(data);
       setDataConfig(parseDataConfig(data.data_config ?? {}));
+      // Restore view curation if saved
+      const raw = data.data_config as Record<string, unknown> | undefined;
+      if (raw?.viewCuration && typeof raw.viewCuration === "object") {
+        const vc = raw.viewCuration as ViewCuration;
+        setViewCuration(vc);
+        setViewLocked(true);
+      }
     } catch (e) {
       setError(e instanceof Error ? e.message : "Failed to load map");
     } finally {
@@ -147,15 +166,18 @@ export default function MapEditorPage() {
 
   // Close status menu on outside click
   useEffect(() => {
-    if (!showStatusMenu) return;
+    if (!showStatusMenu && !showHiddenMenu) return;
     const handleClick = (e: MouseEvent) => {
-      if (statusMenuRef.current && !statusMenuRef.current.contains(e.target as Node)) {
+      if (showStatusMenu && statusMenuRef.current && !statusMenuRef.current.contains(e.target as Node)) {
         setShowStatusMenu(false);
+      }
+      if (showHiddenMenu && hiddenMenuRef.current && !hiddenMenuRef.current.contains(e.target as Node)) {
+        setShowHiddenMenu(false);
       }
     };
     document.addEventListener("mousedown", handleClick);
     return () => document.removeEventListener("mousedown", handleClick);
-  }, [showStatusMenu]);
+  }, [showStatusMenu, showHiddenMenu]);
 
   // Focus title input when entering edit mode
   useEffect(() => {
@@ -276,6 +298,89 @@ export default function MapEditorPage() {
   }, [mapData]);
 
   const embedUrl = `${window.location.origin}/embed/${id}`;
+
+  // ── View curation handlers ────────────────────────────────
+  const saveCuration = useCallback(
+    (curation: ViewCuration | null) => {
+      if (!id) return;
+      if (curationSaveTimerRef.current) clearTimeout(curationSaveTimerRef.current);
+      curationSaveTimerRef.current = setTimeout(async () => {
+        try {
+          await updateMap(id, {
+            data_config: { viewCuration: curation ?? undefined },
+          });
+        } catch {
+          // non-fatal
+        }
+      }, AUTOSAVE_DEBOUNCE_MS);
+    },
+    [id],
+  );
+
+  const handleLockView = useCallback(() => {
+    const map = leafletMapRef.current;
+    if (!map) return;
+    const center = map.getCenter();
+    const zoom = map.getZoom();
+    const bounds = map.getBounds();
+    const curation: ViewCuration = {
+      center: [center.lat, center.lng],
+      zoom,
+      bounds: [
+        [bounds.getSouth(), bounds.getWest()],
+        [bounds.getNorth(), bounds.getEast()],
+      ],
+      hiddenFeatureIds: viewCuration?.hiddenFeatureIds ?? [],
+    };
+    setViewCuration(curation);
+    setViewLocked(true);
+    saveCuration(curation);
+  }, [saveCuration, viewCuration?.hiddenFeatureIds]);
+
+  const handleUnlockView = useCallback(() => {
+    setViewLocked(false);
+    // Keep curation data but unlock navigation - user can re-lock at different position
+  }, []);
+
+  const handleClearCuration = useCallback(() => {
+    setViewCuration(null);
+    setViewLocked(false);
+    saveCuration(null);
+  }, [saveCuration]);
+
+  const handleHideFeature = useCallback(
+    (featureId: string) => {
+      setViewCuration((prev) => {
+        if (!prev) return prev;
+        const next: ViewCuration = {
+          ...prev,
+          hiddenFeatureIds: [...prev.hiddenFeatureIds, featureId],
+        };
+        saveCuration(next);
+        return next;
+      });
+    },
+    [saveCuration],
+  );
+
+  const handleShowFeature = useCallback(
+    (featureId: string) => {
+      setViewCuration((prev) => {
+        if (!prev) return prev;
+        const next: ViewCuration = {
+          ...prev,
+          hiddenFeatureIds: prev.hiddenFeatureIds.filter((id) => id !== featureId),
+        };
+        saveCuration(next);
+        return next;
+      });
+    },
+    [saveCuration],
+  );
+
+  const handleMapRef = useCallback((map: import("leaflet").Map | null) => {
+    leafletMapRef.current = map;
+  }, []);
 
   if (loading) {
     return (
@@ -437,6 +542,67 @@ export default function MapEditorPage() {
             {publishError && (
               <span className="text-xs text-red-500">{publishError}</span>
             )}
+            {/* Lock/Unlock View */}
+            <div className="flex items-center gap-1">
+              {viewLocked ? (
+                <>
+                  <button
+                    onClick={handleUnlockView}
+                    className="inline-flex items-center gap-1.5 rounded-md px-3 py-1.5 text-sm font-medium text-amber-700 bg-amber-50 hover:bg-amber-100 transition-colors"
+                    title="Unlock view to pan & zoom"
+                  >
+                    <FontAwesomeIcon icon={faLock} className="text-xs" />
+                    View Locked
+                  </button>
+                  {viewCuration && viewCuration.hiddenFeatureIds.length > 0 && (
+                    <div className="relative" ref={hiddenMenuRef}>                      <button
+                        onClick={() => setShowHiddenMenu(!showHiddenMenu)}
+                        className="inline-flex items-center gap-1 rounded-full bg-red-100 px-2 py-0.5 text-[10px] font-medium text-red-600 hover:bg-red-200 transition-colors"
+                      >
+                        <FontAwesomeIcon icon={faEye} className="text-[9px]" />
+                        {viewCuration.hiddenFeatureIds.length} hidden
+                      </button>
+                      {showHiddenMenu && (
+                        <div className="absolute right-0 z-50 mt-1 w-56 max-h-64 overflow-y-auto rounded-lg border border-gray-200 bg-white py-1 shadow-lg">
+                          <p className="px-3 py-1.5 text-xs font-medium text-gray-500">Hidden Features</p>
+                          {viewCuration.hiddenFeatureIds.map((fid) => (
+                            <button
+                              key={fid}
+                              onClick={() => {
+                                handleShowFeature(fid);
+                                if (viewCuration.hiddenFeatureIds.length <= 1) {
+                                  setShowHiddenMenu(false);
+                                }
+                              }}
+                              className="flex w-full items-center justify-between px-3 py-1.5 text-xs hover:bg-gray-50"
+                            >
+                              <span className="truncate text-gray-700">{fid}</span>
+                              <span className="ml-2 shrink-0 text-blue-600">Show</span>
+                            </button>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  )}
+                  <button
+                    onClick={handleClearCuration}
+                    className="rounded-md px-2 py-1.5 text-xs text-gray-400 hover:text-red-500 hover:bg-gray-100 transition-colors"
+                    title="Clear curation (unlock + unhide all)"
+                  >
+                    Clear
+                  </button>
+                </>
+              ) : (
+                <button
+                  onClick={handleLockView}
+                  className="inline-flex items-center gap-1.5 rounded-md px-3 py-1.5 text-sm font-medium text-gray-600 hover:bg-gray-100 transition-colors"
+                  title="Lock current view for curation"
+                >
+                  <FontAwesomeIcon icon={faLockOpen} className="text-xs" />
+                  Lock View
+                </button>
+              )}
+            </div>
             <button
               onClick={() => setShowEmbedCode(!showEmbedCode)}
               className="inline-flex items-center gap-1.5 rounded-md px-3 py-1.5 text-sm font-medium text-gray-600 hover:bg-gray-100 transition-colors"
@@ -468,6 +634,10 @@ export default function MapEditorPage() {
               onClearPoints={handleClearPoints}
               initialDrawnFeatures={initialDrawnFeatures}
               onDrawnFeaturesChange={handleDrawnFeaturesChange}
+              viewCuration={viewCuration}
+              viewLocked={viewLocked}
+              onHideFeature={handleHideFeature}
+              onMapRef={handleMapRef}
             />
           ) : (
             /* Data tab: editor + sidebar side-by-side */

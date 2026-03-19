@@ -96,10 +96,25 @@ export interface LayerData {
   lastSynced?: string; // ISO timestamp
 }
 
+// ── View Curation (Sprint 4) ─────────────────────────────────
+
+/** Locked view + per-feature visibility for publication-quality maps */
+export interface ViewCuration {
+  /** Locked map center [lat, lng] */
+  center: [number, number];
+  /** Locked zoom level */
+  zoom: number;
+  /** Visible bounding box [[south, west], [north, east]] for scoped Overpass queries */
+  bounds: [[number, number], [number, number]];
+  /** Feature IDs that should be hidden (roads: "way/123", cities: "denver") */
+  hiddenFeatureIds: string[];
+}
+
 /** Top-level data_config object persisted on the map */
 export interface DataConfig {
   regions: LayerData;
   points: LayerData;
+  viewCuration?: ViewCuration;
 }
 
 /** Active tabs in the editor */

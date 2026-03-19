@@ -13,7 +13,7 @@ import {
 } from "react-leaflet";
 import MarkerClusterGroup from "react-leaflet-cluster";
 import "leaflet/dist/leaflet.css";
-import type { PointData, DrawingMode, DrawnFeatureCollection } from "../types";
+import type { PointData, DrawingMode, DrawnFeatureCollection, ViewCuration } from "../types";
 import {
   MAP_CENTER,
   MAP_ZOOM,
@@ -54,23 +54,34 @@ interface Props {
   onDeleteFeature?: (id: string) => void;
   /** ID of the currently selected drawn feature */
   selectedFeatureId?: string | null;
+  /** View curation state (locked view, hidden features) */
+  viewCuration?: ViewCuration | null;
+  /** Whether the view is currently locked */
+  viewLocked?: boolean;
+  /** Called when a feature should be hidden */
+  onHideFeature?: (id: string) => void;
+  /** Ref callback to expose the Leaflet map instance */
+  onMapRef?: (map: LeafletMap | null) => void;
 }
 
 // ── FlyToSelected ────────────────────────────────────────────
 function FlyToSelected({
   point,
   mapRef,
+  onMapRef,
 }: {
   point: PointData | null;
   mapRef: React.RefObject<LeafletMap | null>;
+  onMapRef?: (map: LeafletMap | null) => void;
 }) {
   const map = useMap();
 
   useEffect(() => {
     if (mapRef.current === null) {
       mapRef.current = map;
+      onMapRef?.(map);
     }
-  }, [map, mapRef]);
+  }, [map, mapRef, onMapRef]);
 
   useEffect(() => {
     if (point) {
@@ -219,6 +230,29 @@ function DrawingPreview({
 
 // ── Main MapView export ──────────────────────────────────────
 
+// ── ViewLockHandler (disables/enables pan & zoom) ────────────
+function ViewLockHandler({ locked }: { locked: boolean }) {
+  const map = useMap();
+  useEffect(() => {
+    if (locked) {
+      map.dragging.disable();
+      map.touchZoom.disable();
+      map.doubleClickZoom.disable();
+      map.scrollWheelZoom.disable();
+      map.boxZoom.disable();
+      map.keyboard.disable();
+    } else {
+      map.dragging.enable();
+      map.touchZoom.enable();
+      map.doubleClickZoom.enable();
+      map.scrollWheelZoom.enable();
+      map.boxZoom.enable();
+      map.keyboard.enable();
+    }
+  }, [locked, map]);
+  return null;
+}
+
 const EMPTY_DRAWN: DrawnFeatureCollection = { type: "FeatureCollection", features: [] };
 
 export default function MapView({
@@ -231,6 +265,10 @@ export default function MapView({
   onSelectFeature,
   onDeleteFeature,
   selectedFeatureId = null,
+  viewCuration,
+  viewLocked = false,
+  onHideFeature,
+  onMapRef,
 }: Props) {
   const { design } = useDesign();
   const tileConfig = getTileConfig(design.tilePreset);
@@ -238,6 +276,19 @@ export default function MapView({
   const markerRefs = useRef<Record<string, L.Marker>>({});
 
   const [pendingVertices, setPendingVertices] = useState<LatLng[]>([]);
+
+  // ── View curation computed values ──────────────────────────
+  const hiddenFeatureIds = useMemo(
+    () => new Set(viewCuration?.hiddenFeatureIds ?? []),
+    [viewCuration?.hiddenFeatureIds],
+  );
+
+  // Bbox string for scoped Overpass queries (only when view is locked)
+  const bbox = useMemo(() => {
+    if (!viewLocked || !viewCuration?.bounds) return undefined;
+    const [[south, west], [north, east]] = viewCuration.bounds;
+    return `${south},${west},${north},${east}`;
+  }, [viewLocked, viewCuration?.bounds]);
 
   const selectedPoint = useMemo(
     () => points.find((p) => p.id === selectedId) ?? null,
@@ -270,10 +321,10 @@ export default function MapView({
         : "";
 
   return (
-    <div className={`h-full w-full ${cursorClass}`}>
+    <div className={`h-full w-full ${cursorClass}${viewLocked ? " ring-2 ring-inset ring-amber-400/60" : ""}`}>
       <MapContainer
-        center={MAP_CENTER}
-        zoom={MAP_ZOOM}
+        center={viewCuration?.center ?? MAP_CENTER}
+        zoom={viewCuration?.zoom ?? MAP_ZOOM}
         maxBounds={MAP_MAX_BOUNDS}
         maxBoundsViscosity={0.8}
         className="h-full w-full"
@@ -327,7 +378,7 @@ export default function MapView({
           />
         )}
 
-        <FlyToSelected point={selectedPoint} mapRef={mapRef} />
+        <FlyToSelected point={selectedPoint} mapRef={mapRef} onMapRef={onMapRef} />
 
         {drawingMode && onDrawingComplete && (
           <DrawingInteraction
@@ -397,9 +448,26 @@ export default function MapView({
         </MarkerClusterGroup>
 
         {/* Feature layers */}
-        <RoadLayer />
-        <WaterwayLayer />
-        <CityLayer />
+        <RoadLayer
+          hiddenFeatureIds={hiddenFeatureIds}
+          onHideFeature={onHideFeature}
+          viewLocked={viewLocked}
+          bbox={bbox}
+        />
+        <WaterwayLayer
+          hiddenFeatureIds={hiddenFeatureIds}
+          onHideFeature={onHideFeature}
+          viewLocked={viewLocked}
+          bbox={bbox}
+        />
+        <CityLayer
+          hiddenFeatureIds={hiddenFeatureIds}
+          onHideFeature={onHideFeature}
+          viewLocked={viewLocked}
+        />
+
+        {/* View lock handler */}
+        <ViewLockHandler locked={viewLocked} />
 
         {/* Label overlay — rendered last so it always appears on top */}
         <LabelLayer />

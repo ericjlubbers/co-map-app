@@ -34,6 +34,9 @@ function RoadSubLayer({
   styleOverrides,
   onStyleOverride,
   onClearOverride,
+  hiddenFeatureIds,
+  onHideFeature,
+  viewLocked,
 }: {
   enabled: boolean;
   fetcher: () => Promise<GeoJSON.FeatureCollection>;
@@ -45,6 +48,9 @@ function RoadSubLayer({
   styleOverrides: Record<string, Partial<FeatureStyle>>;
   onStyleOverride: (id: string, style: Partial<FeatureStyle>) => void;
   onClearOverride: (id: string) => void;
+  hiddenFeatureIds?: Set<string>;
+  onHideFeature?: (id: string) => void;
+  viewLocked?: boolean;
 }) {
   const map = useMap();
   const [data, setData] = useState<GeoJSON.FeatureCollection | null>(null);
@@ -57,6 +63,15 @@ function RoadSubLayer({
   const [editColor, setEditColor] = useState(roadColor);
   const [editWeight, setEditWeight] = useState(roadWeight);
   const [editDash, setEditDash] = useState(roadDashArray);
+
+  // Reset data when fetcher (bbox) changes so it refetches
+  const prevFetcherRef = useRef(fetcher);
+  useEffect(() => {
+    if (prevFetcherRef.current !== fetcher) {
+      prevFetcherRef.current = fetcher;
+      setData(null);
+    }
+  }, [fetcher]);
 
   useEffect(() => {
     if (!enabled) return;
@@ -118,11 +133,16 @@ function RoadSubLayer({
   if (error) return <LoadingNotice map={map} message={`${cacheKey} error: ${error}`} />;
   if (!data) return null;
 
+  // Filter out hidden features
+  const visibleData = hiddenFeatureIds && hiddenFeatureIds.size > 0
+    ? { ...data, features: data.features.filter((f) => !hiddenFeatureIds.has(f.id as string)) }
+    : data;
+
   return (
     <>
       <GeoJSON
-        key={`${cacheKey}-${data.features.length}`}
-        data={data}
+        key={`${cacheKey}-${visibleData.features.length}`}
+        data={visibleData}
         style={getStyle}
         onEachFeature={onEachFeature}
         ref={(ref) => {
@@ -199,6 +219,18 @@ function RoadSubLayer({
                 Reset
               </button>
             </div>
+            {viewLocked && onHideFeature && selectedFeatureId && (
+              <button
+                onClick={() => {
+                  onHideFeature(selectedFeatureId);
+                  setSelectedFeatureId(null);
+                  setPopupLatLng(null);
+                }}
+                className="w-full rounded border border-red-300 px-2 py-1 text-red-600 hover:bg-red-50"
+              >
+                Hide Feature
+              </button>
+            )}
           </div>
         </Popup>
       )}
@@ -207,7 +239,17 @@ function RoadSubLayer({
 }
 
 // ── Main RoadLayer ──────────────────────────────────────────────────────────
-export default function RoadLayer() {
+export default function RoadLayer({
+  hiddenFeatureIds,
+  onHideFeature,
+  viewLocked,
+  bbox,
+}: {
+  hiddenFeatureIds?: Set<string>;
+  onHideFeature?: (id: string) => void;
+  viewLocked?: boolean;
+  bbox?: string;
+}) {
   const { design } = useDesign();
   const [styleOverrides, setStyleOverrides] = useState<Record<string, Partial<FeatureStyle>>>({});
 
@@ -223,14 +265,19 @@ export default function RoadLayer() {
     });
   }, []);
 
+  // Create fetchers that use the scoped bbox when provided
+  const motorwayFetcher = useCallback(() => fetchColoradoMotorways(bbox), [bbox]);
+  const trunkFetcher = useCallback(() => fetchColoradoTrunkRoads(bbox), [bbox]);
+  const primaryFetcher = useCallback(() => fetchColoradoPrimaryRoads(bbox), [bbox]);
+
   if (!design.showRoads) return null;
 
   return (
     <>
       <RoadSubLayer
         enabled={design.showMotorways}
-        fetcher={fetchColoradoMotorways}
-        cacheKey="motorways"
+        fetcher={motorwayFetcher}
+        cacheKey={`motorways${bbox ? `-${bbox}` : ""}`}
         roadColor={design.roadColor}
         roadWeight={design.roadWeight}
         roadOpacity={design.roadOpacity}
@@ -238,11 +285,14 @@ export default function RoadLayer() {
         styleOverrides={styleOverrides}
         onStyleOverride={handleOverride}
         onClearOverride={handleClear}
+        hiddenFeatureIds={hiddenFeatureIds}
+        onHideFeature={onHideFeature}
+        viewLocked={viewLocked}
       />
       <RoadSubLayer
         enabled={design.showTrunkRoads}
-        fetcher={fetchColoradoTrunkRoads}
-        cacheKey="trunk roads"
+        fetcher={trunkFetcher}
+        cacheKey={`trunk roads${bbox ? `-${bbox}` : ""}`}
         roadColor={design.roadColor}
         roadWeight={design.roadWeight}
         roadOpacity={design.roadOpacity}
@@ -250,11 +300,14 @@ export default function RoadLayer() {
         styleOverrides={styleOverrides}
         onStyleOverride={handleOverride}
         onClearOverride={handleClear}
+        hiddenFeatureIds={hiddenFeatureIds}
+        onHideFeature={onHideFeature}
+        viewLocked={viewLocked}
       />
       <RoadSubLayer
         enabled={design.showPrimaryRoads}
-        fetcher={fetchColoradoPrimaryRoads}
-        cacheKey="primary roads"
+        fetcher={primaryFetcher}
+        cacheKey={`primary roads${bbox ? `-${bbox}` : ""}`}
         roadColor={design.roadColor}
         roadWeight={design.roadWeight}
         roadOpacity={design.roadOpacity}
@@ -262,6 +315,9 @@ export default function RoadLayer() {
         styleOverrides={styleOverrides}
         onStyleOverride={handleOverride}
         onClearOverride={handleClear}
+        hiddenFeatureIds={hiddenFeatureIds}
+        onHideFeature={onHideFeature}
+        viewLocked={viewLocked}
       />
     </>
   );

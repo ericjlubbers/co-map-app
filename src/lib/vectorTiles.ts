@@ -109,43 +109,48 @@ async function overpassFetch(
 // ── Public data-fetch functions ──────────────────────────────────────────────
 
 /** Fetch Colorado motorways from Overpass API. */
-export async function fetchColoradoMotorways(): Promise<GeoJSON.FeatureCollection> {
-  const query = `[out:json][timeout:120][bbox:${CO_BBOX}];
+export async function fetchColoradoMotorways(bbox?: string): Promise<GeoJSON.FeatureCollection> {
+  const b = bbox ?? CO_BBOX;
+  const query = `[out:json][timeout:120][bbox:${b}];
 way["highway"="motorway"];
 out geom;`;
-  return overpassFetch(query, "co-motorways");
+  return overpassFetch(query, `co-motorways-${b}`);
 }
 
 /** Fetch Colorado trunk roads from Overpass API. */
-export async function fetchColoradoTrunkRoads(): Promise<GeoJSON.FeatureCollection> {
-  const query = `[out:json][timeout:120][bbox:${CO_BBOX}];
+export async function fetchColoradoTrunkRoads(bbox?: string): Promise<GeoJSON.FeatureCollection> {
+  const b = bbox ?? CO_BBOX;
+  const query = `[out:json][timeout:120][bbox:${b}];
 way["highway"="trunk"];
 out geom;`;
-  return overpassFetch(query, "co-trunk-roads");
+  return overpassFetch(query, `co-trunk-roads-${b}`);
 }
 
 /** Fetch Colorado primary roads from Overpass API. */
-export async function fetchColoradoPrimaryRoads(): Promise<GeoJSON.FeatureCollection> {
-  const query = `[out:json][timeout:120][bbox:${CO_BBOX}];
+export async function fetchColoradoPrimaryRoads(bbox?: string): Promise<GeoJSON.FeatureCollection> {
+  const b = bbox ?? CO_BBOX;
+  const query = `[out:json][timeout:120][bbox:${b}];
 way["highway"="primary"];
 out geom;`;
-  return overpassFetch(query, "co-primary-roads");
+  return overpassFetch(query, `co-primary-roads-${b}`);
 }
 
 /** Fetch Colorado rivers from Overpass API. */
-export async function fetchColoradoRivers(): Promise<GeoJSON.FeatureCollection> {
-  const query = `[out:json][timeout:120][bbox:${CO_BBOX}];
+export async function fetchColoradoRivers(bbox?: string): Promise<GeoJSON.FeatureCollection> {
+  const b = bbox ?? CO_BBOX;
+  const query = `[out:json][timeout:120][bbox:${b}];
 way["waterway"="river"];
 out geom;`;
-  return overpassFetch(query, "co-rivers");
+  return overpassFetch(query, `co-rivers-${b}`);
 }
 
 /** Fetch named Colorado streams from Overpass API. */
-export async function fetchColoradoStreams(): Promise<GeoJSON.FeatureCollection> {
-  const query = `[out:json][timeout:120][bbox:${CO_BBOX}];
+export async function fetchColoradoStreams(bbox?: string): Promise<GeoJSON.FeatureCollection> {
+  const b = bbox ?? CO_BBOX;
+  const query = `[out:json][timeout:120][bbox:${b}];
 way["waterway"="stream"]["name"];
 out geom;`;
-  return overpassFetch(query, "co-streams");
+  return overpassFetch(query, `co-streams-${b}`);
 }
 
 // ── Static Colorado cities & peaks dataset ──────────────────────────────────
