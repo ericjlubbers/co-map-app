@@ -1,38 +1,62 @@
-name: Deploy to GitHub Pages
+name: Deploy
 
 on:
   push:
     branches: [main]
-  workflow_dispatch:
-
-permissions:
-  contents: read
-  pages: write
-  id-token: write
+  pull_request:
+    branches: [main]
 
 concurrency:
-  group: "pages"
+  group: deploy-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
   build-and-deploy:
     runs-on: ubuntu-latest
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
+    permissions:
+      contents: read
+      deployments: write
+
     steps:
       - uses: actions/checkout@v4
+
+      # ── Build frontend ──────────────────────────────────
       - uses: actions/setup-node@v4
         with:
           node-version: 20
           cache: npm
-      - run: npm ci
-      - run: npm run build
+
+      - name: Install frontend dependencies
+        run: npm ci
+
+      - name: Type-check frontend
+        run: npx tsc --noEmit
+
+      - name: Build frontend
+        run: npx vite build
         env:
           VITE_STADIA_API_KEY: ${{ secrets.VITE_STADIA_API_KEY }}
-      - uses: actions/configure-pages@v4
-      - uses: actions/upload-pages-artifact@v3
+
+      # ── Install worker dependencies ─────────────────────
+      - name: Install worker dependencies
+        run: cd worker && npm ci
+
+      # ── Deploy to production (main branch only) ─────────
+      - name: Deploy Worker (production)
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        uses: cloudflare/wrangler-action@v3
         with:
-          path: dist
-      - id: deployment
-        uses: actions/deploy-pages@v4
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          workingDirectory: worker
+          command: deploy --env production
+
+      # ── Deploy preview (pull requests) ──────────────────
+      - name: Deploy Worker (staging preview)
+        if: github.event_name == 'pull_request'
+        uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          workingDirectory: worker
+          command: deploy --env staging

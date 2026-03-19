@@ -8,6 +8,7 @@ import {
   faBoxArchive,
   faTrash,
   faArrowUpRightFromSquare,
+  faUserGear,
 } from "@fortawesome/free-solid-svg-icons";
 import {
   listMaps,
@@ -17,11 +18,13 @@ import {
   deleteMap,
   type MapSummary,
 } from "../lib/api";
+import { useAuth } from "../context/AuthContext";
 
 type StatusFilter = "active" | "draft" | "published" | "archived" | "all";
 
 export default function IndexPage() {
   const navigate = useNavigate();
+  const { user, logout } = useAuth();
   const [maps, setMaps] = useState<MapSummary[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -104,13 +107,29 @@ export default function IndexPage() {
       <header className="border-b border-gray-200 bg-white">
         <div className="mx-auto flex max-w-6xl items-center justify-between px-6 py-4">
           <h1 className="text-xl font-semibold text-gray-900">CO Map App</h1>
-          <button
-            onClick={handleCreate}
-            className="inline-flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 transition-colors"
-          >
-            <FontAwesomeIcon icon={faPlus} />
-            New Map
-          </button>
+          <div className="flex items-center gap-3">
+            <button
+              onClick={() => navigate("/admin")}
+              className="inline-flex items-center gap-1.5 rounded-lg border border-gray-300 px-3 py-2 text-sm font-medium text-gray-600 hover:bg-gray-50 transition-colors"
+              title="User management"
+            >
+              <FontAwesomeIcon icon={faUserGear} />
+            </button>
+            <button
+              onClick={handleCreate}
+              className="inline-flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 transition-colors"
+            >
+              <FontAwesomeIcon icon={faPlus} />
+              New Map
+            </button>
+            <span className="text-sm text-gray-500">{user?.email}</span>
+            <button
+              onClick={logout}
+              className="rounded-lg border border-gray-300 px-3 py-1.5 text-sm font-medium text-gray-600 hover:bg-gray-50 transition-colors"
+            >
+              Sign out
+            </button>
+          </div>
         </div>
       </header>
 
