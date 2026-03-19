@@ -11,6 +11,7 @@ import {
   faCheck,
 } from "@fortawesome/free-solid-svg-icons";
 import { useAuth } from "../context/AuthContext";
+import { useSettings } from "../context/SettingsContext";
 
 const API_BASE = import.meta.env.VITE_API_URL ?? "/api";
 
@@ -43,6 +44,7 @@ type SettingsTab = "users" | "app";
 export default function SettingsPage() {
   const navigate = useNavigate();
   const { user: currentUser, logout } = useAuth();
+  const { refresh: refreshSettings } = useSettings();
   const [activeTab, setActiveTab] = useState<SettingsTab>("users");
 
   // ──── User management state ────
@@ -192,6 +194,7 @@ export default function SettingsPage() {
         body: JSON.stringify({ site_title: siteTitle }),
       });
       setSettingsSaved(true);
+      refreshSettings();
       setTimeout(() => setSettingsSaved(false), 2000);
     } catch (e) {
       setSettingsError(

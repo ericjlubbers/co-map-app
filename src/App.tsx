@@ -1,5 +1,6 @@
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { AuthProvider, useAuth } from "./context/AuthContext";
+import { SettingsProvider } from "./context/SettingsContext";
 import IndexPage from "./pages/IndexPage";
 import MapEditorPage from "./pages/MapEditorPage";
 import EmbedPage from "./pages/EmbedPage";
@@ -32,6 +33,7 @@ export default function App() {
   return (
     <BrowserRouter>
       <AuthProvider>
+        <SettingsProvider>
         <Routes>
           {/* Public */}
           <Route path="/embed/:id" element={<EmbedPage />} />
@@ -70,6 +72,7 @@ export default function App() {
             }
           />
         </Routes>
+        </SettingsProvider>
       </AuthProvider>
     </BrowserRouter>
   );

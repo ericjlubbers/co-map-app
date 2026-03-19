@@ -19,6 +19,7 @@ import {
   type MapSummary,
 } from "../lib/api";
 import { useAuth } from "../context/AuthContext";
+import { useSettings } from "../context/SettingsContext";
 import sunIcon from "../assets/colorado-sun-icon.svg";
 
 type StatusFilter = "active" | "draft" | "published" | "archived" | "all";
@@ -26,6 +27,7 @@ type StatusFilter = "active" | "draft" | "published" | "archived" | "all";
 export default function IndexPage() {
   const navigate = useNavigate();
   const { user, logout } = useAuth();
+  const { settings } = useSettings();
   const [maps, setMaps] = useState<MapSummary[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -109,7 +111,7 @@ export default function IndexPage() {
         <div className="mx-auto flex max-w-6xl items-center justify-between px-6 py-4">
           <h1 className="flex items-center gap-2 text-xl font-semibold text-gray-900">
             <img src={sunIcon} alt="" className="h-7 w-7" />
-            The Colorado Sun Map Tool
+            {settings.site_title}
           </h1>
           <div className="flex items-center gap-3">
             <button
