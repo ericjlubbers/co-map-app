@@ -2,7 +2,7 @@
 
 An interactive map of Colorado locations built with React, Leaflet, and Tailwind CSS. Features categorized markers with clustering, filtering, text search, a synced data table, geographic overlays (county boundaries, state border, outside-state fade), and a live **Design Mode** for collaboratively tweaking every visual option.
 
-Deployed automatically to GitHub Pages on push to `main`.
+Deployed automatically to Cloudflare Workers on push to `main`.
 
 ## Tech Stack
 
@@ -115,9 +115,54 @@ Location data is currently loaded from static seed data in `src/data/seedLocatio
 
 ## Deployment
 
-Pushes to `main` trigger the GitHub Actions workflow at `.github/workflows/deploy.yml`, which builds the app and deploys to GitHub Pages.
+The app deploys as a single **Cloudflare Worker** that serves both the API (`/api/*`) and the Vite-built frontend (with SPA fallback for client-side routing). Pushes to `main` trigger the GitHub Actions workflow at `.github/workflows/deploy.yml`.
 
-The `VITE_STADIA_API_KEY` secret must be added to the repository (**Settings → Secrets and variables → Actions**) for Stadia-hosted tile layers to work in production.
+### Required GitHub Secrets
+
+| Secret                   | Description                                         |
+| ------------------------ | --------------------------------------------------- |
+| `CLOUDFLARE_API_TOKEN`   | Cloudflare API token with Workers + D1 permissions  |
+| `CLOUDFLARE_ACCOUNT_ID`  | Your Cloudflare account ID                          |
+| `VITE_STADIA_API_KEY`    | API key for Stadia-hosted tile layers               |
+
+### First-Time Production Setup
+
+1. **Create the production D1 database:**
+   ```bash
+   cd worker
+   npx wrangler d1 create co-map-db-prod
+   ```
+   Copy the returned `database_id` into `worker/wrangler.toml` under `[env.production.d1_databases]`.
+
+2. **Apply migrations to production:**
+   ```bash
+   npx wrangler d1 migrations apply co-map-db-prod --remote --env production
+   ```
+
+3. **Set GitHub Secrets** in the repo: Settings → Secrets and variables → Actions.
+
+4. **Push to `main`** to trigger the first deploy.
+
+5. **Create the first admin user** (one-time only, while zero users exist):
+   ```bash
+   curl -X POST https://maps.coloradosun.com/api/auth/setup \
+     -H 'Content-Type: application/json' \
+     -d '{"email":"you@example.com","password":"YourPassword","name":"Your Name"}'
+   ```
+
+6. **DNS**: Add a CNAME record `maps.coloradosun.com` → the Workers domain shown in the Cloudflare dashboard. SSL is automatic.
+
+### Local Development
+
+```bash
+# Terminal 1: start the API worker
+cd worker
+npx wrangler d1 migrations apply co-map-db --local   # first time only
+npx wrangler dev src/index.ts --port 8787
+
+# Terminal 2: start the Vite dev server (proxies /api → localhost:8787)
+npm run dev
+```
 
 ## Scripts
 
