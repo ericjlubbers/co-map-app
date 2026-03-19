@@ -8,6 +8,8 @@ export interface PointData {
   url: string;
   lat: number;
   lng: number;
+  /** FontAwesome icon name override (from "icon" column role) */
+  icon?: string;
 }
 
 // ── Drawing & Sketching ──────────────────────────────────────
@@ -77,7 +79,7 @@ export type TilePreset =
 // ── Data Tab Types ──────────────────────────────────────────
 
 /** Roles a column can be assigned to in the data editor */
-export type ColumnRole = "geometry" | "name" | "label" | "value" | "group" | "metadata" | "none";
+export type ColumnRole = "geometry" | "name" | "label" | "value" | "group" | "icon" | "image" | "metadata" | "none";
 
 /** Maps a column name to a visualization role */
 export type ColumnMappings = Record<string, ColumnRole>;

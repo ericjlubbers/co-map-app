@@ -19,6 +19,8 @@ const COLUMN_ROLES: { value: ColumnRole; label: string; description: string }[] 
   { value: "label", label: "Label", description: "Displayed on the map" },
   { value: "value", label: "Value", description: "Numeric value for choropleth" },
   { value: "group", label: "Group", description: "Category or cluster key" },
+  { value: "icon", label: "Icon", description: "FontAwesome icon for marker" },
+  { value: "image", label: "Image", description: "Image URL for popup & data panel" },
   { value: "metadata", label: "Metadata", description: "Extra info, shown in popup" },
   { value: "none", label: "None", description: "Ignore this column" },
 ];

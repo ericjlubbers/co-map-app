@@ -10,6 +10,7 @@ import {
   faTimes,
 } from "@fortawesome/free-solid-svg-icons";
 import type { DataRow, ColumnRole } from "../types";
+import IconPicker from "./IconPicker";
 
 // ── Constants ─────────────────────────────────────────────────
 
@@ -62,6 +63,7 @@ export default function DataEditor({
   const [editValue, setEditValue] = useState("");
   const [contextMenu, setContextMenu] = useState<ContextMenu | null>(null);
   const [selectedRows, setSelectedRows] = useState<Set<number>>(new Set());
+  const [iconPickerCell, setIconPickerCell] = useState<{ row: number; col: number } | null>(null);
 
   const scrollRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -434,11 +436,13 @@ export default function DataEditor({
                       editingCell?.row === rowIdx && editingCell?.col === colIdx;
                     const isFocused =
                       selectedCell?.row === rowIdx && selectedCell?.col === colIdx;
+                    const role = columnMappings?.[col];
+                    const cellValue = row?.[col] ?? "";
 
                     return (
                       <div
                         key={col}
-                        className={`shrink-0 border-r border-gray-100 ${
+                        className={`relative shrink-0 border-r border-gray-100 ${
                           isFocused && !isEditing
                             ? "ring-2 ring-inset ring-blue-400"
                             : ""
@@ -446,10 +450,14 @@ export default function DataEditor({
                         style={{ width, height: ROW_HEIGHT }}
                         onClick={() => {
                           setSelectedCell({ row: rowIdx, col: colIdx });
-                          if (!isEditing) startEdit(rowIdx, colIdx);
+                          if (role === "icon") {
+                            setIconPickerCell({ row: rowIdx, col: colIdx });
+                          } else if (!isEditing) {
+                            startEdit(rowIdx, colIdx);
+                          }
                         }}
                       >
-                        {isEditing ? (
+                        {isEditing && role !== "icon" ? (
                           <input
                             ref={inputRef}
                             value={editValue}
@@ -460,10 +468,41 @@ export default function DataEditor({
                           />
                         ) : (
                           <div className="flex h-full items-center overflow-hidden px-2">
-                            <span className="truncate text-xs text-gray-700">
-                              {row?.[col] ?? ""}
-                            </span>
+                            {role === "icon" && cellValue ? (
+                              <>
+                                <FontAwesomeIcon icon={cellValue as never} className="mr-1.5 shrink-0 text-xs text-gray-500" />
+                                <span className="truncate text-xs text-gray-700">{cellValue}</span>
+                              </>
+                            ) : role === "image" && cellValue ? (
+                              <>
+                                <img
+                                  src={cellValue}
+                                  alt=""
+                                  className="mr-1.5 h-5 w-5 shrink-0 rounded object-cover"
+                                  onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }}
+                                />
+                                <span className="truncate text-xs text-gray-700">{cellValue}</span>
+                              </>
+                            ) : (
+                              <span className="truncate text-xs text-gray-700">
+                                {cellValue}
+                              </span>
+                            )}
                           </div>
+                        )}
+                        {/* Icon picker dropdown */}
+                        {role === "icon" && iconPickerCell?.row === rowIdx && iconPickerCell?.col === colIdx && (
+                          <IconPicker
+                            value={cellValue}
+                            onChange={(iconName) => {
+                              const updatedRows = rows.map((r, i) =>
+                                i === rowIdx ? { ...r, [col]: iconName } : r
+                              );
+                              onRowsChange(updatedRows);
+                              setIconPickerCell(null);
+                            }}
+                            onClose={() => setIconPickerCell(null)}
+                          />
                         )}
                       </div>
                     );
@@ -526,6 +565,8 @@ function HeaderCell({ col, role, onRename }: HeaderCellProps) {
     label: "bg-cyan-100 text-cyan-700",
     value: "bg-green-100 text-green-700",
     group: "bg-orange-100 text-orange-700",
+    icon: "bg-indigo-100 text-indigo-700",
+    image: "bg-pink-100 text-pink-700",
     metadata: "bg-gray-100 text-gray-600",
   };
 

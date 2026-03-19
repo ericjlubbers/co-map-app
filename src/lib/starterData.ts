@@ -11,6 +11,8 @@ export function layerDataToPoints(layer: LayerData): PointData[] {
   // Find columns by role
   const nameCol = columns.find((c) => columnMappings[c] === "name");
   const groupCol = columns.find((c) => columnMappings[c] === "group");
+  const iconCol = columns.find((c) => columnMappings[c] === "icon");
+  const imageCol = columns.find((c) => columnMappings[c] === "image");
   const metaCols = columns.filter((c) => columnMappings[c] === "metadata");
   const geoCols = columns.filter((c) => columnMappings[c] === "geometry");
 
@@ -50,10 +52,11 @@ export function layerDataToPoints(layer: LayerData): PointData[] {
       category: groupCol ? (row[groupCol] ?? "") : "",
       description: metaCols.map((c) => row[c] ?? "").filter(Boolean).join(" · "),
       address: "",
-      imageUrl: "",
+      imageUrl: imageCol ? (row[imageCol] ?? "") : "",
       url: "",
       lat,
       lng,
+      icon: iconCol ? (row[iconCol] ?? undefined) : undefined,
     });
   }
 

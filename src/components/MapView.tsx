@@ -376,6 +376,7 @@ export default function MapView({
                 design.pointColorMode === "by-category"
                   ? design.categoryColors[point.category]
                   : design.pointColor,
+                point.icon,
               )}
               category={point.category}
               ref={handleMarkerRef(point.id)}

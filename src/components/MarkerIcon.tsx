@@ -1,40 +1,20 @@
 import L from "leaflet";
 import { getCategoryInfo } from "../config";
-import {
-  faTree,
-  faLandmark,
-  faGraduationCap,
-  faHeartPulse,
-  faUtensils,
-  faPalette,
-  faBriefcase,
-  faPeopleGroup,
-  faMapPin,
-} from "@fortawesome/free-solid-svg-icons";
-import type { IconDefinition } from "@fortawesome/fontawesome-svg-core";
-
-const FA_ICONS: Record<string, IconDefinition> = {
-  tree: faTree,
-  landmark: faLandmark,
-  "graduation-cap": faGraduationCap,
-  "heart-pulse": faHeartPulse,
-  utensils: faUtensils,
-  palette: faPalette,
-  briefcase: faBriefcase,
-  "people-group": faPeopleGroup,
-  "map-pin": faMapPin,
-};
+import { getFaIconSvg } from "../lib/faIcons";
 
 function getPathData(iconName: string): string {
-  const icon = FA_ICONS[iconName] || FA_ICONS["map-pin"];
-  // FA icons: [width, height, ligatures, unicode, pathData]
-  const pathData = icon.icon[4];
-  return typeof pathData === "string" ? pathData : (pathData as string[])[0];
+  const svg = getFaIconSvg(iconName);
+  if (svg) return svg.pathData;
+  // Fallback to map-pin
+  const fallback = getFaIconSvg("map-pin");
+  return fallback?.pathData ?? "";
 }
 
 function getViewBox(iconName: string): string {
-  const icon = FA_ICONS[iconName] || FA_ICONS["map-pin"];
-  return `0 0 ${icon.icon[0]} ${icon.icon[1]}`;
+  const svg = getFaIconSvg(iconName);
+  if (svg) return svg.viewBox;
+  const fallback = getFaIconSvg("map-pin");
+  return fallback?.viewBox ?? "0 0 320 512";
 }
 
 export function createMarkerIcon(
@@ -42,13 +22,15 @@ export function createMarkerIcon(
   isSelected = false,
   baseSize = 34,
   colorOverride?: string,
+  iconOverride?: string,
 ): L.DivIcon {
   const info = getCategoryInfo(category);
   const size = isSelected ? baseSize * 1.24 : baseSize;
   const pinColor = colorOverride || info.color;
+  const iconName = iconOverride || info.icon;
 
-  const iconPath = getPathData(info.icon);
-  const viewBox = getViewBox(info.icon);
+  const iconPath = getPathData(iconName);
+  const viewBox = getViewBox(iconName);
 
   // SVG pin with FA icon inside
   const svg = `

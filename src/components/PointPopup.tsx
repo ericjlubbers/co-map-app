@@ -12,21 +12,26 @@ export default function PointPopup({ point }: Props) {
 
   return (
     <div className="min-w-[220px] max-w-[280px]">
-      {/* Thumbnail */}
-      <div className="mb-2 overflow-hidden rounded-lg">
-        <img
-          src={point.imageUrl}
-          alt={point.title}
-          className="h-32 w-full object-cover"
-          loading="lazy"
-          onError={(e) => {
-            (e.target as HTMLImageElement).style.display = "none";
-          }}
-        />
-      </div>
+      {/* Thumbnail (from image column or legacy imageUrl) */}
+      {point.imageUrl && (
+        <div className="mb-2 overflow-hidden rounded-lg">
+          <img
+            src={point.imageUrl}
+            alt={point.title}
+            className="h-32 w-full object-cover"
+            loading="lazy"
+            onError={(e) => {
+              (e.target as HTMLImageElement).style.display = "none";
+            }}
+          />
+        </div>
+      )}
 
-      {/* Title */}
-      <h3 className="mb-1 text-sm font-semibold leading-tight text-gray-900">
+      {/* Title with optional icon */}
+      <h3 className="mb-1 flex items-center gap-1.5 text-sm font-semibold leading-tight text-gray-900">
+        {point.icon && (
+          <FontAwesomeIcon icon={point.icon as never} className="shrink-0 text-xs" style={{ color: catInfo.color }} />
+        )}
         {point.title}
       </h3>
 

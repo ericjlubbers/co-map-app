@@ -35,6 +35,7 @@ import type {
   ColumnMappings,
   DataRow,
 } from "../types";
+import sunIcon from "../assets/colorado-sun-icon.svg";
 
 /** Debounce delay (ms) before persisting changes to the API. */
 const AUTOSAVE_DEBOUNCE_MS = 1000;
@@ -267,7 +268,8 @@ export default function MapEditorPage() {
               onClick={() => navigate("/")}
               className="inline-flex items-center gap-1.5 rounded-md px-2 py-1.5 text-sm text-gray-600 hover:bg-gray-100 transition-colors"
             >
-              <FontAwesomeIcon icon={faArrowLeft} />
+              <img src={sunIcon} alt="" className="h-5 w-5" />
+              <FontAwesomeIcon icon={faArrowLeft} className="text-xs" />
               Maps
             </button>
             <span className="text-sm font-medium text-gray-900">{mapData.title}</span>
