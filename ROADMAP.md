@@ -36,8 +36,8 @@ Internal mapping platform for The Colorado Sun newsroom. Reporters and data visu
 
 ### Next Up
 
-- **Proof-of-concept map**: Build a real production-ready map to validate the workflow end-to-end
-- **Refinement pass**: Address UX issues discovered during proof-of-concept testing
+- **Proof-of-concept map**: 🔄 Building CO150 production map — sidebar-filter template, geocoding, live preview working
+- **Refinement pass**: 🔄 Addressing UX issues discovered during proof-of-concept testing
 - **C5 — Polish & Embed**: Finalize embed rendering, persistence reliability, mode transitions
 
 ### Deferred
@@ -49,6 +49,7 @@ Internal mapping platform for The Colorado Sun newsroom. Reporters and data visu
 | Sprint 5 — Region Choropleth Layer | 🔲 | Gradient fills for county regions, auto-toggle region layer, design controls |
 | Sprint 6 — Vector Tile Labels & Local Data | 🔲 | Client-side vector labels, local CO data cache, tile caching |
 | Sprint 7 — Responsive Preview Toolbar | 🔲 | Desktop/mobile/article preview modes in the editor |
+| Embed Preview Panel | 🔲 | Last-look preview in embed code menu; device-size previews (phone/tablet/desktop), iframe simulation |
 
 ---
 
@@ -57,7 +58,7 @@ Internal mapping platform for The Colorado Sun newsroom. Reporters and data visu
 ### Editor Workflow
 - **Two-mode editor**: Settings (DesignSidebar) | Customize (CustomizeSidebar)
 - **Publish**: Stays in toolbar as status dropdown / embed code (not a separate mode)
-- **Sidebar**: 3 collapsible super-groups (Layers, Design, Embed) with single-open accordion behavior
+- **Sidebar**: 2 collapsible super-groups (Layers, Design) with single-open accordion behavior; Design contains Template, Data Table, Auto-Rotate, Typography, Colors, Sizing, Frame sections
 
 ### Primary Elements Layer (S8 C2–C3)
 - Click any map element (road, city, waterway, park, lake) in Customize mode to select it

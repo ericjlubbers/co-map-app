@@ -79,7 +79,7 @@ export type TilePreset =
 // ── Data Tab Types ──────────────────────────────────────────
 
 /** Roles a column can be assigned to in the data editor */
-export type ColumnRole = "geometry" | "name" | "label" | "value" | "group" | "icon" | "image" | "metadata" | "none";
+export type ColumnRole = "geometry" | "name" | "label" | "value" | "group" | "icon" | "image" | "address" | "url" | "metadata" | "none";
 
 /** Maps a column name to a visualization role */
 export type ColumnMappings = Record<string, ColumnRole>;
@@ -265,4 +265,6 @@ export interface DesignState {
   embedMobileAspectRatio: string;
   embedHeight: string;
   embedHeightUnit: "auto" | "px" | "vh";
+  // Embed layout template
+  embedLayout: "standard" | "sidebar-filter";
 }

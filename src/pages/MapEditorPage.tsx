@@ -774,6 +774,7 @@ export default function MapEditorPage() {
                 layerData={dataConfig[activeLayer]}
                 onUpdateMappings={handleMappingsChange}
                 onSheetLoaded={handleSheetLoaded}
+                onRowsChange={handleRowsChange}
               />
             </div>
           )}

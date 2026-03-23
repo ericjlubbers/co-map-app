@@ -475,6 +475,79 @@ app.post('/api/maps/:id/duplicate', async (c) => {
   return c.json({ id: newId, created_at: now }, 201);
 });
 
+// ---------- Geocoding ----------
+
+app.post('/api/geocode', async (c) => {
+  const denied = await requireAuth(c);
+  if (denied) return denied;
+
+  const body = await c.req.json<{ addresses?: unknown }>();
+  if (!Array.isArray(body.addresses) || body.addresses.length === 0) {
+    return c.json({ error: 'addresses must be a non-empty array of strings' }, 400);
+  }
+
+  // Limit batch size to prevent abuse
+  const MAX_BATCH = 200;
+  const addresses: string[] = body.addresses
+    .slice(0, MAX_BATCH)
+    .map((a: unknown) => (typeof a === 'string' ? a.trim() : ''))
+    .filter((a: string) => a.length > 0);
+
+  if (addresses.length === 0) {
+    return c.json({ error: 'No valid addresses provided' }, 400);
+  }
+
+  const results: Array<{
+    address: string;
+    lat: number | null;
+    lng: number | null;
+    display_name: string | null;
+  }> = [];
+
+  for (const addr of addresses) {
+    // Add Colorado bias if not already present
+    const lowerAddr = addr.toLowerCase();
+    const queryAddr =
+      lowerAddr.includes('colorado') || /\bco\b/.test(lowerAddr)
+        ? addr
+        : `${addr}, Colorado, USA`;
+
+    try {
+      const url = `https://nominatim.openstreetmap.org/search?format=json&limit=1&q=${encodeURIComponent(queryAddr)}`;
+      const res = await fetch(url, {
+        headers: {
+          'User-Agent': 'COMapApp/1.0 (internal newsroom mapping tool)',
+        },
+      });
+
+      if (res.ok) {
+        const data = await res.json() as Array<{ lat: string; lon: string; display_name: string }>;
+        if (data.length > 0) {
+          results.push({
+            address: addr,
+            lat: parseFloat(data[0].lat),
+            lng: parseFloat(data[0].lon),
+            display_name: data[0].display_name,
+          });
+        } else {
+          results.push({ address: addr, lat: null, lng: null, display_name: null });
+        }
+      } else {
+        results.push({ address: addr, lat: null, lng: null, display_name: null });
+      }
+    } catch {
+      results.push({ address: addr, lat: null, lng: null, display_name: null });
+    }
+
+    // Nominatim rate limit: 1 request per second
+    if (addresses.indexOf(addr) < addresses.length - 1) {
+      await new Promise((resolve) => setTimeout(resolve, 1100));
+    }
+  }
+
+  return c.json({ results });
+});
+
 // ---------- SPA fallback ----------
 // Non-API routes are served by the static assets binding (Vite build output).
 // The `not_found_handling = "single-page-application"` in wrangler.toml ensures

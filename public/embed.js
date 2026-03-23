@@ -46,7 +46,10 @@
       if (heightUnit === "px") {
         iframe.style.height = heightVal + "px";
       } else if (heightUnit === "vh") {
-        iframe.style.height = heightVal + "vh";
+        // Support separate desktop/mobile vh via data-vh-desktop / data-vh-mobile
+        var vhDesktop = parseFloat(iframe.getAttribute("data-vh-desktop")) || heightVal;
+        var vhMobile = parseFloat(iframe.getAttribute("data-vh-mobile")) || heightVal;
+        iframe.style.height = (isMobile ? vhMobile : vhDesktop) + "vh";
       } else {
         // auto — use aspect ratio
         var ratioStr = isMobile

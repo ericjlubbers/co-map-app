@@ -88,7 +88,7 @@ interface DesignSidebarProps {
 export default function DesignSidebar({ onClose, categories = [] }: DesignSidebarProps) {
   const { design, set, reset, getShareURL } = useDesign();
   const [copied, setCopied] = useState<"view" | "edit" | null>(null);
-  const [openGroup, setOpenGroup] = useState<"layers" | "design" | "embed">("layers");
+  const [openGroup, setOpenGroup] = useState<"layers" | "design">("layers");
 
   const handleCopy = useCallback(
     (mode: "view" | "edit") => {
@@ -618,10 +618,31 @@ export default function DesignSidebar({ onClose, categories = [] }: DesignSideba
         {/* ════════════ DESIGN ════════════ */}
         <SidebarGroup title="Design" open={openGroup === "design"} onToggle={() => setOpenGroup("design")}>
 
-          {/* ── Data Panel ── */}
-          <AccordionSection title="Data Panel">
+          {/* ── Template ── */}
+          <AccordionSection title="Template">
             <div className="space-y-3">
-              <Field label="Show Data Panel">
+              <Field label="Embed Template">
+                <select
+                  value={design.embedLayout}
+                  onChange={(e) => set("embedLayout", e.target.value as DesignState["embedLayout"])}
+                  className="w-full rounded-md border border-gray-300 bg-white px-2.5 py-1.5 text-xs text-gray-700"
+                >
+                  <option value="standard">Standard (map only)</option>
+                  <option value="sidebar-filter">Sidebar Filter</option>
+                </select>
+              </Field>
+              {design.embedLayout === "sidebar-filter" && (
+                <p className="text-[11px] text-gray-400 italic">
+                  Desktop: category sidebar + map + table. Mobile: horizontal category bar + map.
+                </p>
+              )}
+            </div>
+          </AccordionSection>
+
+          {/* ── Data Table ── */}
+          <AccordionSection title="Data Table">
+            <div className="space-y-3">
+              <Field label="Show Data Table">
                 <ToggleSwitch
                   checked={design.showDataPanel}
                   onChange={(v) => set("showDataPanel", v)}
@@ -640,6 +661,33 @@ export default function DesignSidebar({ onClose, categories = [] }: DesignSideba
                       </option>
                     ))}
                   </select>
+                </Field>
+              )}
+            </div>
+          </AccordionSection>
+
+          {/* ── Auto-Rotate ── */}
+          <AccordionSection title="Auto-Rotate">
+            <div className="space-y-3">
+              <Field label="Enable Auto-Rotate">
+                <ToggleSwitch
+                  checked={design.enableDemoMode}
+                  onChange={(v) => set("enableDemoMode", v)}
+                />
+              </Field>
+              <p className="text-[11px] text-gray-400 italic">
+                Automatically cycles through each category, spotlighting points one group at a time.
+              </p>
+              {design.enableDemoMode && (
+                <Field label="Rotation Interval">
+                  <Slider
+                    min={2000}
+                    max={10000}
+                    step={500}
+                    value={design.demoIntervalMs}
+                    onChange={(v) => set("demoIntervalMs", v)}
+                    format={(v) => `${(v / 1000).toFixed(1)}s`}
+                  />
                 </Field>
               )}
             </div>
@@ -697,13 +745,55 @@ export default function DesignSidebar({ onClose, categories = [] }: DesignSideba
             </div>
           </AccordionSection>
 
-        </SidebarGroup>
+          {/* ── Sizing ── */}
+          <AccordionSection title="Sizing">
+            <div className="space-y-4">
+              {/* Embed Aspect Ratio */}
+              <div className="space-y-2">
+                <span className="text-xs font-medium text-gray-600">Aspect Ratio</span>
+                <AspectRatioSelector
+                  desktopValue={design.embedAspectRatio}
+                  mobileValue={design.embedMobileAspectRatio}
+                  onDesktopChange={(v) => set("embedAspectRatio", v)}
+                  onMobileChange={(v) => set("embedMobileAspectRatio", v)}
+                />
+              </div>
 
-        {/* ════════════ EMBED ════════════ */}
-        <SidebarGroup title="Embed" open={openGroup === "embed"} onToggle={() => setOpenGroup("embed")}>
+              {/* Embed Height */}
+              <div className="space-y-2">
+                <span className="text-xs font-medium text-gray-600">Height</span>
+                <div className="flex items-center gap-2">
+                  {design.embedHeightUnit !== "auto" && (
+                    <input
+                      type="number"
+                      min={100}
+                      max={2000}
+                      value={design.embedHeight}
+                      onChange={(e) => set("embedHeight", e.target.value)}
+                      className="w-20 rounded-md border border-gray-300 bg-white px-2 py-1.5 text-xs text-gray-700"
+                    />
+                  )}
+                  <select
+                    value={design.embedHeightUnit}
+                    onChange={(e) => set("embedHeightUnit", e.target.value as DesignState["embedHeightUnit"])}
+                    className="rounded-md border border-gray-300 bg-white px-2.5 py-1.5 text-xs text-gray-700"
+                  >
+                    <option value="auto">Auto (from ratio)</option>
+                    <option value="px">px</option>
+                    <option value="vh">vh</option>
+                  </select>
+                </div>
+                <p className="text-[11px] text-gray-400 italic">
+                  {design.embedHeightUnit === "auto"
+                    ? "Height calculated from width \u00D7 aspect ratio."
+                    : `Fixed height: ${design.embedHeight}${design.embedHeightUnit}.`}
+                </p>
+              </div>
+            </div>
+          </AccordionSection>
 
-          {/* ── Layout ── */}
-          <AccordionSection title="Layout">
+          {/* ── Frame ── */}
+          <AccordionSection title="Frame">
             <div className="space-y-4">
               <Field label="Border Radius">
                 <Slider
@@ -715,7 +805,7 @@ export default function DesignSidebar({ onClose, categories = [] }: DesignSideba
                   suffix="px"
                 />
               </Field>
-              <Field label="Embed Padding">
+              <Field label="Padding">
                 <Slider
                   min={0}
                   max={32}
@@ -733,7 +823,7 @@ export default function DesignSidebar({ onClose, categories = [] }: DesignSideba
                   />
                 </Field>
               )}
-              <Field label="Embed Margin">
+              <Field label="Margin">
                 <Slider
                   min={0}
                   max={32}
@@ -794,75 +884,6 @@ export default function DesignSidebar({ onClose, categories = [] }: DesignSideba
                     />
                   </Field>
                 </>
-              )}
-
-              {/* Embed Aspect Ratio */}
-              <div className="space-y-2">
-                <span className="text-xs font-medium text-gray-600">Embed Aspect Ratio</span>
-                <AspectRatioSelector
-                  desktopValue={design.embedAspectRatio}
-                  mobileValue={design.embedMobileAspectRatio}
-                  onDesktopChange={(v) => set("embedAspectRatio", v)}
-                  onMobileChange={(v) => set("embedMobileAspectRatio", v)}
-                />
-              </div>
-
-              {/* Embed Height */}
-              <div className="space-y-2">
-                <span className="text-xs font-medium text-gray-600">Embed Height</span>
-                <div className="flex items-center gap-2">
-                  {design.embedHeightUnit !== "auto" && (
-                    <input
-                      type="number"
-                      min={100}
-                      max={2000}
-                      value={design.embedHeight}
-                      onChange={(e) => set("embedHeight", e.target.value)}
-                      className="w-20 rounded-md border border-gray-300 bg-white px-2 py-1.5 text-xs text-gray-700"
-                    />
-                  )}
-                  <select
-                    value={design.embedHeightUnit}
-                    onChange={(e) => set("embedHeightUnit", e.target.value as DesignState["embedHeightUnit"])}
-                    className="rounded-md border border-gray-300 bg-white px-2.5 py-1.5 text-xs text-gray-700"
-                  >
-                    <option value="auto">Auto (from ratio)</option>
-                    <option value="px">px</option>
-                    <option value="vh">vh</option>
-                  </select>
-                </div>
-                <p className="text-[11px] text-gray-400 italic">
-                  {design.embedHeightUnit === "auto"
-                    ? "Height calculated from width \u00D7 aspect ratio."
-                    : `Fixed height: ${design.embedHeight}${design.embedHeightUnit}.`}
-                </p>
-              </div>
-            </div>
-          </AccordionSection>
-
-          {/* ── Auto-Rotate Demo ── */}
-          <AccordionSection title="Auto-Rotate Demo">
-            <div className="space-y-3">
-              <Field label="Enable Auto-Rotate">
-                <ToggleSwitch
-                  checked={design.enableDemoMode}
-                  onChange={(v) => set("enableDemoMode", v)}
-                />
-              </Field>
-              <p className="text-[11px] text-gray-400 italic">
-                When enabled, the embed automatically cycles through each category, spotlighting points one group at a time.
-              </p>
-              {design.enableDemoMode && (
-                <Field label="Rotation Interval">
-                  <Slider
-                    min={2000}
-                    max={10000}
-                    step={500}
-                    value={design.demoIntervalMs}
-                    onChange={(v) => set("demoIntervalMs", v)}
-                    format={(v) => `${(v / 1000).toFixed(1)}s`}
-                  />
-                </Field>
               )}
             </div>
           </AccordionSection>

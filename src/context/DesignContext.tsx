@@ -78,6 +78,7 @@ const PARAM_MAP: Record<keyof DesignState, string> = {
   embedMobileAspectRatio: "eMobileRatio",
   embedHeight: "eHeight",
   embedHeightUnit: "eHeightUnit",
+  embedLayout: "eLayout",
 };
 
 // ── Font shorthand mapping ──────────────────────────────────
@@ -258,6 +259,10 @@ function parseFromURL(): Partial<DesignState> {
   const dataPanel = params.get(PARAM_MAP.showDataPanel);
   if (dataPanel) partial.showDataPanel = dataPanel === "1";
 
+  const eLayout = params.get(PARAM_MAP.embedLayout);
+  if (eLayout && ["standard", "sidebar-filter"].includes(eLayout))
+    partial.embedLayout = eLayout as DesignState["embedLayout"];
+
   return partial;
 }
 
@@ -383,6 +388,9 @@ function serializeToURL(state: DesignState, includeDesignMode: boolean): string 
 
   if (state.showDataPanel !== DEFAULT_DESIGN.showDataPanel)
     params.set(PARAM_MAP.showDataPanel, state.showDataPanel ? "1" : "0");
+
+  if (state.embedLayout !== DEFAULT_DESIGN.embedLayout)
+    params.set(PARAM_MAP.embedLayout, state.embedLayout);
 
   if (includeDesignMode) params.set("design", "1");
 

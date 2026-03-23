@@ -13,6 +13,7 @@ import AutoRotateDemo from "./AutoRotateDemo";
 import DrawingToolbar from "./DrawingToolbar";
 import DrawnFeatureForm from "./DrawnFeatureForm";
 import DrawnFeaturesTable from "./DrawnFeaturesTable";
+import SidebarFilterLayout from "./SidebarFilterLayout";
 import {
   emptyCollection,
   createPointFeature,
@@ -339,6 +340,19 @@ export default function MapEditorContent({
 
   // ── Embed mode: map only ──
   if (embedMode) {
+    // Sidebar-filter template: category sidebar + map + table
+    if (design.embedLayout === "sidebar-filter") {
+      return (
+        <SidebarFilterLayout
+          points={data}
+          demoMode={demoMode}
+          viewCuration={viewCuration}
+          viewLocked={viewLocked}
+        />
+      );
+    }
+
+    // Standard embed template: map only + optional auto-rotate overlay
     return (
       <div className="relative h-full w-full" style={{ backgroundColor: design.pageBg }}>
         <MapView
@@ -392,6 +406,14 @@ export default function MapEditorContent({
               : {}),
           }}
         >
+          {design.embedLayout === "sidebar-filter" ? (
+            <SidebarFilterLayout
+              points={data}
+              viewCuration={viewCuration}
+              viewLocked={viewLocked}
+              fillContainer
+            />
+          ) : (
           <div
             className="design-grid grid h-full"
             style={{
@@ -565,6 +587,7 @@ export default function MapEditorContent({
             </div>
             )}
           </div>
+        )}
         </div>
       </div>
 

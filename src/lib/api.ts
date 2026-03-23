@@ -87,3 +87,24 @@ export async function duplicateMap(id: string): Promise<{ id: string }> {
   if (!res.ok) throw new Error(`Failed to duplicate map: ${res.status}`);
   return res.json();
 }
+
+// ── Geocoding ───────────────────────────────────────────────
+
+export interface GeocodeResult {
+  address: string;
+  lat: number | null;
+  lng: number | null;
+  display_name: string | null;
+}
+
+export async function geocodeAddresses(
+  addresses: string[],
+): Promise<GeocodeResult[]> {
+  const res = await fetch(`${API_BASE}/geocode`, opts({
+    method: 'POST',
+    body: JSON.stringify({ addresses }),
+  }));
+  if (!res.ok) throw new Error(`Geocoding failed: ${res.status}`);
+  const data = await res.json() as { results: GeocodeResult[] };
+  return data.results;
+}

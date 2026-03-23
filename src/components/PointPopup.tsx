@@ -46,24 +46,30 @@ export default function PointPopup({ point }: Props) {
       </span>
 
       {/* Description */}
-      <p className="mb-2 text-xs leading-relaxed text-gray-600">
-        {point.description}
-      </p>
+      {point.description && (
+        <p className="mb-2 text-xs leading-relaxed text-gray-600">
+          {point.description}
+        </p>
+      )}
 
       {/* Address */}
-      <p className="mb-2 text-xs text-gray-500">{point.address}</p>
+      {point.address && (
+        <p className="mb-2 text-xs text-gray-500">{point.address}</p>
+      )}
 
       {/* Actions */}
       <div className="flex gap-3">
-        <a
-          href={`https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(point.address)}`}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="inline-flex items-center gap-1 text-xs font-medium text-blue-600 hover:text-blue-800"
-        >
-          <FontAwesomeIcon icon={faDirections} className="text-[10px]" />
-          Directions
-        </a>
+        {point.address && (
+          <a
+            href={`https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(point.address)}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center gap-1 text-xs font-medium text-blue-600 hover:text-blue-800"
+          >
+            <FontAwesomeIcon icon={faDirections} className="text-[10px]" />
+            Directions
+          </a>
+        )}
         {point.url && (
           <a
             href={point.url}

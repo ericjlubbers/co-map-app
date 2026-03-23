@@ -3,7 +3,8 @@ import { useParams, useSearchParams } from "react-router-dom";
 import { getMap, type MapDetail } from "../lib/api";
 import { DesignProvider } from "../context/DesignContext";
 import MapEditorContent from "../components/MapEditorContent";
-import type { ViewCuration } from "../types";
+import { layerDataToPoints } from "../lib/starterData";
+import type { ViewCuration, LayerData, PointData } from "../types";
 
 /**
  * Embed page — renders just the map with no editor chrome.
@@ -34,6 +35,16 @@ export default function EmbedPage() {
     return null;
   }, [mapData]);
 
+  // Extract points from data_config
+  const points = useMemo<PointData[]>(() => {
+    if (!mapData?.data_config) return [];
+    const raw = mapData.data_config as Record<string, unknown>;
+    if (raw.points && typeof raw.points === "object") {
+      return layerDataToPoints(raw.points as LayerData);
+    }
+    return [];
+  }, [mapData]);
+
   if (error) {
     return (
       <div className="flex h-dvh items-center justify-center bg-gray-100">
@@ -56,6 +67,7 @@ export default function EmbedPage() {
         <MapEditorContent
           embedMode
           demoMode={demoOverride || !!(mapData.design_state as Record<string, unknown>)?.enableDemoMode}
+          points={points}
           viewCuration={viewCuration}
           viewLocked={!!viewCuration}
         />

@@ -227,6 +227,7 @@ export const DEFAULT_DESIGN: DesignState = {
   embedMobileAspectRatio: "3:4",
   embedHeight: "600",
   embedHeightUnit: "auto",
+  embedLayout: "standard",
 };
 
 // ── Clustering Settings ─────────────────────────────────────────────

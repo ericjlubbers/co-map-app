@@ -26,6 +26,10 @@ export default function EmbedCodeBanner({
     `data-ratio-mobile="${design.embedMobileAspectRatio}"`,
     `data-height="${design.embedHeight}"`,
     `data-height-unit="${design.embedHeightUnit}"`,
+    // Sidebar-filter template uses separate desktop/mobile vh heights
+    ...(design.embedLayout === "sidebar-filter" && design.embedHeightUnit === "vh"
+      ? [`data-vh-desktop="75"`, `data-vh-mobile="85"`]
+      : []),
   ].join(" ");
 
   // Fallback height for browsers/contexts where script doesn't load

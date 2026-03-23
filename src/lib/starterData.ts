@@ -13,6 +13,8 @@ export function layerDataToPoints(layer: LayerData): PointData[] {
   const groupCol = columns.find((c) => columnMappings[c] === "group");
   const iconCol = columns.find((c) => columnMappings[c] === "icon");
   const imageCol = columns.find((c) => columnMappings[c] === "image");
+  const addressCol = columns.find((c) => columnMappings[c] === "address");
+  const urlCol = columns.find((c) => columnMappings[c] === "url");
   const metaCols = columns.filter((c) => columnMappings[c] === "metadata");
   const geoCols = columns.filter((c) => columnMappings[c] === "geometry");
 
@@ -51,9 +53,9 @@ export function layerDataToPoints(layer: LayerData): PointData[] {
       title: nameCol ? (row[nameCol] ?? "") : "",
       category: groupCol ? (row[groupCol] ?? "") : "",
       description: metaCols.map((c) => row[c] ?? "").filter(Boolean).join(" · "),
-      address: "",
+      address: addressCol ? (row[addressCol] ?? "") : "",
       imageUrl: imageCol ? (row[imageCol] ?? "") : "",
-      url: "",
+      url: urlCol ? (row[urlCol] ?? "") : "",
       lat,
       lng,
       icon: iconCol ? (row[iconCol] ?? undefined) : undefined,
