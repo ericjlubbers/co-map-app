@@ -88,13 +88,18 @@ function FlyToSelected({
   mapRef,
   onMapRef,
   flyToZoom,
+  homeCenter,
+  homeZoom,
 }: {
   point: PointData | null;
   mapRef: React.RefObject<LeafletMap | null>;
   onMapRef?: (map: LeafletMap | null) => void;
   flyToZoom: number;
+  homeCenter: [number, number];
+  homeZoom: number;
 }) {
   const map = useMap();
+  const prevPointRef = useRef<PointData | null>(null);
 
   useEffect(() => {
     if (mapRef.current === null) {
@@ -106,9 +111,31 @@ function FlyToSelected({
   useEffect(() => {
     if (point) {
       map.flyTo([point.lat, point.lng], flyToZoom, { duration: 0.8 });
+    } else if (prevPointRef.current) {
+      // Point was deselected — fly back to initial view
+      map.flyTo(homeCenter, homeZoom, { duration: 0.8 });
     }
-  }, [point, map, flyToZoom]);
+    prevPointRef.current = point;
+  }, [point, map, flyToZoom, homeCenter, homeZoom]);
 
+  return null;
+}
+
+// ── MapClickDeselect ─────────────────────────────────────────
+function MapClickDeselect({
+  onSelectPoint,
+  drawingMode,
+}: {
+  onSelectPoint: (id: string | null) => void;
+  drawingMode: DrawingMode | null;
+}) {
+  useMapEvents({
+    click: () => {
+      if (!drawingMode || drawingMode === "select") {
+        onSelectPoint(null);
+      }
+    },
+  });
   return null;
 }
 
@@ -402,7 +429,15 @@ export default function MapView({
           />
         )}
 
-        <FlyToSelected point={selectedPoint} mapRef={mapRef} onMapRef={onMapRef} flyToZoom={design.flyToZoom} />
+        <FlyToSelected
+          point={selectedPoint}
+          mapRef={mapRef}
+          onMapRef={onMapRef}
+          flyToZoom={design.flyToZoom}
+          homeCenter={viewCuration?.center ?? MAP_CENTER}
+          homeZoom={viewCuration?.zoom ?? MAP_ZOOM}
+        />
+        <MapClickDeselect onSelectPoint={onSelectPoint} drawingMode={drawingMode ?? null} />
 
         {drawingMode && onDrawingComplete && (
           <DrawingInteraction
@@ -430,6 +465,7 @@ export default function MapView({
               cluster as Parameters<typeof createClusterIcon>[0],
               design.clusterStyle,
               design.pointColorMode === "by-category" ? design.categoryColors : undefined,
+              Object.keys(design.categoryIcons).length > 0 ? design.categoryIcons : undefined,
             )
           }
           maxClusterRadius={CLUSTER_SETTINGS.maxClusterRadius}

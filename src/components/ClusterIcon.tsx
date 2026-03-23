@@ -1,6 +1,7 @@
 import L from "leaflet";
-import type { PointData, ClusterStyle } from "../types";
+import type { ClusterStyle } from "../types";
 import { getCategoryInfo, CLUSTER_STYLE } from "../config";
+import { getFaIconSvg } from "../lib/faIcons";
 
 // Count categories in child markers
 function getCategoryCounts(cluster: L.MarkerCluster): Record<string, number> {
@@ -124,11 +125,81 @@ function createMinimalIcon(cluster: L.MarkerCluster): L.DivIcon {
   });
 }
 
+// ── Ring-style cluster icon ─────────────────────────────────
+function createRingIcon(
+  cluster: L.MarkerCluster,
+  resolveColor: (cat: string) => string,
+  iconMap?: Record<string, string>,
+): L.DivIcon {
+  const counts = getCategoryCounts(cluster);
+  const total = cluster.getChildCount();
+  const entries = Object.entries(counts).sort((a, b) => b[1] - a[1]);
+
+  // Build a list of icons to show (one per category, capped at 8)
+  const maxIcons = Math.min(entries.length, 8);
+  const iconEntries = entries.slice(0, maxIcons);
+
+  const size = Math.max(64, 48 + maxIcons * 3);
+  const cx = size / 2;
+  const cy = size / 2;
+  const ringR = size / 2 - 8; // radius for icon placement
+  const iconSize = 10;
+  const innerR = ringR - iconSize - 2;
+
+  let icons = "";
+  for (let i = 0; i < iconEntries.length; i++) {
+    const [cat] = iconEntries[i];
+    const color = resolveColor(cat);
+    const angle = (i / iconEntries.length) * 2 * Math.PI - Math.PI / 2;
+    const ix = cx + ringR * Math.cos(angle);
+    const iy = cy + ringR * Math.sin(angle);
+
+    const catIconName = iconMap?.[cat] || getCategoryInfo(cat).icon;
+    const svgData = getFaIconSvg(catIconName);
+
+    if (svgData) {
+      // Render the FA icon scaled into a small circle
+      const [, , w, h] = svgData.viewBox.split(" ").map(Number);
+      const scale = iconSize / Math.max(w, h);
+      icons += `<g transform="translate(${ix},${iy})">
+        <circle r="${iconSize / 2 + 3}" fill="white" stroke="${color}" stroke-width="1.5" />
+        <g transform="translate(${-w * scale / 2},${-h * scale / 2}) scale(${scale})">
+          <path d="${svgData.pathData}" fill="${color}" />
+        </g>
+      </g>`;
+    } else {
+      // Fallback: colored dot
+      icons += `<circle cx="${ix}" cy="${iy}" r="4" fill="${color}" stroke="white" stroke-width="1" />`;
+    }
+  }
+
+  // Thin ring connecting the icons
+  const ringSvg = `<circle cx="${cx}" cy="${cy}" r="${ringR}" fill="none" stroke="#e5e7eb" stroke-width="1" stroke-dasharray="3 2" />`;
+
+  const svg = `
+    <svg width="${size}" height="${size}" viewBox="0 0 ${size} ${size}" xmlns="http://www.w3.org/2000/svg">
+      ${ringSvg}
+      <circle cx="${cx}" cy="${cy}" r="${innerR}" fill="white" stroke="#d1d5db" stroke-width="1" />
+      <text x="${cx}" y="${cx}" text-anchor="middle" dominant-baseline="central"
+            font-family="'Libre Franklin', sans-serif" font-weight="600"
+            font-size="${total > 99 ? 11 : 13}" fill="#374151">${total}</text>
+      ${icons}
+    </svg>`;
+
+  return L.divIcon({
+    html: svg,
+    className: "marker-cluster",
+    iconSize: L.point(size, size),
+    iconAnchor: L.point(size / 2, size / 2),
+  });
+}
+
 // ── Public factory ──────────────────────────────────────────
 export function createClusterIcon(
   cluster: L.MarkerCluster,
   style?: ClusterStyle,
   colorMap?: Record<string, string>,
+  iconMap?: Record<string, string>,
 ): L.DivIcon {
   const s = style ?? CLUSTER_STYLE;
   const resolver = (cat: string) => colorMap?.[cat] || getCategoryInfo(cat).color;
@@ -137,6 +208,8 @@ export function createClusterIcon(
       return createGradientIcon(cluster, resolver);
     case "minimal":
       return createMinimalIcon(cluster);
+    case "ring":
+      return createRingIcon(cluster, resolver, iconMap);
     case "donut":
     default:
       return createDonutIcon(cluster, resolver);

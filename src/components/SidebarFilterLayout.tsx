@@ -268,13 +268,15 @@ export default function SidebarFilterLayout({
         </div>
 
         {/* Table (desktop only) */}
-        <div className="sf-table">
-          <DataTable
-            points={filteredPoints}
-            selectedId={selectedId}
-            onSelectPoint={handleSelectPoint}
-          />
-        </div>
+        {design.showDataPanel && (
+          <div className="sf-table">
+            <DataTable
+              points={filteredPoints}
+              selectedId={selectedId}
+              onSelectPoint={handleSelectPoint}
+            />
+          </div>
+        )}
       </div>
 
       <style>{`
@@ -372,7 +374,7 @@ export default function SidebarFilterLayout({
             flex: 1;
           }
           .sf-map {
-            flex: 3;
+            flex: ${design.showDataPanel ? '3' : '1'};
           }
           .sf-table {
             display: flex;

@@ -26,6 +26,7 @@ const CLUSTER_STYLES: { value: ClusterStyle; label: string }[] = [
   { value: "donut", label: "Donut" },
   { value: "gradient", label: "Gradient" },
   { value: "minimal", label: "Minimal" },
+  { value: "ring", label: "Ring" },
 ];
 
 const TILE_PRESETS: { value: TilePreset; label: string }[] = [

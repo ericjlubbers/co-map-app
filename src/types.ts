@@ -57,7 +57,7 @@ export interface CategoryInfo {
   bgColor: string;
 }
 
-export type ClusterStyle = "donut" | "gradient" | "minimal";
+export type ClusterStyle = "donut" | "gradient" | "minimal" | "ring";
 export type FontFamily = "Libre Franklin" | "Atkinson Hyperlegible" | "Plus Jakarta Sans";
 export type TilePreset =
   | "carto-light"
