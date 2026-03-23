@@ -16,6 +16,8 @@ import {
   faLock,
   faLockOpen,
   faEye,
+  faGear,
+  faPaintBrush,
 } from "@fortawesome/free-solid-svg-icons";
 import { getMap, updateMap, type MapDetail } from "../lib/api";
 import { DesignProvider } from "../context/DesignContext";
@@ -36,12 +38,15 @@ import {
 import type {
   DrawnFeatureCollection,
   EditorTab,
+  EditorMode,
   DataLayerTab,
   DataConfig,
   LayerData,
   ColumnMappings,
   DataRow,
   ViewCuration,
+  PrimaryElement,
+  PublicationBounds,
 } from "../types";
 import sunIcon from "../assets/colorado-sun-icon.svg";
 
@@ -57,10 +62,14 @@ function emptyLayer(): LayerData {
 function parseDataConfig(raw: Record<string, unknown>): DataConfig {
   const regions = (raw?.regions as LayerData | undefined);
   const points = (raw?.points as LayerData | undefined);
+  const primaryElements = (raw?.primaryElements as PrimaryElement[] | undefined);
+  const publicationBounds = (raw?.publicationBounds as PublicationBounds | undefined);
   return {
     // Pre-populate regions with county data when empty
     regions: (regions && regions.rows.length > 0) ? regions : defaultCountyRegions(),
     points: points ?? emptyLayer(),
+    primaryElements: primaryElements ?? [],
+    publicationBounds,
   };
 }
 
@@ -75,6 +84,7 @@ export default function MapEditorPage() {
   const [publishError, setPublishError] = useState<string | null>(null);
   const [showStatusMenu, setShowStatusMenu] = useState(false);
   const [showHiddenMenu, setShowHiddenMenu] = useState(false);
+  const [editorMode, setEditorMode] = useState<EditorMode>("settings");
   const [editingTitle, setEditingTitle] = useState(false);
   const [titleDraft, setTitleDraft] = useState("");
   const [savingTitle, setSavingTitle] = useState(false);
@@ -98,6 +108,7 @@ export default function MapEditorPage() {
   const [dataConfig, setDataConfig] = useState<DataConfig>({
     regions: emptyLayer(),
     points: emptyLayer(),
+    primaryElements: [],
   });
 
   const fetchMap = async () => {
@@ -299,6 +310,81 @@ export default function MapEditorPage() {
 
   const embedUrl = `${window.location.origin}/embed/${id}`;
 
+  // ── Primary elements handlers ─────────────────────────────
+  const handleAddPrimaryElement = useCallback(
+    (element: PrimaryElement) => {
+      setDataConfig((prev) => {
+        const next = { ...prev, primaryElements: [...(prev.primaryElements ?? []), element] };
+        saveDataConfig(next);
+        return next;
+      });
+    },
+    [saveDataConfig],
+  );
+
+  const handleRemovePrimaryElement = useCallback(
+    (elementId: string) => {
+      setDataConfig((prev) => {
+        const next = {
+          ...prev,
+          primaryElements: (prev.primaryElements ?? []).filter((e) => e.id !== elementId),
+        };
+        saveDataConfig(next);
+        return next;
+      });
+    },
+    [saveDataConfig],
+  );
+
+  const handleUpdatePrimaryElement = useCallback(
+    (elementId: string, updates: Partial<PrimaryElement>) => {
+      setDataConfig((prev) => {
+        const next = {
+          ...prev,
+          primaryElements: (prev.primaryElements ?? []).map((e) =>
+            e.id === elementId ? { ...e, ...updates } : e,
+          ),
+        };
+        saveDataConfig(next);
+        return next;
+      });
+    },
+    [saveDataConfig],
+  );
+
+  // ── Publication bounds handlers (C4) ──────────────────────
+  const handleUpdatePublicationBounds = useCallback(
+    (bounds: PublicationBounds | undefined) => {
+      setDataConfig((prev) => {
+        const next = { ...prev, publicationBounds: bounds };
+        saveDataConfig(next);
+        return next;
+      });
+    },
+    [saveDataConfig],
+  );
+
+  const handleSetBoundsFromView = useCallback(
+    (target: "desktop" | "mobile") => {
+      const map = leafletMapRef.current;
+      if (!map) return;
+      const b = map.getBounds();
+      const boundsArray: [[number, number], [number, number]] = [
+        [b.getSouth(), b.getWest()],
+        [b.getNorth(), b.getEast()],
+      ];
+      setDataConfig((prev) => {
+        const next = {
+          ...prev,
+          publicationBounds: { ...prev.publicationBounds, [target]: boundsArray },
+        };
+        saveDataConfig(next);
+        return next;
+      });
+    },
+    [saveDataConfig],
+  );
+
   // ── View curation handlers ────────────────────────────────
   const saveCuration = useCallback(
     (curation: ViewCuration | null) => {
@@ -480,6 +566,31 @@ export default function MapEditorPage() {
               </a>
             )}
           </div>
+          {/* Editor mode toggle */}
+          <div className="flex items-center rounded-lg border border-gray-200 bg-gray-50 p-0.5">
+            <button
+              onClick={() => setEditorMode("settings")}
+              className={`inline-flex items-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-medium transition-colors ${
+                editorMode === "settings"
+                  ? "bg-white text-gray-900 shadow-sm"
+                  : "text-gray-500 hover:text-gray-700"
+              }`}
+            >
+              <FontAwesomeIcon icon={faGear} className="text-[11px]" />
+              Settings
+            </button>
+            <button
+              onClick={() => setEditorMode("customize")}
+              className={`inline-flex items-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-medium transition-colors ${
+                editorMode === "customize"
+                  ? "bg-white text-gray-900 shadow-sm"
+                  : "text-gray-500 hover:text-gray-700"
+              }`}
+            >
+              <FontAwesomeIcon icon={faPaintBrush} className="text-[11px]" />
+              Customize
+            </button>
+          </div>
           <div className="flex items-center gap-2">
             {/* Status workflow dropdown */}
             <div className="relative" ref={statusMenuRef}>
@@ -638,6 +749,14 @@ export default function MapEditorPage() {
               viewLocked={viewLocked}
               onHideFeature={handleHideFeature}
               onMapRef={handleMapRef}
+              editorMode={editorMode}
+              primaryElements={dataConfig.primaryElements ?? []}
+              onAddPrimaryElement={handleAddPrimaryElement}
+              onRemovePrimaryElement={handleRemovePrimaryElement}
+              onUpdatePrimaryElement={handleUpdatePrimaryElement}
+              publicationBounds={dataConfig.publicationBounds}
+              onUpdatePublicationBounds={handleUpdatePublicationBounds}
+              onSetBoundsFromView={handleSetBoundsFromView}
             />
           ) : (
             /* Data tab: editor + sidebar side-by-side */

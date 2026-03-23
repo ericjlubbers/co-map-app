@@ -13,7 +13,7 @@ import {
 } from "react-leaflet";
 import MarkerClusterGroup from "react-leaflet-cluster";
 import "leaflet/dist/leaflet.css";
-import type { PointData, DrawingMode, DrawnFeatureCollection, ViewCuration } from "../types";
+import type { PointData, DrawingMode, DrawnFeatureCollection, ViewCuration, EditorMode, SelectedElement, PrimaryElement, PublicationBounds } from "../types";
 import {
   MAP_CENTER,
   MAP_ZOOM,
@@ -32,6 +32,10 @@ import LabelLayer from "./layers/LabelLayer";
 import RoadLayer from "./layers/RoadLayer";
 import WaterwayLayer from "./layers/WaterwayLayer";
 import CityLayer from "./layers/CityLayer";
+import ParkLayer from "./layers/ParkLayer";
+import LakeLayer from "./layers/LakeLayer";
+import PrimaryElementsLayer from "./layers/PrimaryElementsLayer";
+import BoundsOverlay from "./layers/BoundsOverlay";
 import type { Map as LeafletMap, LatLng } from "leaflet";
 
 /** Milliseconds to wait after a click before treating it as a single-click
@@ -62,6 +66,20 @@ interface Props {
   onHideFeature?: (id: string) => void;
   /** Ref callback to expose the Leaflet map instance */
   onMapRef?: (map: LeafletMap | null) => void;
+  /** Current editor mode */
+  editorMode?: EditorMode;
+  /** Called when an element is selected in customize mode */
+  onSelectElement?: (element: SelectedElement | null) => void;
+  /** Currently selected element */
+  selectedElement?: SelectedElement | null;
+  /** Primary elements to render */
+  primaryElements?: PrimaryElement[];
+  /** Update a primary element */
+  onUpdatePrimaryElement?: (elementId: string, updates: Partial<PrimaryElement>) => void;
+  /** Publication bounds for crop overlay */
+  publicationBounds?: PublicationBounds;
+  /** Update publication bounds (corner dragging) */
+  onUpdatePublicationBounds?: (bounds: PublicationBounds | undefined) => void;
 }
 
 // ── FlyToSelected ────────────────────────────────────────────
@@ -269,6 +287,13 @@ export default function MapView({
   viewLocked = false,
   onHideFeature,
   onMapRef,
+  editorMode,
+  onSelectElement,
+  selectedElement,
+  primaryElements = [],
+  onUpdatePrimaryElement,
+  publicationBounds,
+  onUpdatePublicationBounds,
 }: Props) {
   const { design } = useDesign();
   const tileConfig = getTileConfig(design.tilePreset);
@@ -278,17 +303,14 @@ export default function MapView({
   const [pendingVertices, setPendingVertices] = useState<LatLng[]>([]);
 
   // ── View curation computed values ──────────────────────────
-  const hiddenFeatureIds = useMemo(
-    () => new Set(viewCuration?.hiddenFeatureIds ?? []),
-    [viewCuration?.hiddenFeatureIds],
-  );
-
-  // Bbox string for scoped Overpass queries (only when view is locked)
-  const bbox = useMemo(() => {
-    if (!viewLocked || !viewCuration?.bounds) return undefined;
-    const [[south, west], [north, east]] = viewCuration.bounds;
-    return `${south},${west},${north},${east}`;
-  }, [viewLocked, viewCuration?.bounds]);
+  const hiddenFeatureIds = useMemo(() => {
+    const set = new Set(viewCuration?.hiddenFeatureIds ?? []);
+    // Auto-hide: primary element source IDs are hidden on base layers
+    for (const el of primaryElements) {
+      for (const sid of el.sourceIds) set.add(sid);
+    }
+    return set;
+  }, [viewCuration?.hiddenFeatureIds, primaryElements]);
 
   const selectedPoint = useMemo(
     () => points.find((p) => p.id === selectedId) ?? null,
@@ -452,19 +474,51 @@ export default function MapView({
           hiddenFeatureIds={hiddenFeatureIds}
           onHideFeature={onHideFeature}
           viewLocked={viewLocked}
-          bbox={bbox}
+          editorMode={editorMode}
+          onSelectElement={onSelectElement}
         />
         <WaterwayLayer
           hiddenFeatureIds={hiddenFeatureIds}
           onHideFeature={onHideFeature}
           viewLocked={viewLocked}
-          bbox={bbox}
+          editorMode={editorMode}
+          onSelectElement={onSelectElement}
+        />
+        <ParkLayer
+          hiddenFeatureIds={hiddenFeatureIds}
+          editorMode={editorMode}
+          onSelectElement={onSelectElement}
+        />
+        <LakeLayer
+          hiddenFeatureIds={hiddenFeatureIds}
+          editorMode={editorMode}
+          onSelectElement={onSelectElement}
         />
         <CityLayer
           hiddenFeatureIds={hiddenFeatureIds}
           onHideFeature={onHideFeature}
           viewLocked={viewLocked}
+          editorMode={editorMode}
+          onSelectElement={onSelectElement}
         />
+
+        {/* Primary elements + selection overlay (rendered above base layers) */}
+        {editorMode === "customize" && onSelectElement && (
+          <PrimaryElementsLayer
+            primaryElements={primaryElements}
+            selectedElement={selectedElement ?? null}
+            onSelectElement={onSelectElement}
+            onUpdatePrimaryElement={onUpdatePrimaryElement}
+          />
+        )}
+
+        {/* Publication bounds overlay (rendered in customize mode) */}
+        {editorMode === "customize" && publicationBounds && (
+          <BoundsOverlay
+            publicationBounds={publicationBounds}
+            onUpdatePublicationBounds={onUpdatePublicationBounds}
+          />
+        )}
 
         {/* View lock handler */}
         <ViewLockHandler locked={viewLocked} />

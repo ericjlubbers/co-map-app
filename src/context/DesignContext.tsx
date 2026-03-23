@@ -46,6 +46,8 @@ const PARAM_MAP: Record<keyof DesignState, string> = {
   showMotorways: "motorways",
   showTrunkRoads: "trunks",
   showPrimaryRoads: "primaries",
+  showSecondaryRoads: "secondaries",
+  showTertiaryRoads: "tertiaries",
   roadColor: "roadColor",
   roadWeight: "roadW",
   roadOpacity: "roadOp",
@@ -56,6 +58,12 @@ const PARAM_MAP: Record<keyof DesignState, string> = {
   waterwayColor: "waterwayColor",
   waterwayWeight: "waterwayW",
   waterwayOpacity: "waterwayOp",
+  showParks: "parks",
+  parkColor: "parkColor",
+  parkOpacity: "parkOp",
+  showLakes: "lakes",
+  lakeColor: "lakeColor",
+  lakeOpacity: "lakeOp",
   showCities: "cities",
   showCityLabels: "cityLabels",
   showPeakLabels: "peakLabels",
@@ -182,6 +190,10 @@ function parseFromURL(): Partial<DesignState> {
   if (showTrunks) partial.showTrunkRoads = showTrunks === "1";
   const showPrimaries = params.get(PARAM_MAP.showPrimaryRoads);
   if (showPrimaries) partial.showPrimaryRoads = showPrimaries === "1";
+  const showSecondaries = params.get(PARAM_MAP.showSecondaryRoads);
+  if (showSecondaries) partial.showSecondaryRoads = showSecondaries === "1";
+  const showTertiaries = params.get(PARAM_MAP.showTertiaryRoads);
+  if (showTertiaries) partial.showTertiaryRoads = showTertiaries === "1";
 
   const roadColor = params.get(PARAM_MAP.roadColor);
   if (roadColor) partial.roadColor = `#${roadColor}`;
@@ -211,6 +223,20 @@ function parseFromURL(): Partial<DesignState> {
 
   const waterwayOp = params.get(PARAM_MAP.waterwayOpacity);
   if (waterwayOp) partial.waterwayOpacity = parseFloat(waterwayOp);
+
+  const showParks = params.get(PARAM_MAP.showParks);
+  if (showParks) partial.showParks = showParks === "1";
+  const parkColor = params.get(PARAM_MAP.parkColor);
+  if (parkColor) partial.parkColor = `#${parkColor}`;
+  const parkOp = params.get(PARAM_MAP.parkOpacity);
+  if (parkOp) partial.parkOpacity = parseFloat(parkOp);
+
+  const showLakes = params.get(PARAM_MAP.showLakes);
+  if (showLakes) partial.showLakes = showLakes === "1";
+  const lakeColor = params.get(PARAM_MAP.lakeColor);
+  if (lakeColor) partial.lakeColor = `#${lakeColor}`;
+  const lakeOp = params.get(PARAM_MAP.lakeOpacity);
+  if (lakeOp) partial.lakeOpacity = parseFloat(lakeOp);
 
   const showCities = params.get(PARAM_MAP.showCities);
   if (showCities) partial.showCities = showCities === "1";
@@ -302,6 +328,10 @@ function serializeToURL(state: DesignState, includeDesignMode: boolean): string 
     params.set(PARAM_MAP.showTrunkRoads, state.showTrunkRoads ? "1" : "0");
   if (state.showPrimaryRoads !== DEFAULT_DESIGN.showPrimaryRoads)
     params.set(PARAM_MAP.showPrimaryRoads, state.showPrimaryRoads ? "1" : "0");
+  if (state.showSecondaryRoads !== DEFAULT_DESIGN.showSecondaryRoads)
+    params.set(PARAM_MAP.showSecondaryRoads, state.showSecondaryRoads ? "1" : "0");
+  if (state.showTertiaryRoads !== DEFAULT_DESIGN.showTertiaryRoads)
+    params.set(PARAM_MAP.showTertiaryRoads, state.showTertiaryRoads ? "1" : "0");
   if (state.roadColor !== DEFAULT_DESIGN.roadColor)
     params.set(PARAM_MAP.roadColor, state.roadColor.replace("#", ""));
   if (state.roadWeight !== DEFAULT_DESIGN.roadWeight)
@@ -323,6 +353,20 @@ function serializeToURL(state: DesignState, includeDesignMode: boolean): string 
     params.set(PARAM_MAP.waterwayWeight, String(state.waterwayWeight));
   if (state.waterwayOpacity !== DEFAULT_DESIGN.waterwayOpacity)
     params.set(PARAM_MAP.waterwayOpacity, String(state.waterwayOpacity));
+
+  if (state.showParks !== DEFAULT_DESIGN.showParks)
+    params.set(PARAM_MAP.showParks, state.showParks ? "1" : "0");
+  if (state.parkColor !== DEFAULT_DESIGN.parkColor)
+    params.set(PARAM_MAP.parkColor, state.parkColor.replace("#", ""));
+  if (state.parkOpacity !== DEFAULT_DESIGN.parkOpacity)
+    params.set(PARAM_MAP.parkOpacity, String(state.parkOpacity));
+
+  if (state.showLakes !== DEFAULT_DESIGN.showLakes)
+    params.set(PARAM_MAP.showLakes, state.showLakes ? "1" : "0");
+  if (state.lakeColor !== DEFAULT_DESIGN.lakeColor)
+    params.set(PARAM_MAP.lakeColor, state.lakeColor.replace("#", ""));
+  if (state.lakeOpacity !== DEFAULT_DESIGN.lakeOpacity)
+    params.set(PARAM_MAP.lakeOpacity, String(state.lakeOpacity));
 
   if (state.showCities !== DEFAULT_DESIGN.showCities)
     params.set(PARAM_MAP.showCities, state.showCities ? "1" : "0");

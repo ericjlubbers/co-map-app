@@ -4,6 +4,7 @@ import L from "leaflet";
 import { useDesign } from "../../context/DesignContext";
 import { COLORADO_CITIES, formatElevation } from "../../lib/vectorTiles";
 import type { CityFeature } from "../../lib/vectorTiles";
+import type { EditorMode, SelectedElement } from "../../types";
 
 // ── Per-feature style override ───────────────────────────────────────────────
 interface CityStyleOverride {
@@ -65,10 +66,14 @@ export default function CityLayer({
   hiddenFeatureIds,
   onHideFeature,
   viewLocked,
+  editorMode,
+  onSelectElement,
 }: {
   hiddenFeatureIds?: Set<string>;
   onHideFeature?: (id: string) => void;
   viewLocked?: boolean;
+  editorMode?: EditorMode;
+  onSelectElement?: (element: SelectedElement) => void;
 }) {
   const { design } = useDesign();
 
@@ -111,6 +116,20 @@ export default function CityLayer({
             icon={icon}
             eventHandlers={{
               click: () => {
+                if (editorMode === "customize" && onSelectElement) {
+                  onSelectElement({
+                    sourceType: "city",
+                    sourceIds: [city.id],
+                    name: city.name,
+                    geometry: { type: "Point", coordinates: [city.lng, city.lat] },
+                    properties: {
+                      elevation_m: city.elevation_m,
+                      population: city.population,
+                      type: city.type,
+                    },
+                  });
+                  return;
+                }
                 setSelectedId(city.id);
                 setEditColor(override?.color ?? design.cityColor);
                 setEditFontSize(override?.fontSize ?? design.cityFontSize);

@@ -7,7 +7,11 @@ import {
   fetchColoradoMotorways,
   fetchColoradoTrunkRoads,
   fetchColoradoPrimaryRoads,
+  fetchColoradoSecondaryRoads,
+  fetchColoradoTertiaryRoads,
 } from "../../lib/vectorTiles";
+import { useZoom, LOD_THRESHOLDS } from "../../hooks/useLOD";
+import type { EditorMode, SelectedElement } from "../../types";
 
 interface FeatureStyle {
   color: string;
@@ -20,6 +24,8 @@ const HIGHWAY_WEIGHT: Record<string, number> = {
   motorway: 4,
   trunk: 3,
   primary: 2,
+  secondary: 1.5,
+  tertiary: 1,
 };
 
 // ── Sub-layer for a single road type ──────────────────────────────────────────
@@ -37,6 +43,9 @@ function RoadSubLayer({
   hiddenFeatureIds,
   onHideFeature,
   viewLocked,
+  minZoom = 0,
+  editorMode,
+  onSelectElement,
 }: {
   enabled: boolean;
   fetcher: () => Promise<GeoJSON.FeatureCollection>;
@@ -51,8 +60,12 @@ function RoadSubLayer({
   hiddenFeatureIds?: Set<string>;
   onHideFeature?: (id: string) => void;
   viewLocked?: boolean;
+  minZoom?: number;
+  editorMode?: EditorMode;
+  onSelectElement?: (element: SelectedElement) => void;
 }) {
   const map = useMap();
+  const zoom = useZoom();
   const [data, setData] = useState<GeoJSON.FeatureCollection | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -64,15 +77,7 @@ function RoadSubLayer({
   const [editWeight, setEditWeight] = useState(roadWeight);
   const [editDash, setEditDash] = useState(roadDashArray);
 
-  // Reset data when fetcher (bbox) changes so it refetches
-  const prevFetcherRef = useRef(fetcher);
-  useEffect(() => {
-    if (prevFetcherRef.current !== fetcher) {
-      prevFetcherRef.current = fetcher;
-      setData(null);
-    }
-  }, [fetcher]);
-
+  // Reset data when fetcher changes so it refetches
   useEffect(() => {
     if (!enabled) return;
     if (data) return;
@@ -110,12 +115,49 @@ function RoadSubLayer({
       const id = feature.id as string;
       layer.on("click", (e: LeafletMouseEvent) => {
         L.DomEvent.stopPropagation(e);
+
+        if (editorMode === "customize" && onSelectElement) {
+          const name = (feature.properties?.ref as string) || (feature.properties?.name as string) || id;
+          onSelectElement({
+            sourceType: "road",
+            sourceIds: [id],
+            name,
+            geometry: feature.geometry,
+            properties: (feature.properties ?? {}) as Record<string, unknown>,
+          });
+          return;
+        }
+
         const override = styleOverrides[id];
         setEditColor(override?.color ?? roadColor);
         setEditWeight(override?.weight ?? roadWeight);
         setEditDash(override?.dashArray ?? roadDashArray);
         setSelectedFeatureId(id);
         setPopupLatLng([e.latlng.lat, e.latlng.lng]);
+      });
+      // Double-click: connected selection via ref tag (C2.2)
+      layer.on("dblclick", (e: LeafletMouseEvent) => {
+        if (editorMode !== "customize" || !onSelectElement || !data) return;
+        e.originalEvent?.stopPropagation();
+        e.originalEvent?.preventDefault();
+
+        const featureRef = feature.properties?.ref as string | undefined;
+        if (!featureRef) return; // no ref tag — single-click selection is enough
+
+        const connected = data.features.filter((f) => f.properties?.ref === featureRef);
+        if (connected.length <= 1) return;
+
+        const lineCoords = connected
+          .filter((f) => f.geometry.type === "LineString")
+          .map((f) => (f.geometry as GeoJSON.LineString).coordinates);
+
+        onSelectElement({
+          sourceType: "road",
+          sourceIds: connected.map((f) => f.id as string),
+          name: featureRef,
+          geometry: { type: "MultiLineString", coordinates: lineCoords },
+          properties: (feature.properties ?? {}) as Record<string, unknown>,
+        });
       });
       layer.on("mouseover", () => {
         const w = getStyle(feature).weight ?? 2;
@@ -125,10 +167,10 @@ function RoadSubLayer({
         (layer as L.Path).setStyle(getStyle(feature));
       });
     },
-    [roadColor, roadWeight, roadDashArray, styleOverrides, getStyle],
+    [roadColor, roadWeight, roadDashArray, styleOverrides, getStyle, editorMode, onSelectElement, data],
   );
 
-  if (!enabled) return null;
+  if (!enabled || zoom < minZoom) return null;
   if (loading) return <LoadingNotice map={map} message={`Loading ${cacheKey}…`} />;
   if (error) return <LoadingNotice map={map} message={`${cacheKey} error: ${error}`} />;
   if (!data) return null;
@@ -243,12 +285,14 @@ export default function RoadLayer({
   hiddenFeatureIds,
   onHideFeature,
   viewLocked,
-  bbox,
+  editorMode,
+  onSelectElement,
 }: {
   hiddenFeatureIds?: Set<string>;
   onHideFeature?: (id: string) => void;
   viewLocked?: boolean;
-  bbox?: string;
+  editorMode?: EditorMode;
+  onSelectElement?: (element: SelectedElement) => void;
 }) {
   const { design } = useDesign();
   const [styleOverrides, setStyleOverrides] = useState<Record<string, Partial<FeatureStyle>>>({});
@@ -265,19 +309,14 @@ export default function RoadLayer({
     });
   }, []);
 
-  // Create fetchers that use the scoped bbox when provided
-  const motorwayFetcher = useCallback(() => fetchColoradoMotorways(bbox), [bbox]);
-  const trunkFetcher = useCallback(() => fetchColoradoTrunkRoads(bbox), [bbox]);
-  const primaryFetcher = useCallback(() => fetchColoradoPrimaryRoads(bbox), [bbox]);
-
   if (!design.showRoads) return null;
 
   return (
     <>
       <RoadSubLayer
         enabled={design.showMotorways}
-        fetcher={motorwayFetcher}
-        cacheKey={`motorways${bbox ? `-${bbox}` : ""}`}
+        fetcher={fetchColoradoMotorways}
+        cacheKey="motorways"
         roadColor={design.roadColor}
         roadWeight={design.roadWeight}
         roadOpacity={design.roadOpacity}
@@ -288,11 +327,13 @@ export default function RoadLayer({
         hiddenFeatureIds={hiddenFeatureIds}
         onHideFeature={onHideFeature}
         viewLocked={viewLocked}
+        editorMode={editorMode}
+        onSelectElement={onSelectElement}
       />
       <RoadSubLayer
         enabled={design.showTrunkRoads}
-        fetcher={trunkFetcher}
-        cacheKey={`trunk roads${bbox ? `-${bbox}` : ""}`}
+        fetcher={fetchColoradoTrunkRoads}
+        cacheKey="trunk roads"
         roadColor={design.roadColor}
         roadWeight={design.roadWeight}
         roadOpacity={design.roadOpacity}
@@ -303,11 +344,13 @@ export default function RoadLayer({
         hiddenFeatureIds={hiddenFeatureIds}
         onHideFeature={onHideFeature}
         viewLocked={viewLocked}
+        editorMode={editorMode}
+        onSelectElement={onSelectElement}
       />
       <RoadSubLayer
         enabled={design.showPrimaryRoads}
-        fetcher={primaryFetcher}
-        cacheKey={`primary roads${bbox ? `-${bbox}` : ""}`}
+        fetcher={fetchColoradoPrimaryRoads}
+        cacheKey="primary roads"
         roadColor={design.roadColor}
         roadWeight={design.roadWeight}
         roadOpacity={design.roadOpacity}
@@ -318,6 +361,45 @@ export default function RoadLayer({
         hiddenFeatureIds={hiddenFeatureIds}
         onHideFeature={onHideFeature}
         viewLocked={viewLocked}
+        minZoom={LOD_THRESHOLDS.primary}
+        editorMode={editorMode}
+        onSelectElement={onSelectElement}
+      />
+      <RoadSubLayer
+        enabled={design.showSecondaryRoads}
+        fetcher={fetchColoradoSecondaryRoads}
+        cacheKey="secondary roads"
+        roadColor={design.roadColor}
+        roadWeight={design.roadWeight}
+        roadOpacity={design.roadOpacity}
+        roadDashArray={design.roadDashArray}
+        styleOverrides={styleOverrides}
+        onStyleOverride={handleOverride}
+        onClearOverride={handleClear}
+        hiddenFeatureIds={hiddenFeatureIds}
+        onHideFeature={onHideFeature}
+        viewLocked={viewLocked}
+        minZoom={LOD_THRESHOLDS.secondary}
+        editorMode={editorMode}
+        onSelectElement={onSelectElement}
+      />
+      <RoadSubLayer
+        enabled={design.showTertiaryRoads}
+        fetcher={fetchColoradoTertiaryRoads}
+        cacheKey="tertiary roads"
+        roadColor={design.roadColor}
+        roadWeight={design.roadWeight}
+        roadOpacity={design.roadOpacity}
+        roadDashArray={design.roadDashArray}
+        styleOverrides={styleOverrides}
+        onStyleOverride={handleOverride}
+        onClearOverride={handleClear}
+        hiddenFeatureIds={hiddenFeatureIds}
+        onHideFeature={onHideFeature}
+        viewLocked={viewLocked}
+        minZoom={LOD_THRESHOLDS.tertiary}
+        editorMode={editorMode}
+        onSelectElement={onSelectElement}
       />
     </>
   );

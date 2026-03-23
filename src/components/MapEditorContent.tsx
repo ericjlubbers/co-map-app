@@ -8,6 +8,7 @@ import MapView from "./MapView";
 import DataTable from "./DataTable";
 import FilterBar from "./FilterBar";
 import DesignSidebar from "./DesignSidebar";
+import CustomizeSidebar from "./CustomizeSidebar";
 import AutoRotateDemo from "./AutoRotateDemo";
 import DrawingToolbar from "./DrawingToolbar";
 import DrawnFeatureForm from "./DrawnFeatureForm";
@@ -26,8 +27,12 @@ import type {
   DrawingMode,
   DrawnFeatureCollection,
   DrawnFeatureProperties,
+  EditorMode,
   PointData,
   ViewCuration,
+  SelectedElement,
+  PrimaryElement,
+  PublicationBounds,
 } from "../types";
 import type { StarterType } from "../lib/starterData";
 import type { LatLng } from "leaflet";
@@ -51,6 +56,22 @@ interface MapEditorContentProps {
   onHideFeature?: (id: string) => void;
   /** Ref callback to expose the Leaflet map instance */
   onMapRef?: (map: import("leaflet").Map | null) => void;
+  /** Current editor mode */
+  editorMode?: EditorMode;
+  /** Primary elements array */
+  primaryElements?: PrimaryElement[];
+  /** Add a primary element */
+  onAddPrimaryElement?: (element: PrimaryElement) => void;
+  /** Remove a primary element */
+  onRemovePrimaryElement?: (elementId: string) => void;
+  /** Update a primary element (style overrides, label position, etc.) */
+  onUpdatePrimaryElement?: (elementId: string, updates: Partial<PrimaryElement>) => void;
+  /** Publication bounds for crop rectangle */
+  publicationBounds?: PublicationBounds;
+  /** Update publication bounds */
+  onUpdatePublicationBounds?: (bounds: PublicationBounds | undefined) => void;
+  /** Capture current view as desktop or mobile bounds */
+  onSetBoundsFromView?: (target: "desktop" | "mobile") => void;
 }
 
 type DataTab = "points" | "drawn";
@@ -67,11 +88,89 @@ export default function MapEditorContent({
   viewLocked = false,
   onHideFeature,
   onMapRef,
+  editorMode = "settings",
+  primaryElements = [],
+  onAddPrimaryElement,
+  onRemovePrimaryElement,
+  onUpdatePrimaryElement,
+  publicationBounds,
+  onUpdatePublicationBounds,
+  onSetBoundsFromView,
 }: MapEditorContentProps) {
   const { design, designMode } = useDesign();
   const data = externalPoints ?? [];
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [sidebarOpen, setSidebarOpen] = useState(designMode);
+
+  // ── Local map ref for flyTo ────────────────────────────────
+  const localMapRef = useRef<import("leaflet").Map | null>(null);
+  const handleMapRefLocal = useCallback(
+    (map: import("leaflet").Map | null) => {
+      localMapRef.current = map;
+      onMapRef?.(map);
+    },
+    [onMapRef],
+  );
+
+  const handleFlyTo = useCallback((lat: number, lng: number, zoom?: number) => {
+    localMapRef.current?.flyTo([lat, lng], zoom ?? 12, { duration: 0.8 });
+  }, []);
+
+  // ── Selection state for customize mode ─────────────────────
+  const [selectedElement, setSelectedElement] = useState<SelectedElement | null>(null);
+
+  const handleSelectElement = useCallback((element: SelectedElement | null) => {
+    setSelectedElement(element);
+  }, []);
+
+  /** Add an arbitrary element directly as primary (used by quicksearch) */
+  const handleQuickAddPrimary = useCallback(
+    (element: SelectedElement) => {
+      if (!onAddPrimaryElement) return;
+      const id = `primary-${element.sourceType}-${element.sourceIds.join("+")}`;
+      if (primaryElements.some((el) => el.id === id)) return;
+      const pe: PrimaryElement = {
+        id,
+        sourceType: element.sourceType,
+        sourceIds: element.sourceIds,
+        name: element.name,
+        geometry: element.geometry,
+        properties: element.properties,
+      };
+      onAddPrimaryElement(pe);
+    },
+    [onAddPrimaryElement, primaryElements],
+  );
+
+  const handleAddToPrimary = useCallback(() => {
+    if (!selectedElement || !onAddPrimaryElement) return;
+    const id = `primary-${selectedElement.sourceType}-${selectedElement.sourceIds.join("+")}`;
+    // Don't add if already exists
+    if (primaryElements.some((el) => el.id === id)) return;
+    const pe: PrimaryElement = {
+      id,
+      sourceType: selectedElement.sourceType,
+      sourceIds: selectedElement.sourceIds,
+      name: selectedElement.name,
+      geometry: selectedElement.geometry,
+      properties: selectedElement.properties,
+    };
+    onAddPrimaryElement(pe);
+    setSelectedElement(null);
+  }, [selectedElement, onAddPrimaryElement, primaryElements]);
+
+  const handleRemoveFromPrimary = useCallback(
+    (elementId: string) => {
+      onRemovePrimaryElement?.(elementId);
+      setSelectedElement(null);
+    },
+    [onRemovePrimaryElement],
+  );
+
+  // Clear selection when leaving customize mode
+  useEffect(() => {
+    if (editorMode !== "customize") setSelectedElement(null);
+  }, [editorMode]);
 
   useEffect(() => {
     setSidebarOpen(designMode);
@@ -250,7 +349,7 @@ export default function MapEditorContent({
           viewCuration={viewCuration}
           viewLocked={viewLocked}
           onHideFeature={onHideFeature}
-          onMapRef={onMapRef}
+          onMapRef={handleMapRefLocal}
         />
         {demoMode && categories.length > 0 && (
           <AutoRotateDemo
@@ -315,7 +414,14 @@ export default function MapEditorContent({
                 viewCuration={viewCuration}
                 viewLocked={viewLocked}
                 onHideFeature={onHideFeature}
-                onMapRef={onMapRef}
+                onMapRef={handleMapRefLocal}
+                editorMode={editorMode}
+                onSelectElement={handleSelectElement}
+                selectedElement={selectedElement}
+                primaryElements={primaryElements}
+                onUpdatePrimaryElement={onUpdatePrimaryElement}
+                publicationBounds={publicationBounds}
+                onUpdatePublicationBounds={onUpdatePublicationBounds}
               />
 
               {/* Drawing toolbar overlay */}
@@ -462,9 +568,26 @@ export default function MapEditorContent({
         </div>
       </div>
 
-      {/* Design sidebar */}
+      {/* Sidebar — switches based on editor mode */}
       {!embedMode && sidebarOpen && (
-        <DesignSidebar onClose={() => setSidebarOpen(false)} categories={categories} />
+        editorMode === "customize" ? (
+          <CustomizeSidebar
+            onClose={() => setSidebarOpen(false)}
+            selectedElement={selectedElement}
+            primaryElements={primaryElements}
+            onAddToPrimary={handleAddToPrimary}
+            onRemoveFromPrimary={handleRemoveFromPrimary}
+            onSelectElement={handleSelectElement}
+            onUpdatePrimaryElement={onUpdatePrimaryElement}
+            publicationBounds={publicationBounds}
+            onSetBoundsFromView={onSetBoundsFromView}
+            onUpdatePublicationBounds={onUpdatePublicationBounds}
+            onFlyTo={handleFlyTo}
+            onQuickAddPrimary={handleQuickAddPrimary}
+          />
+        ) : (
+          <DesignSidebar onClose={() => setSidebarOpen(false)} categories={categories} />
+        )
       )}
     </div>
   );

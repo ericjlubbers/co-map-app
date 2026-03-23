@@ -6,7 +6,7 @@ Internal mapping platform for The Colorado Sun newsroom. Reporters and data visu
 
 ---
 
-## Status Summary (updated 2026-03-18)
+## Status Summary (updated 2026-03-19)
 
 ### Completed Phases (merged to main)
 
@@ -26,14 +26,24 @@ Internal mapping platform for The Colorado Sun newsroom. Reporters and data visu
 | S1 — Editor UX Polish | ✅ | Font isolation, sidebar reorg (3 groups, single-open), table toggle, empty-by-default, example data, custom ColorPicker, category colors, custom border controls, embed padding/margin/background |
 | S2 — Responsive Embed | ✅ | Independent desktop/mobile aspect ratios, responsive embed.js loader, live embed code snippets, auto-rotate demo toggle |
 | S3 — Auth & Deployment | ✅ | User login, admin panel, Cloudflare Pages, DNS, production config |
-| S4 — View-Scoped Curation | ✅ | Lock view, bbox-scoped Overpass, per-feature show/hide |
+| S4 — View-Scoped Curation | ✅ | Lock view, bbox-scoped Overpass, per-feature show/hide (prototype — superseded by Sprint 8 Customize Mode) |
+| **S8 — Customize Mode** | 🔲 | **Three-stage editor workflow, primary elements layer, per-element styling, label dragging, publication bounds** |
+
+### Sprint 8 Phases
+
+| Phase | Status | Focus |
+|-------|--------|-------|
+| C1 — Foundation | 🔲 | Editor mode system, statewide data cache, expanded feature types, scaled LOD |
+| C2 — Selection & Primary Layer | 🔲 | Element selection, ref-tag grouping, primary elements data layer, auto-hide |
+| C3 — Styling & Labels | 🔲 | Per-element style controls, label dragging, leader line connectors |
+| C4 — Quicksearch & Bounds | 🔲 | Feature search, publication crop tool, out-of-bounds management |
+| C5 — Polish & Embed | 🔲 | Mode re-entry workflow, embed rendering, persistence, Publish integration |
 
 ### Deferred
 
 | Item | Status | Notes |
 |------|--------|-------|
 | Phase 6 — Locator Map Wizard | 🔲 | Workflow shortcut; editors can create locator maps manually today |
-| Multi-select / marquee tool | 🔲 | Batch-style road/waterway segments; Phase 3 polish |
 | CSV file upload | 🔲 | Data import alternative to Google Sheets |
 | Sprint 5 — Region Choropleth Layer | 🔲 | Gradient fills for county regions, auto-toggle region layer, design controls |
 | Sprint 6 — Vector Tile Labels & Local Data | 🔲 | Client-side vector labels, local CO data cache, tile caching |
@@ -301,6 +311,277 @@ Lightweight JS script (~1KB) hosted at `maps.coloradosun.com/embed.js` that:
 - Unlock → all features visible again
 - Re-lock at different zoom → curate a different set of features
 
+> **Note**: Sprint 4 was the initial prototype for view curation. Sprint 8 (Customize Mode) supersedes this approach with a comprehensive primary-elements-based workflow, statewide data caching, and publication-quality composition tools.
+
+---
+
+## Sprint 8 — Customize Mode
+
+**Goal**: Transform the editor from a simple settings panel into a full three-stage composition workflow — **Settings → Customize → Publish** — enabling editors to select, style, reposition, and compose individual map elements for publication-quality output.
+
+**Architecture**: Sprint 8 introduces the **Primary Elements Layer** — when a feature (road, city, waterway, etc.) is selected for emphasis, its geometry is **copied** into a dedicated data layer. This copy can be independently styled, its label dragged to a new position, and a leader-line connector added. The original feature on its base layer is auto-hidden to avoid rendering duplicates. This approach keeps base-layer styling simple (one set of rules for all non-primary features) and gives primary elements full independence.
+
+**Overpass Strategy**: Instead of Sprint 4's bbox-scoped API calls (which caused 504 errors on tight bounds), all Overpass queries use the statewide Colorado bounding box. Data is fetched once per feature type and cached client-side. Visible features are filtered at render time based on the current map bounds. This eliminates API errors and provides a consistent data/processing load regardless of map viewport.
+
+**Scaled Controls**: To prevent performance problems when showing all detail at wide zoom levels, a Level-of-Detail (LOD) system ties feature visibility to zoom level. Tertiary roads and minor features are suppressed below certain zoom thresholds. This keeps the rendering performant across maps from a single city block to the entire state.
+
+---
+
+### Phase C1 — Foundation: Editor Mode System + Data Cache ✅
+
+**Goal**: Establish the three-mode editor structure and replace bbox-scoped Overpass calls with statewide caching.
+
+#### C1.1: Editor Mode Toggle ✅
+
+- Add mode system to editor toolbar: **Settings** | **Customize**
+- Settings mode = current DesignSidebar behavior (renamed from "Design" conceptually)
+- Customize mode = new CustomizeSidebar (stubbed in this phase)
+- Publish remains in the toolbar as it is today (status dropdown / embed code), not a separate mode
+- Mode state lives in `MapEditorPage`; sidebar renders conditionally based on active mode
+- Visual distinction between modes (active state styling on toggle buttons)
+
+#### C1.2: Statewide Overpass Cache (Fix S4 504 Bug) ✅
+
+- Remove optional `bbox` parameter from all 5 Overpass fetchers in `vectorTiles.ts`
+- All fetchers use the existing `CO_BBOX` statewide constant exclusively
+- Cache key simplifies to feature type only (no bbox suffix)
+- Remove bbox-change detection logic from layer components (`RoadLayer`, `WaterwayLayer`)
+- Verify cache prevents redundant API calls when navigating between maps
+
+#### C1.3: Expanded Feature Types ✅
+
+- Add new Overpass fetchers: secondary roads, tertiary roads, parks, lakes
+- Each type follows existing `fetch{Type}` → `FeatureCollection` pattern
+- New layer components as needed (or integrate into existing layer hierarchy)
+- Feature toggles in Settings sidebar under appropriate accordion sections
+
+#### C1.4: Scaled Level-of-Detail (LOD) System ✅
+
+- Define zoom thresholds per feature type:
+  - Motorways/trunk: always visible
+  - Primary roads: zoom ≥ 7
+  - Secondary roads: zoom ≥ 9
+  - Tertiary roads: zoom ≥ 11
+  - Minor features: zoom ≥ 13
+- Layer components read current zoom and suppress rendering below threshold
+- LOD thresholds are defaults — overridable per map in future phases
+- Client-side bounds filtering: only render features intersecting the visible map extent
+
+#### C1.5: Customize Sidebar Stub ✅
+
+- Create `CustomizeSidebar` component with placeholder layout:
+  - Top: "Style Controls" placeholder (empty when nothing selected)
+  - Middle: "Quicksearch" placeholder (disabled)
+  - Bottom: "Primary Elements" placeholder (empty list)
+- Wire sidebar rendering in `MapEditorContent` based on active mode
+
+**Relevant Files**: `src/lib/vectorTiles.ts`, `src/components/MapView.tsx`, `src/pages/MapEditorPage.tsx`, `src/components/MapEditorContent.tsx`, `src/components/layers/RoadLayer.tsx`, `src/components/layers/WaterwayLayer.tsx`, `src/components/DesignSidebar.tsx`, new `src/components/CustomizeSidebar.tsx`
+
+**Verification**:
+- Mode toggle switches sidebar content cleanly (no flicker, state preserved)
+- Overpass fetches use statewide bbox only — no 504 errors
+- New feature types render correctly when toggled on
+- Zooming out beyond LOD threshold hides appropriate features
+- Cache prevents duplicate Overpass calls
+
+---
+
+### Phase C2 — Selection & Primary Elements Layer
+
+**Goal**: Enable editors to select any visible element and promote it to the Primary Elements layer.
+
+#### C2.1: Element Selection
+
+- Click any visible map element (road, waterway, city, park, lake) to select it
+- Selection highlight: contrasting border/glow to distinguish selected element
+- Click elsewhere or press Escape to deselect
+- Selection state managed in `MapEditorPage` (or a new `CustomizeContext`)
+- Selected element info appears in sidebar Style Controls area (name, type, current style)
+
+#### C2.2: Connected Selection via Ref Tag
+
+- Double-click a road segment to select all connected segments sharing the same `ref` tag
+- Example: double-click any segment of I-70 → selects all I-70 way segments
+- Visual: all connected segments highlight simultaneously
+- Works for roads that carry `ref` tags; falls back to single-segment selection otherwise
+
+#### C2.3: Primary Elements Data Layer
+
+- Define `PrimaryElement` type: `{ id, sourceType, sourceId, geometry, properties, styleOverrides, labelPosition?, connectorStyle? }`
+- "Add to Primary" action on selected element (button in sidebar or toolbar action)
+- Copies selected feature's geometry + properties into `data_config.primaryElements[]`
+- New `PrimaryElementsLayer` component renders primary elements above all other layers
+- Each primary element gets a stable ID (e.g., `primary-{sourceType}-{sourceId}`)
+
+#### C2.4: Auto-Hide on Base Layers
+
+- When a feature is promoted to primary, its `sourceId` is added to a hidden set for its source layer
+- Base layer components (RoadLayer, CityLayer, etc.) filter out elements whose IDs are in the hidden set
+- Prevents visual duplication between base layer and primary layer
+- If a primary element is removed, its source feature re-appears on the base layer automatically
+
+#### C2.5: Primary Elements Sidebar List
+
+- Bottom section of CustomizeSidebar shows categorized list of primary elements
+- Categories: Roads, Cities, Waterways, Parks, Lakes (expandable accordion sections)
+- Each item shows: name, type badge
+- Click item to select it on map; remove button to demote back to base layer
+- Indicator count per category (e.g., "Roads (3)")
+
+**Relevant Files**: `src/types.ts`, `src/pages/MapEditorPage.tsx`, `src/components/CustomizeSidebar.tsx`, new `src/components/layers/PrimaryElementsLayer.tsx`, all base layer components
+
+**Verification**:
+- Click-to-select highlights the correct element
+- Double-click selects all segments of a tagged road
+- "Add to Primary" copies geometry and renders in primary layer
+- Original element is hidden on base layer; removing from primary restores it
+- Sidebar list updates in real time as elements are added/removed
+
+---
+
+### Phase C3 — Styling & Labels
+
+**Goal**: Give editors per-element style controls and label dragging with connector lines.
+
+#### C3.1: Per-Element Style Controls
+
+- When a primary element is selected, sidebar Style Controls area shows editable properties:
+  - **Shapes** (roads, waterways, boundaries): color, weight, opacity, dashArray
+  - **Points** (cities, landmarks): marker color, size, icon
+  - **Labels**: font size, font color, background color/opacity, padding
+- Changes update `styleOverrides` on the primary element and re-render immediately
+- Style changes auto-save to `data_config` via existing debounce mechanism
+
+#### C3.2: Style Presets
+
+- Quick-apply presets for common emphasis patterns:
+  - **Highlight**: bright color, increased weight
+  - **Glow**: outer shadow/bloom effect
+  - **Subdued**: reduced opacity, thinner weight
+  - **Color-code**: pick from a small palette of semantically distinct colors
+- Presets modify `styleOverrides` — user can further adjust after applying
+
+#### C3.3: Label Dragging
+
+- All primary element labels are draggable to custom positions
+- Drag handle appears on hover/select for label elements
+- New position saved as `labelPosition: { lat, lng }` on the primary element
+- Labels render at custom position; original label hidden on base layer
+- **Shapes are NOT draggable** — only labels can be repositioned
+
+#### C3.4: Leader Line Connectors
+
+- When a label is dragged away from its source element, a connector line is drawn between them
+- Connector renders as a thin line from label edge to the nearest point on the source geometry
+- Connector style controls: color, weight, dashArray, opacity
+- Connector style saved as `connectorStyle` on the primary element
+- Connectors only appear when label has been repositioned (not at default position)
+
+**Relevant Files**: `src/components/CustomizeSidebar.tsx`, `src/components/layers/PrimaryElementsLayer.tsx`, `src/types.ts`
+
+**Verification**:
+- Selecting a primary element shows its style controls in sidebar
+- Changing color/weight/opacity updates the map in real time
+- Dragging a label repositions it; connector line appears and tracks correctly
+- Labels can be dragged freely; shapes cannot be moved
+- All style changes persist across page reloads
+
+---
+
+### Phase C4 — Quicksearch & Publication Bounds
+
+**Goal**: Add a feature search system and a publication crop rectangle for final map framing.
+
+#### C4.1: Quicksearch Component
+
+- Search field in middle section of CustomizeSidebar
+- Searches across all loaded features (statewide cached data) by name/label
+- Layer filter checkboxes below search field: Roads, Cities, Waterways, Parks, Lakes
+- Results show: feature name, type badge, approximate location
+- Click a result to:
+  - Pan/zoom map to the feature
+  - Select it (highlight on map)
+  - Option to add directly to primary elements from search results
+
+#### C4.2: Publication Bounds Tool
+
+- Interactive rectangle overlay on the map for defining the publication crop
+- Draggable corners and edges to adjust bounds
+- Desktop and mobile bounds are set separately (or lock to same)
+- **Combined bounds** for element management: the outermost rectangle encompassing both desktop and mobile bounds
+- Bounds saved to `data_config.publicationBounds: { desktop: LatLngBounds, mobile: LatLngBounds }`
+
+#### C4.3: Out-of-Bounds Management
+
+- Each primary element in the sidebar list gets a bounds indicator:
+  - ✅ **In bounds**: fully within combined bounds rectangle
+  - ⚠️ **Partially out**: some geometry extends beyond bounds (e.g., a road hanging off the edge)
+  - 🚫 **Out of bounds**: entirely outside combined bounds
+- Expandable category sections show count of affected elements
+- "Remove all out-of-bounds" shortcut button removes all 🚫 elements at once
+- Partially-out elements shown with mild warning — user decides whether to keep or remove
+
+#### C4.4: Bounds Change Workflow
+
+- When bounds change (in Settings or Customize mode), re-evaluate all primary elements
+- Elements are never auto-removed — only indicators update
+- User makes explicit decisions about what to keep/remove
+
+**Relevant Files**: `src/components/CustomizeSidebar.tsx`, `src/types.ts`, `src/pages/MapEditorPage.tsx`, new bounds overlay component
+
+**Verification**:
+- Quicksearch finds features across all loaded layers
+- Layer checkboxes filter search results correctly
+- Bounds rectangle is interactive and saves to data_config
+- Out-of-bounds indicators update correctly when bounds change
+- "Remove all out-of-bounds" removes only fully-out elements
+
+---
+
+### Phase C5 — Polish & Embed Integration
+
+**Goal**: Ensure smooth mode transitions, reliable persistence, and publication-quality embed rendering.
+
+#### C5.1: Mode Re-entry Workflow
+
+- Switching from Customize → Settings preserves all primary elements and their styles
+- Switching from Settings → Customize shows existing primary elements in the sidebar
+- Changing base-layer settings (tile provider, colors, fonts) in Settings mode is reflected immediately when switching back to Customize
+- Primary elements persist regardless of which mode the user is in
+
+#### C5.2: Embed Rendering
+
+- EmbedPage renders the Primary Elements Layer on top of base layers
+- Publication crop bounds applied: only content within bounds is visible
+- Dragged labels render at their custom positions
+- Leader line connectors render correctly
+- Non-primary layers use base Settings styling (no per-element overrides)
+- Hidden base features (that have primary copies) are suppressed
+
+#### C5.3: Data Persistence
+
+- All primary elements stored in `data_config.primaryElements[]`
+- All publication bounds stored in `data_config.publicationBounds`
+- Auto-save via existing debounced `updateMap` API calls
+- Full state loadable from API on editor re-open (primary elements, styles, bounds, label positions)
+
+#### C5.4: Edge Cases & Polish
+
+- Handle deleted primary elements gracefully (source feature re-appears on base layer)
+- Handle maps with no primary elements (Customize mode works but primary layer is empty)
+- Undo support for customization actions (stretch goal — evaluate feasibility)
+- Performance: primary elements layer should render without blocking interaction
+- OSM attribution: ODbL notice on all published maps
+
+**Relevant Files**: `src/pages/EmbedPage.tsx`, `src/pages/MapEditorPage.tsx`, `src/components/MapEditorContent.tsx`, `src/components/layers/PrimaryElementsLayer.tsx`, `src/types.ts`, `worker/src/index.ts`
+
+**Verification**:
+- Switching modes preserves all customization state
+- Embed renders primary elements with correct styles and positions
+- Publication bounds crop the embed correctly
+- Re-opening an editor loads all saved customizations
+- Performance is acceptable with 20+ primary elements
+
 ---
 
 ## Sprint 5 — Region Choropleth Layer (Deferred)
@@ -499,23 +780,26 @@ Lightweight JS script (~1KB) hosted at `maps.coloradosun.com/embed.js` that:
 Completed Phases (1-5, 7)              ✅ all merged to main
     │
     ├── Sprint 1 (Editor UX Polish)    ✅ merged
-    │
     ├── Sprint 2 (Responsive Embed)    ✅ merged
+    ├── Sprint 3 (Auth & Deployment)   ✅ merged (production deployed)
+    ├── Sprint 4 (View Curation)       ✅ merged (prototype, superseded by S8)
     │
-    └── Sprint 3 (Auth & Deployment)   → production launch ← NEXT
+    └── Sprint 8 (Customize Mode)      ← ACTIVE
             │
-            ├── Sprint 4 (View Curation)  → publication-quality maps
-            │
-            ├── Sprint 5 (Choropleth)     → region data + gradient fills
-            │
-            ├── Sprint 6 (Vector/Local)   → vector labels + local data cache
-            │
-            ├── Sprint 7 (Preview)        → responsive preview toolbar
-            │
-            └── Phase 6 (Wizard)          → deferred post-launch optimization
+            ├── C1  Foundation             → mode system + data cache
+            ├── C2  Selection & Primary    → element selection + layer
+            ├── C3  Styling & Labels       → per-element styles + dragging
+            ├── C4  Quicksearch & Bounds   → search + publication crop
+            └── C5  Polish & Embed         → re-entry + embed rendering
+
+    Post-Customize:
+            ├── Sprint 5 (Choropleth)      → region data + gradient fills
+            ├── Sprint 6 (Vector/Local)    → vector labels + local data cache
+            ├── Sprint 7 (Preview)         → responsive preview toolbar
+            └── Phase 6 (Wizard)           → deferred post-launch
 ```
 
-Sprint 3 is the next milestone — production deployment unblocks real map publishing. Sprints 4–7 are post-launch enhancements.
+Sprint 8 is the next milestone — the Customize Mode is the system that enables publication-quality maps.
 
 ---
 
@@ -536,3 +820,7 @@ Sprint 3 is the next milestone — production deployment unblocks real map publi
 | New map default | Empty (no seed data) |
 | Visibility | All published maps public, editor requires login |
 | Locator wizard | Deferred post-launch |
+| Editor workflow | Three-stage: Settings → Customize → Publish (toolbar) |
+| Overpass strategy | Statewide fetch, client-side cache + bounds filter (not bbox-scoped API) |
+| Primary elements | Geometry copies in own data layer (not references to base features) |
+| OSM data license | ODbL — standard attribution required on all maps |

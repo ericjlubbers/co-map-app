@@ -7,6 +7,8 @@ import {
   fetchColoradoRivers,
   fetchColoradoStreams,
 } from "../../lib/vectorTiles";
+import { useZoom, LOD_THRESHOLDS } from "../../hooks/useLOD";
+import type { EditorMode, SelectedElement } from "../../types";
 
 interface FeatureStyle {
   color: string;
@@ -34,6 +36,9 @@ function WaterwaySubLayer({
   hiddenFeatureIds,
   onHideFeature,
   viewLocked,
+  minZoom = 0,
+  editorMode,
+  onSelectElement,
 }: {
   enabled: boolean;
   fetcher: () => Promise<GeoJSON.FeatureCollection>;
@@ -47,8 +52,12 @@ function WaterwaySubLayer({
   hiddenFeatureIds?: Set<string>;
   onHideFeature?: (id: string) => void;
   viewLocked?: boolean;
+  minZoom?: number;
+  editorMode?: EditorMode;
+  onSelectElement?: (element: SelectedElement) => void;
 }) {
   const map = useMap();
+  const zoom = useZoom();
   const [data, setData] = useState<GeoJSON.FeatureCollection | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -59,15 +68,7 @@ function WaterwaySubLayer({
   const [editColor, setEditColor] = useState(waterwayColor);
   const [editWeight, setEditWeight] = useState(waterwayWeight);
 
-  // Reset data when fetcher (bbox) changes so it refetches
-  const prevFetcherRef = useRef(fetcher);
-  useEffect(() => {
-    if (prevFetcherRef.current !== fetcher) {
-      prevFetcherRef.current = fetcher;
-      setData(null);
-    }
-  }, [fetcher]);
-
+  // Fetch data once when enabled
   useEffect(() => {
     if (!enabled) return;
     if (data) return;
@@ -106,6 +107,19 @@ function WaterwaySubLayer({
       const id = feature.id as string;
       layer.on("click", (e: LeafletMouseEvent) => {
         L.DomEvent.stopPropagation(e);
+
+        if (editorMode === "customize" && onSelectElement) {
+          const name = (feature.properties?.name as string) || id;
+          onSelectElement({
+            sourceType: "waterway",
+            sourceIds: [id],
+            name,
+            geometry: feature.geometry,
+            properties: (feature.properties ?? {}) as Record<string, unknown>,
+          });
+          return;
+        }
+
         const override = styleOverrides[id];
         setEditColor(override?.color ?? waterwayColor);
         setEditWeight(override?.weight ?? waterwayWeight);
@@ -120,10 +134,10 @@ function WaterwaySubLayer({
         (layer as L.Path).setStyle(getStyle(feature));
       });
     },
-    [waterwayColor, waterwayWeight, styleOverrides, getStyle],
+    [waterwayColor, waterwayWeight, styleOverrides, getStyle, editorMode, onSelectElement],
   );
 
-  if (!enabled) return null;
+  if (!enabled || zoom < minZoom) return null;
   if (loading) return <LoadingNotice map={map} message={`Loading ${cacheKey}…`} />;
   if (error) return <LoadingNotice map={map} message={`${cacheKey} error: ${error}`} />;
   if (!data) return null;
@@ -227,12 +241,14 @@ export default function WaterwayLayer({
   hiddenFeatureIds,
   onHideFeature,
   viewLocked,
-  bbox,
+  editorMode,
+  onSelectElement,
 }: {
   hiddenFeatureIds?: Set<string>;
   onHideFeature?: (id: string) => void;
   viewLocked?: boolean;
-  bbox?: string;
+  editorMode?: EditorMode;
+  onSelectElement?: (element: SelectedElement) => void;
 }) {
   const { design } = useDesign();
   const [styleOverrides, setStyleOverrides] = useState<Record<string, Partial<FeatureStyle>>>({});
@@ -249,18 +265,14 @@ export default function WaterwayLayer({
     });
   }, []);
 
-  // Create fetchers that use the scoped bbox when provided
-  const riverFetcher = useCallback(() => fetchColoradoRivers(bbox), [bbox]);
-  const streamFetcher = useCallback(() => fetchColoradoStreams(bbox), [bbox]);
-
   if (!design.showWaterways) return null;
 
   return (
     <>
       <WaterwaySubLayer
         enabled={design.showRivers}
-        fetcher={riverFetcher}
-        cacheKey={`rivers${bbox ? `-${bbox}` : ""}`}
+        fetcher={fetchColoradoRivers}
+        cacheKey="rivers"
         waterwayColor={design.waterwayColor}
         waterwayWeight={design.waterwayWeight}
         waterwayOpacity={design.waterwayOpacity}
@@ -270,11 +282,13 @@ export default function WaterwayLayer({
         hiddenFeatureIds={hiddenFeatureIds}
         onHideFeature={onHideFeature}
         viewLocked={viewLocked}
+        editorMode={editorMode}
+        onSelectElement={onSelectElement}
       />
       <WaterwaySubLayer
         enabled={design.showStreams}
-        fetcher={streamFetcher}
-        cacheKey={`streams${bbox ? `-${bbox}` : ""}`}
+        fetcher={fetchColoradoStreams}
+        cacheKey="streams"
         waterwayColor={design.waterwayColor}
         waterwayWeight={design.waterwayWeight}
         waterwayOpacity={design.waterwayOpacity}
@@ -284,6 +298,9 @@ export default function WaterwayLayer({
         hiddenFeatureIds={hiddenFeatureIds}
         onHideFeature={onHideFeature}
         viewLocked={viewLocked}
+        minZoom={LOD_THRESHOLDS.stream}
+        editorMode={editorMode}
+        onSelectElement={onSelectElement}
       />
     </>
   );

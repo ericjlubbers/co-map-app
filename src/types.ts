@@ -110,16 +110,77 @@ export interface ViewCuration {
   hiddenFeatureIds: string[];
 }
 
+// ── Primary Elements (Sprint 8 C2) ──────────────────────────
+
+export type PrimaryElementSourceType = 'road' | 'waterway' | 'city' | 'park' | 'lake';
+
+/** Style overrides for primary elements (C3) */
+export interface StyleOverrides {
+  // Shape styling (roads, waterways, parks, lakes)
+  color?: string;
+  weight?: number;
+  opacity?: number;
+  dashArray?: string;
+  fillColor?: string;
+  fillOpacity?: number;
+  // Label/point styling (cities, peaks)
+  fontSize?: number;
+  fontColor?: string;
+  bgColor?: string;
+  bgOpacity?: number;
+}
+
+/** Leader line connector style (C3) */
+export interface ConnectorStyle {
+  color?: string;
+  weight?: number;
+  dashArray?: string;
+  opacity?: number;
+}
+
+/** Transient selection state for customize mode */
+export interface SelectedElement {
+  sourceType: PrimaryElementSourceType;
+  sourceIds: string[];
+  name: string;
+  geometry: GeoJSON.Geometry;
+  properties: Record<string, unknown>;
+}
+
+/** A promoted element in the primary elements layer */
+export interface PrimaryElement {
+  id: string;
+  sourceType: PrimaryElementSourceType;
+  sourceIds: string[];
+  name: string;
+  geometry: GeoJSON.Geometry;
+  properties: Record<string, unknown>;
+  styleOverrides?: StyleOverrides;
+  labelPosition?: { lat: number; lng: number };
+  connectorStyle?: ConnectorStyle;
+}
+
+/** Publication crop bounds for desktop/mobile (C4) */
+export interface PublicationBounds {
+  desktop?: [[number, number], [number, number]]; // [[south, west], [north, east]]
+  mobile?: [[number, number], [number, number]];
+}
+
 /** Top-level data_config object persisted on the map */
 export interface DataConfig {
   regions: LayerData;
   points: LayerData;
   viewCuration?: ViewCuration;
+  primaryElements?: PrimaryElement[];
+  publicationBounds?: PublicationBounds;
 }
 
 /** Active tabs in the editor */
 export type EditorTab = "preview" | "data";
 export type DataLayerTab = "regions" | "points";
+
+/** Editor mode: Settings (design controls) or Customize (element-level editing) */
+export type EditorMode = "settings" | "customize";
 
 export interface DesignState {
   fontFamily: FontFamily;
@@ -164,6 +225,8 @@ export interface DesignState {
   showMotorways: boolean;
   showTrunkRoads: boolean;
   showPrimaryRoads: boolean;
+  showSecondaryRoads: boolean;
+  showTertiaryRoads: boolean;
   roadColor: string;
   roadWeight: number;
   roadOpacity: number;
@@ -175,6 +238,14 @@ export interface DesignState {
   waterwayColor: string;
   waterwayWeight: number;
   waterwayOpacity: number;
+  // Parks layer
+  showParks: boolean;
+  parkColor: string;
+  parkOpacity: number;
+  // Lakes layer
+  showLakes: boolean;
+  lakeColor: string;
+  lakeOpacity: number;
   // Cities layer
   showCities: boolean;
   showCityLabels: boolean;

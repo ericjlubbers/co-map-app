@@ -332,6 +332,16 @@ export default function DesignSidebar({ onClose, categories = [] }: DesignSideba
                         checked={design.showPrimaryRoads}
                         onChange={(v) => set("showPrimaryRoads", v)}
                       />
+                      <TogglePill
+                        label="Secondary"
+                        checked={design.showSecondaryRoads}
+                        onChange={(v) => set("showSecondaryRoads", v)}
+                      />
+                      <TogglePill
+                        label="Tertiary"
+                        checked={design.showTertiaryRoads}
+                        onChange={(v) => set("showTertiaryRoads", v)}
+                      />
                     </div>
                   </Field>
                   <Field label="Color">
@@ -435,6 +445,70 @@ export default function DesignSidebar({ onClose, categories = [] }: DesignSideba
                   <p className="text-[11px] text-gray-400 italic">
                     Click a waterway on the map to override its style.
                   </p>
+                </>
+              )}
+            </div>
+          </AccordionSection>
+
+          {/* ── Parks Layer ── */}
+          <AccordionSection title="Parks">
+            <div className="space-y-3">
+              <Field label="Show Parks">
+                <ToggleSwitch
+                  checked={design.showParks}
+                  onChange={(v) => set("showParks", v)}
+                />
+              </Field>
+              {design.showParks && (
+                <>
+                  <Field label="Color">
+                    <ColorPicker
+                      value={design.parkColor}
+                      onChange={(v) => set("parkColor", v)}
+                    />
+                  </Field>
+                  <Field label="Opacity">
+                    <Slider
+                      min={0.1}
+                      max={0.8}
+                      step={0.05}
+                      value={design.parkOpacity}
+                      onChange={(v) => set("parkOpacity", v)}
+                      format={(v) => v.toFixed(2)}
+                    />
+                  </Field>
+                </>
+              )}
+            </div>
+          </AccordionSection>
+
+          {/* ── Lakes Layer ── */}
+          <AccordionSection title="Lakes">
+            <div className="space-y-3">
+              <Field label="Show Lakes">
+                <ToggleSwitch
+                  checked={design.showLakes}
+                  onChange={(v) => set("showLakes", v)}
+                />
+              </Field>
+              {design.showLakes && (
+                <>
+                  <Field label="Color">
+                    <ColorPicker
+                      value={design.lakeColor}
+                      onChange={(v) => set("lakeColor", v)}
+                    />
+                  </Field>
+                  <Field label="Opacity">
+                    <Slider
+                      min={0.1}
+                      max={0.8}
+                      step={0.05}
+                      value={design.lakeOpacity}
+                      onChange={(v) => set("lakeOpacity", v)}
+                      format={(v) => v.toFixed(2)}
+                    />
+                  </Field>
                 </>
               )}
             </div>
