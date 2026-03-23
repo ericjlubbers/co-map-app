@@ -222,12 +222,21 @@ export const DEFAULT_DESIGN: DesignState = {
   pointColor: "#2563eb",
   pointColorMode: "single" as const,
   categoryColors: {} as Record<string, string>,
+  categoryIcons: {} as Record<string, string>,
   showDataPanel: true,
   embedAspectRatio: "16:9",
   embedMobileAspectRatio: "3:4",
   embedHeight: "600",
   embedHeightUnit: "auto",
   embedLayout: "standard",
+  sfSidebarWidth: "200px",
+  sfBtnFontSize: 13,
+  sfBtnPadding: "8px 10px",
+  sfBtnBorderRadius: "8px",
+  sfBtnGap: "4px",
+  sfLabelWrap: true,
+  flyToZoom: 14,
+  categoryDisplayMode: "text",
 };
 
 // ── Clustering Settings ─────────────────────────────────────────────

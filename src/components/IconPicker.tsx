@@ -1,24 +1,29 @@
 import { useState, useRef, useEffect, useMemo } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { FA_ICON_NAMES } from "../lib/faIcons";
+import { loadFaIconNames, getFaIconNames } from "../lib/faIcons";
 
 interface Props {
   value: string;
   onChange: (iconName: string) => void;
   onClose: () => void;
+  /** Which edge to anchor the dropdown to. Default "left". */
+  align?: "left" | "right";
 }
 
 /** Maximum results shown in the dropdown */
 const MAX_RESULTS = 80;
 
-export default function IconPicker({ value, onChange, onClose }: Props) {
+export default function IconPicker({ value, onChange, onClose, align = "left" }: Props) {
   const [query, setQuery] = useState(value);
+  const [iconNames, setIconNames] = useState<string[]>(getFaIconNames);
   const inputRef = useRef<HTMLInputElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     inputRef.current?.focus();
     inputRef.current?.select();
+    // Load icon library (no-op if already loaded)
+    loadFaIconNames().then(setIconNames);
   }, []);
 
   // Close on outside click
@@ -34,9 +39,9 @@ export default function IconPicker({ value, onChange, onClose }: Props) {
 
   const filtered = useMemo(() => {
     const q = query.toLowerCase().trim();
-    if (!q) return FA_ICON_NAMES.slice(0, MAX_RESULTS);
-    return FA_ICON_NAMES.filter((n) => n.includes(q)).slice(0, MAX_RESULTS);
-  }, [query]);
+    if (!q) return iconNames.slice(0, MAX_RESULTS);
+    return iconNames.filter((n) => n.includes(q)).slice(0, MAX_RESULTS);
+  }, [query, iconNames]);
 
   const handleSelect = (name: string) => {
     onChange(name);
@@ -44,7 +49,7 @@ export default function IconPicker({ value, onChange, onClose }: Props) {
   };
 
   return (
-    <div ref={containerRef} className="absolute left-0 top-full z-50 mt-1 w-64 rounded-lg border border-gray-200 bg-white shadow-xl">
+    <div ref={containerRef} className={`absolute top-full z-50 mt-1 w-64 rounded-lg border border-gray-200 bg-white shadow-xl ${align === "right" ? "right-0" : "left-0"}`}>
       {/* Search input */}
       <div className="border-b border-gray-100 p-2">
         <input

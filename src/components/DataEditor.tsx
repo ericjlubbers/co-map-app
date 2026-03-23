@@ -1,4 +1,4 @@
-import { useState, useRef, useCallback, useEffect } from "react";
+import { useState, useRef, useCallback, useEffect, useMemo } from "react";
 import { useVirtualizer } from "@tanstack/react-virtual";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
@@ -8,6 +8,9 @@ import {
   faArrowLeft,
   faArrowRight,
   faTimes,
+  faSortUp,
+  faSortDown,
+  faSort,
 } from "@fortawesome/free-solid-svg-icons";
 import type { DataRow, ColumnRole } from "../types";
 import IconPicker from "./IconPicker";
@@ -37,6 +40,11 @@ interface ContextMenu {
   y: number;
 }
 
+interface SortState {
+  column: string;
+  direction: "asc" | "desc";
+}
+
 // ── Utility ───────────────────────────────────────────────────
 
 function generateId() {
@@ -63,10 +71,16 @@ export default function DataEditor({
   const [editValue, setEditValue] = useState("");
   const [contextMenu, setContextMenu] = useState<ContextMenu | null>(null);
   const [selectedRows, setSelectedRows] = useState<Set<number>>(new Set());
+  const [selectionAnchor, setSelectionAnchor] = useState<number | null>(null);
   const [iconPickerCell, setIconPickerCell] = useState<{ row: number; col: number } | null>(null);
+  const [sortState, setSortState] = useState<SortState | null>(null);
+  const [fillDragEnd, setFillDragEnd] = useState<number | null>(null);
+  const [reorderTarget, setReorderTarget] = useState<number | null>(null);
 
   const scrollRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+  const fillDragRef = useRef<{ startRow: number; endRow: number; col: number } | null>(null);
+  const reorderRef = useRef<{ fromRow: number } | null>(null);
 
   // Column widths (resizable)
   const [colWidths, setColWidths] = useState<Record<string, number>>(() =>
@@ -121,7 +135,8 @@ export default function DataEditor({
 
   // ── Keyboard navigation ───────────────────────────────────
 
-  const handleKeyDown = useCallback(
+  // Keyboard handler for the edit input
+  const handleEditKeyDown = useCallback(
     (e: React.KeyboardEvent<HTMLInputElement>) => {
       if (!editingCell) return;
       const { row: rowIdx, col: colIdx } = editingCell;
@@ -129,25 +144,60 @@ export default function DataEditor({
       if (e.key === "Enter" || e.key === "Tab") {
         e.preventDefault();
         commitEdit();
-        // Move to next cell
+        // Move to next cell (select, not edit)
         if (e.key === "Tab") {
           const nextCol = e.shiftKey ? colIdx - 1 : colIdx + 1;
           if (nextCol >= 0 && nextCol < columns.length) {
             setSelectedCell({ row: rowIdx, col: nextCol });
-            startEdit(rowIdx, nextCol);
           }
         } else {
           const nextRow = rowIdx + 1;
           if (nextRow < rows.length) {
             setSelectedCell({ row: nextRow, col: colIdx });
-            startEdit(nextRow, colIdx);
           }
         }
       } else if (e.key === "Escape") {
         cancelEdit();
       }
     },
-    [editingCell, commitEdit, cancelEdit, columns.length, rows.length, startEdit]
+    [editingCell, commitEdit, cancelEdit, columns.length, rows.length]
+  );
+
+  // Keyboard handler for the container (arrow navigation, Enter/F2 to edit)
+  const handleContainerKeyDown = useCallback(
+    (e: React.KeyboardEvent<HTMLDivElement>) => {
+      if (editingCell) return; // let the input handle keys
+      if (!selectedCell) return;
+      const { row: r, col: c } = selectedCell;
+
+      if (e.key === "ArrowDown") {
+        e.preventDefault();
+        if (r + 1 < rows.length) setSelectedCell({ row: r + 1, col: c });
+      } else if (e.key === "ArrowUp") {
+        e.preventDefault();
+        if (r > 0) setSelectedCell({ row: r - 1, col: c });
+      } else if (e.key === "ArrowRight" || (e.key === "Tab" && !e.shiftKey)) {
+        e.preventDefault();
+        if (c + 1 < columns.length) setSelectedCell({ row: r, col: c + 1 });
+      } else if (e.key === "ArrowLeft" || (e.key === "Tab" && e.shiftKey)) {
+        e.preventDefault();
+        if (c > 0) setSelectedCell({ row: r, col: c - 1 });
+      } else if (e.key === "Enter" || e.key === "F2") {
+        e.preventDefault();
+        startEdit(r, c);
+      } else if (e.key === "Delete" || e.key === "Backspace") {
+        e.preventDefault();
+        const col = columns[c];
+        const updatedRows = rows.map((row, i) =>
+          i === r ? { ...row, [col]: "" } : row
+        );
+        onRowsChange(updatedRows);
+      } else if (e.key.length === 1 && !e.metaKey && !e.ctrlKey && !e.altKey) {
+        // Start editing on any printable key
+        startEdit(r, c);
+      }
+    },
+    [editingCell, selectedCell, rows, columns, startEdit, onRowsChange]
   );
 
   // ── Clipboard paste ───────────────────────────────────────
@@ -212,14 +262,165 @@ export default function DataEditor({
     setSelectedRows(new Set());
   }, [rows, selectedRows, onRowsChange]);
 
-  const toggleRowSelection = useCallback((idx: number) => {
-    setSelectedRows((prev) => {
-      const next = new Set(prev);
-      if (next.has(idx)) next.delete(idx);
-      else next.add(idx);
-      return next;
-    });
-  }, []);
+  // ── Row selection (enhanced: shift, cmd/ctrl, select-all) ──
+
+  const handleRowClick = useCallback(
+    (rowIdx: number, e: React.MouseEvent) => {
+      if (e.shiftKey && selectionAnchor != null) {
+        const start = Math.min(selectionAnchor, rowIdx);
+        const end = Math.max(selectionAnchor, rowIdx);
+        const next = new Set<number>();
+        for (let i = start; i <= end; i++) next.add(i);
+        setSelectedRows(next);
+      } else if (e.metaKey || e.ctrlKey) {
+        setSelectedRows((prev) => {
+          const next = new Set(prev);
+          if (next.has(rowIdx)) next.delete(rowIdx);
+          else next.add(rowIdx);
+          return next;
+        });
+        setSelectionAnchor(rowIdx);
+      } else {
+        setSelectedRows((prev) => {
+          const next = new Set<number>();
+          if (!prev.has(rowIdx)) next.add(rowIdx);
+          return next;
+        });
+        setSelectionAnchor(rowIdx);
+      }
+    },
+    [selectionAnchor]
+  );
+
+  const toggleSelectAll = useCallback(() => {
+    if (selectedRows.size === rows.length && rows.length > 0) {
+      setSelectedRows(new Set());
+    } else {
+      setSelectedRows(new Set(Array.from({ length: rows.length }, (_, i) => i)));
+    }
+  }, [selectedRows.size, rows.length]);
+
+  // ── Sorting ──
+
+  const handleSort = useCallback(
+    (col: string) => {
+      let direction: "asc" | "desc" = "asc";
+      if (sortState?.column === col) {
+        if (sortState.direction === "asc") direction = "desc";
+        else {
+          setSortState(null);
+          return;
+        }
+      }
+      setSortState({ column: col, direction });
+      const sorted = [...rows].sort((a, b) => {
+        const va = (a[col] ?? "").trim();
+        const vb = (b[col] ?? "").trim();
+        const na = Number(va);
+        const nb = Number(vb);
+        if (va !== "" && vb !== "" && !isNaN(na) && !isNaN(nb)) {
+          return direction === "asc" ? na - nb : nb - na;
+        }
+        const cmp = va.localeCompare(vb);
+        return direction === "asc" ? cmp : -cmp;
+      });
+      onRowsChange(sorted);
+      setSelectedRows(new Set());
+      setSelectedCell(null);
+    },
+    [sortState, rows, onRowsChange]
+  );
+
+  // ── Fill-down ──
+
+  const handleFillMouseDown = useCallback(
+    (e: React.MouseEvent) => {
+      if (!selectedCell) return;
+      e.preventDefault();
+      e.stopPropagation();
+      const { row: startRow, col: colIdx } = selectedCell;
+      fillDragRef.current = { startRow, endRow: startRow, col: colIdx };
+      setFillDragEnd(startRow);
+
+      const onMove = (ev: MouseEvent) => {
+        if (!scrollRef.current || !fillDragRef.current) return;
+        const rect = scrollRef.current.getBoundingClientRect();
+        const scrollTop = scrollRef.current.scrollTop;
+        const y = ev.clientY - rect.top + scrollTop - HEADER_HEIGHT;
+        const target = Math.max(
+          fillDragRef.current.startRow,
+          Math.min(rows.length - 1, Math.floor(y / ROW_HEIGHT))
+        );
+        fillDragRef.current.endRow = target;
+        setFillDragEnd(target);
+      };
+
+      const onUp = () => {
+        document.removeEventListener("mousemove", onMove);
+        document.removeEventListener("mouseup", onUp);
+        if (fillDragRef.current) {
+          const { startRow: sr, endRow: er, col: ci } = fillDragRef.current;
+          if (er > sr) {
+            const col = columns[ci];
+            const srcValue = rows[sr]?.[col] ?? "";
+            const updatedRows = [...rows];
+            for (let i = sr + 1; i <= er; i++) {
+              updatedRows[i] = { ...updatedRows[i], [col]: srcValue };
+            }
+            onRowsChange(updatedRows);
+          }
+          fillDragRef.current = null;
+        }
+        setFillDragEnd(null);
+      };
+
+      document.addEventListener("mousemove", onMove);
+      document.addEventListener("mouseup", onUp);
+    },
+    [selectedCell, rows, columns, onRowsChange]
+  );
+
+  // ── Row reorder ──
+
+  const handleReorderMouseDown = useCallback(
+    (rowIdx: number, e: React.MouseEvent) => {
+      e.preventDefault();
+      reorderRef.current = { fromRow: rowIdx };
+      setReorderTarget(rowIdx);
+
+      const onMove = (ev: MouseEvent) => {
+        if (!scrollRef.current) return;
+        const rect = scrollRef.current.getBoundingClientRect();
+        const scrollTop = scrollRef.current.scrollTop;
+        const y = ev.clientY - rect.top + scrollTop - HEADER_HEIGHT;
+        const target = Math.max(0, Math.min(rows.length - 1, Math.floor(y / ROW_HEIGHT)));
+        setReorderTarget(target);
+      };
+
+      const onUp = () => {
+        document.removeEventListener("mousemove", onMove);
+        document.removeEventListener("mouseup", onUp);
+        setReorderTarget((dropTarget) => {
+          if (reorderRef.current && dropTarget != null) {
+            const from = reorderRef.current.fromRow;
+            if (from !== dropTarget) {
+              const updated = [...rows];
+              const [moved] = updated.splice(from, 1);
+              updated.splice(dropTarget, 0, moved);
+              onRowsChange(updated);
+              setSelectedRows(new Set());
+            }
+          }
+          reorderRef.current = null;
+          return null;
+        });
+      };
+
+      document.addEventListener("mousemove", onMove);
+      document.addEventListener("mouseup", onUp);
+    },
+    [rows, onRowsChange]
+  );
 
   // ── Column operations ─────────────────────────────────────
 
@@ -331,8 +532,9 @@ export default function DataEditor({
       {/* Table */}
       <div
         ref={scrollRef}
-        className="flex-1 overflow-auto"
+        className="flex-1 overflow-auto focus:outline-none"
         onPaste={handleContainerPaste}
+        onKeyDown={handleContainerKeyDown}
         tabIndex={0}
       >
         <div style={{ minWidth: totalWidth }}>
@@ -341,16 +543,23 @@ export default function DataEditor({
             className="sticky top-0 z-10 flex bg-gray-50 border-b border-gray-200"
             style={{ height: HEADER_HEIGHT }}
           >
-            {/* Row number column */}
+            {/* Row number column — select all */}
             <div
-              className="flex shrink-0 items-center justify-center border-r border-gray-200 bg-gray-50 text-[10px] text-gray-400"
+              className="flex shrink-0 cursor-pointer items-center justify-center border-r border-gray-200 bg-gray-50 text-[10px] text-gray-400 hover:bg-blue-50"
               style={{ width: ROW_NUM_WIDTH }}
-            />
+              onClick={toggleSelectAll}
+              title={selectedRows.size === rows.length && rows.length > 0 ? "Deselect all" : "Select all"}
+            >
+              {rows.length > 0 && (
+                <div className={`h-3 w-3 rounded border ${selectedRows.size === rows.length ? "border-blue-600 bg-blue-600" : selectedRows.size > 0 ? "border-blue-400 bg-blue-100" : "border-gray-300"}`} />
+              )}
+            </div>
 
             {/* Column headers */}
             {columns.map((col, colIdx) => {
               const width = colWidths[col] ?? DEFAULT_COL_WIDTH;
               const role = columnMappings?.[col];
+              const isSorted = sortState?.column === col;
               return (
                 <div
                   key={col}
@@ -362,6 +571,16 @@ export default function DataEditor({
                     role={role}
                     onRename={(newName) => renameColumn(col, newName)}
                   />
+                  {/* Sort indicator */}
+                  <button
+                    onClick={() => handleSort(col)}
+                    className={`shrink-0 rounded px-0.5 text-[9px] ${isSorted ? "text-blue-600" : "text-gray-300 opacity-0 group-hover:opacity-100"} hover:text-blue-500`}
+                    title={`Sort by ${col}`}
+                  >
+                    <FontAwesomeIcon
+                      icon={isSorted ? (sortState.direction === "asc" ? faSortUp : faSortDown) : faSort}
+                    />
+                  </button>
                   {/* Context menu trigger */}
                   <button
                     onClick={(e) => {
@@ -406,21 +625,44 @@ export default function DataEditor({
               const rowIdx = vRow.index;
               const row = rows[rowIdx];
               const isSelected = selectedRows.has(rowIdx);
+              const isReorderTarget = reorderTarget === rowIdx && reorderRef.current != null;
 
               return (
                 <div
                   key={vRow.key}
                   className={`absolute left-0 right-0 flex border-b border-gray-100 ${
-                    isSelected ? "bg-blue-50" : "hover:bg-gray-50"
+                    isReorderTarget
+                      ? "border-t-2 border-t-blue-500"
+                      : isSelected
+                        ? "bg-blue-50"
+                        : "hover:bg-gray-50"
                   }`}
                   style={{ top: vRow.start, height: ROW_HEIGHT }}
                 >
-                  {/* Row number / checkbox */}
+                  {/* Row number / checkbox — click to select, drag to reorder */}
                   <div
-                    className="flex shrink-0 cursor-pointer items-center justify-center border-r border-gray-100 text-[10px] text-gray-400 hover:bg-blue-50"
+                    className="flex shrink-0 cursor-grab items-center justify-center border-r border-gray-100 text-[10px] text-gray-400 hover:bg-blue-50 active:cursor-grabbing"
                     style={{ width: ROW_NUM_WIDTH }}
-                    onClick={() => toggleRowSelection(rowIdx)}
-                    title={isSelected ? "Deselect row" : "Select row"}
+                    onClick={(e) => handleRowClick(rowIdx, e)}
+                    onMouseDown={(e) => {
+                      if (e.button !== 0) return;
+                      // Start reorder on drag
+                      const startY = e.clientY;
+                      const onFirstMove = (ev: MouseEvent) => {
+                        if (Math.abs(ev.clientY - startY) > 4) {
+                          document.removeEventListener("mousemove", onFirstMove);
+                          document.removeEventListener("mouseup", onFirstUp);
+                          handleReorderMouseDown(rowIdx, e);
+                        }
+                      };
+                      const onFirstUp = () => {
+                        document.removeEventListener("mousemove", onFirstMove);
+                        document.removeEventListener("mouseup", onFirstUp);
+                      };
+                      document.addEventListener("mousemove", onFirstMove);
+                      document.addEventListener("mouseup", onFirstUp);
+                    }}
+                    title={isSelected ? "Deselect row" : "Select row · Drag to reorder"}
                   >
                     {isSelected ? (
                       <div className="h-3.5 w-3.5 rounded bg-blue-600" />
@@ -436,6 +678,12 @@ export default function DataEditor({
                       editingCell?.row === rowIdx && editingCell?.col === colIdx;
                     const isFocused =
                       selectedCell?.row === rowIdx && selectedCell?.col === colIdx;
+                    const isFillTarget =
+                      fillDragRef.current != null &&
+                      colIdx === selectedCell?.col &&
+                      fillDragEnd != null &&
+                      rowIdx > (selectedCell?.row ?? -1) &&
+                      rowIdx <= fillDragEnd;
                     const role = columnMappings?.[col];
                     const cellValue = row?.[col] ?? "";
 
@@ -445,15 +693,22 @@ export default function DataEditor({
                         className={`relative shrink-0 border-r border-gray-100 ${
                           isFocused && !isEditing
                             ? "ring-2 ring-inset ring-blue-400"
-                            : ""
+                            : isFillTarget
+                              ? "bg-blue-50 ring-1 ring-inset ring-blue-300"
+                              : ""
                         }`}
                         style={{ width, height: ROW_HEIGHT }}
                         onClick={() => {
-                          setSelectedCell({ row: rowIdx, col: colIdx });
-                          if (role === "icon") {
-                            setIconPickerCell({ row: rowIdx, col: colIdx });
-                          } else if (!isEditing) {
-                            startEdit(rowIdx, colIdx);
+                          if (!isFocused) {
+                            setSelectedCell({ row: rowIdx, col: colIdx });
+                            setEditingCell(null);
+                          } else if (isFocused && !isEditing) {
+                            // Second click on already-focused cell → edit
+                            if (role === "icon") {
+                              setIconPickerCell({ row: rowIdx, col: colIdx });
+                            } else {
+                              startEdit(rowIdx, colIdx);
+                            }
                           }
                         }}
                       >
@@ -463,7 +718,7 @@ export default function DataEditor({
                             value={editValue}
                             onChange={(e) => setEditValue(e.target.value)}
                             onBlur={commitEdit}
-                            onKeyDown={handleKeyDown}
+                            onKeyDown={handleEditKeyDown}
                             className="h-full w-full border-none bg-white px-2 text-xs text-gray-800 outline-none focus:ring-2 focus:ring-inset focus:ring-blue-500"
                           />
                         ) : (
@@ -491,6 +746,13 @@ export default function DataEditor({
                               </span>
                             )}
                           </div>
+                        )}
+                        {/* Fill-down handle */}
+                        {isFocused && !isEditing && (
+                          <div
+                            className="absolute -bottom-[3px] -right-[3px] z-20 h-[7px] w-[7px] cursor-crosshair rounded-sm bg-blue-600"
+                            onMouseDown={handleFillMouseDown}
+                          />
                         )}
                         {/* Icon picker dropdown */}
                         {role === "icon" && iconPickerCell?.row === rowIdx && iconPickerCell?.col === colIdx && (

@@ -244,11 +244,31 @@ export default function MapEditorPage() {
     [activeLayer, updateLayer],
   );
 
+  const [staleColumns, setStaleColumns] = useState<string[]>([]);
+
   const handleSheetLoaded = useCallback(
-    (data: Pick<LayerData, "columns" | "rows" | "googleSheetsUrl" | "lastSynced">) =>
-      updateLayer(activeLayer, (l) => ({ ...l, ...data })),
+    (data: Pick<LayerData, "columns" | "rows" | "googleSheetsUrl" | "lastSynced">) => {
+      updateLayer(activeLayer, (l) => {
+        // Detect columns that have mappings but no longer exist in the sheet
+        const newColSet = new Set(data.columns);
+        const orphaned = Object.keys(l.columnMappings).filter(
+          (c) => l.columnMappings[c] !== "none" && !newColSet.has(c),
+        );
+        setStaleColumns(orphaned);
+        return { ...l, ...data };
+      });
+    },
     [activeLayer, updateLayer],
   );
+
+  const clearStaleColumns = useCallback(() => {
+    updateLayer(activeLayer, (l) => {
+      const cleaned = { ...l.columnMappings };
+      staleColumns.forEach((col) => delete cleaned[col]);
+      return { ...l, columnMappings: cleaned };
+    });
+    setStaleColumns([]);
+  }, [activeLayer, updateLayer, staleColumns]);
 
   // ── Derive map points from dataConfig.points ──────────────
   const mapPoints = useMemo(
@@ -775,6 +795,8 @@ export default function MapEditorPage() {
                 onUpdateMappings={handleMappingsChange}
                 onSheetLoaded={handleSheetLoaded}
                 onRowsChange={handleRowsChange}
+                staleColumns={staleColumns}
+                onClearStaleColumns={clearStaleColumns}
               />
             </div>
           )}

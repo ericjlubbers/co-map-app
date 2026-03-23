@@ -2,13 +2,17 @@ import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faDirections, faGlobe } from "@fortawesome/free-solid-svg-icons";
 import type { PointData } from "../types";
 import { getCategoryInfo } from "../config";
+import { useDesign } from "../context/DesignContext";
 
 interface Props {
   point: PointData;
 }
 
 export default function PointPopup({ point }: Props) {
+  const { design } = useDesign();
   const catInfo = getCategoryInfo(point.category);
+  const displayColor = design.categoryColors[point.category] || catInfo.color;
+  const displayIcon = design.categoryIcons[point.category] || point.icon || catInfo.icon;
 
   return (
     <div className="min-w-[220px] max-w-[280px]">
@@ -31,8 +35,8 @@ export default function PointPopup({ point }: Props) {
 
       {/* Title with optional icon */}
       <h3 className="mb-1 flex items-center gap-1.5 text-sm font-semibold leading-tight text-gray-900">
-        {point.icon && (
-          <FontAwesomeIcon icon={point.icon as never} className="shrink-0 text-xs" style={{ color: catInfo.color }} />
+        {displayIcon && (
+          <FontAwesomeIcon icon={displayIcon as never} className="shrink-0 text-xs" style={{ color: displayColor }} />
         )}
         {point.title}
       </h3>
@@ -40,7 +44,7 @@ export default function PointPopup({ point }: Props) {
       {/* Category badge */}
       <span
         className="mb-2 inline-block rounded-full px-2 py-0.5 text-xs font-medium"
-        style={{ backgroundColor: catInfo.bgColor, color: catInfo.color }}
+        style={{ backgroundColor: catInfo.bgColor, color: displayColor }}
       >
         {point.category}
       </span>

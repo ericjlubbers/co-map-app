@@ -87,10 +87,12 @@ function FlyToSelected({
   point,
   mapRef,
   onMapRef,
+  flyToZoom,
 }: {
   point: PointData | null;
   mapRef: React.RefObject<LeafletMap | null>;
   onMapRef?: (map: LeafletMap | null) => void;
+  flyToZoom: number;
 }) {
   const map = useMap();
 
@@ -103,9 +105,9 @@ function FlyToSelected({
 
   useEffect(() => {
     if (point) {
-      map.flyTo([point.lat, point.lng], 13, { duration: 0.8 });
+      map.flyTo([point.lat, point.lng], flyToZoom, { duration: 0.8 });
     }
-  }, [point, map]);
+  }, [point, map, flyToZoom]);
 
   return null;
 }
@@ -400,7 +402,7 @@ export default function MapView({
           />
         )}
 
-        <FlyToSelected point={selectedPoint} mapRef={mapRef} onMapRef={onMapRef} />
+        <FlyToSelected point={selectedPoint} mapRef={mapRef} onMapRef={onMapRef} flyToZoom={design.flyToZoom} />
 
         {drawingMode && onDrawingComplete && (
           <DrawingInteraction
@@ -449,7 +451,7 @@ export default function MapView({
                 design.pointColorMode === "by-category"
                   ? design.categoryColors[point.category]
                   : design.pointColor,
-                point.icon,
+                design.categoryIcons[point.category] || point.icon,
               )}
               category={point.category}
               ref={handleMarkerRef(point.id)}

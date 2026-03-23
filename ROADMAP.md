@@ -45,7 +45,7 @@ Internal mapping platform for The Colorado Sun newsroom. Reporters and data visu
 | Item | Status | Notes |
 |------|--------|-------|
 | Phase 6 — Locator Map Wizard | 🔲 | Workflow shortcut; editors can create locator maps manually today |
-| CSV file upload | 🔲 | Data import alternative to Google Sheets |
+| Multiple Data Input Methods | 🔲 | Google Sheets connector (existing), CSV paste into editor, CSV file upload, image/PDF upload with AI-assisted data extraction (OCR → editable table) |
 | Sprint 5 — Region Choropleth Layer | 🔲 | Gradient fills for county regions, auto-toggle region layer, design controls |
 | Sprint 6 — Vector Tile Labels & Local Data | 🔲 | Client-side vector labels, local CO data cache, tile caching |
 | Sprint 7 — Responsive Preview Toolbar | 🔲 | Desktop/mobile/article preview modes in the editor |

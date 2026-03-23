@@ -146,7 +146,18 @@ export default function SidebarFilterLayout({
 
   // ── Render ──────────────────────────────────────────────────
   return (
-    <div className="sf-layout" style={fillContainer ? { height: '100%' } : undefined}>
+    <div
+      className="sf-layout"
+      style={{
+        ...(fillContainer ? { height: '100%' } : {}),
+        '--sf-sidebar-w': design.sfSidebarWidth,
+        '--sf-btn-font': `${design.sfBtnFontSize}px`,
+        '--sf-btn-pad': design.sfBtnPadding,
+        '--sf-btn-rad': design.sfBtnBorderRadius,
+        '--sf-btn-gap': design.sfBtnGap,
+        '--sf-label-wrap': design.sfLabelWrap ? 'normal' : 'nowrap',
+      } as React.CSSProperties}
+    >
       {/* ── Desktop left sidebar ── */}
       <aside className="sf-sidebar">
         {/* All button */}
@@ -165,6 +176,8 @@ export default function SidebarFilterLayout({
 
         {categories.map((cat) => {
           const info = getCategoryInfo(cat);
+          const catColor = design.categoryColors[cat] || info.color;
+          const catIcon = design.categoryIcons[cat] || info.icon;
           const isActive = activeCategory === cat;
           const count = points.filter((p) => p.category === cat).length;
           return (
@@ -173,11 +186,11 @@ export default function SidebarFilterLayout({
               onClick={() => handleCategoryClick(cat)}
               className="sf-cat-btn"
               style={{
-                backgroundColor: isActive ? info.color : info.bgColor,
-                color: isActive ? "#ffffff" : info.color,
+                backgroundColor: isActive ? catColor : info.bgColor,
+                color: isActive ? "#ffffff" : catColor,
               }}
             >
-              <FaIconSvg name={info.icon} className="sf-cat-icon" />
+              <FaIconSvg name={catIcon} className="sf-cat-icon" />
               <span className="sf-cat-label">{cat}</span>
               <span className="sf-cat-count">{count}</span>
             </button>
@@ -210,6 +223,8 @@ export default function SidebarFilterLayout({
           </button>
           {categories.map((cat) => {
             const info = getCategoryInfo(cat);
+            const catColor = design.categoryColors[cat] || info.color;
+            const catIcon = design.categoryIcons[cat] || info.icon;
             const isActive = activeCategory === cat;
             return (
               <button
@@ -217,12 +232,12 @@ export default function SidebarFilterLayout({
                 onClick={() => handleCategoryClick(cat)}
                 className="sf-mobile-btn"
                 style={{
-                  backgroundColor: isActive ? info.color : info.bgColor,
-                  color: isActive ? "#ffffff" : info.color,
-                  borderColor: isActive ? info.color : "transparent",
+                  backgroundColor: isActive ? catColor : info.bgColor,
+                  color: isActive ? "#ffffff" : catColor,
+                  borderColor: isActive ? catColor : "transparent",
                 }}
               >
-                <FaIconSvg name={info.icon} className="h-3 w-3 shrink-0" />
+                <FaIconSvg name={catIcon} className="h-3 w-3 shrink-0" />
                 <span className="truncate">{cat}</span>
               </button>
             );
@@ -341,9 +356,9 @@ export default function SidebarFilterLayout({
           .sf-sidebar {
             display: flex;
             flex-direction: column;
-            width: 200px;
+            width: var(--sf-sidebar-w, 200px);
             flex-shrink: 0;
-            gap: 4px;
+            gap: var(--sf-btn-gap, 4px);
             padding: 8px;
             background: #ffffff;
             border-right: 1px solid #e5e7eb;
@@ -372,11 +387,11 @@ export default function SidebarFilterLayout({
         .sf-cat-btn {
           display: flex;
           align-items: center;
-          gap: 8px;
+          gap: var(--sf-btn-gap, 8px);
           width: 100%;
-          padding: 8px 10px;
-          border-radius: 8px;
-          font-size: 13px;
+          padding: var(--sf-btn-pad, 8px 10px);
+          border-radius: var(--sf-btn-rad, 8px);
+          font-size: var(--sf-btn-font, 13px);
           font-weight: 600;
           border: none;
           cursor: pointer;
@@ -399,7 +414,7 @@ export default function SidebarFilterLayout({
           flex: 1;
           overflow: hidden;
           text-overflow: ellipsis;
-          white-space: nowrap;
+          white-space: var(--sf-label-wrap, nowrap);
         }
         .sf-cat-count {
           font-size: 11px;

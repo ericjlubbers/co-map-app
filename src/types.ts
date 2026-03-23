@@ -258,6 +258,7 @@ export interface DesignState {
   pointColor: string;
   pointColorMode: "single" | "by-category";
   categoryColors: Record<string, string>;
+  categoryIcons: Record<string, string>;
   // Data panel visibility
   showDataPanel: boolean;
   // Embed sizing
@@ -267,4 +268,15 @@ export interface DesignState {
   embedHeightUnit: "auto" | "px" | "vh";
   // Embed layout template
   embedLayout: "standard" | "sidebar-filter";
+  // Sidebar-filter styling
+  sfSidebarWidth: string;
+  sfBtnFontSize: number;
+  sfBtnPadding: string;
+  sfBtnBorderRadius: string;
+  sfBtnGap: string;
+  sfLabelWrap: boolean;
+  // Map interaction
+  flyToZoom: number;
+  // Category display in data table
+  categoryDisplayMode: "text" | "icon" | "both";
 }

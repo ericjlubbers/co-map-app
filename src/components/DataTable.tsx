@@ -7,6 +7,8 @@ import {
 } from "@fortawesome/free-solid-svg-icons";
 import type { PointData } from "../types";
 import { getCategoryInfo } from "../config";
+import { useDesign } from "../context/DesignContext";
+import { getFaIconSvg } from "../lib/faIcons";
 
 interface Props {
   points: PointData[];
@@ -15,6 +17,7 @@ interface Props {
 }
 
 export default function DataTable({ points, selectedId, onSelectPoint }: Props) {
+  const { design } = useDesign();
   const rowRefs = useRef<Record<string, HTMLTableRowElement | null>>({});
 
   // Scroll selected row into view
@@ -33,6 +36,22 @@ export default function DataTable({ points, selectedId, onSelectPoint }: Props) 
     },
     []
   );
+
+  const renderCatContent = (category: string, catInfo: { icon: string; color: string }) => {
+    const iconName = design.categoryIcons[category] || catInfo.icon;
+    const mode = design.categoryDisplayMode;
+    const svgData = (mode === "icon" || mode === "both") ? getFaIconSvg(iconName) : null;
+    return (
+      <>
+        {svgData && (
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox={svgData.viewBox} className="h-3 w-3 fill-current" aria-hidden="true">
+            <path d={svgData.pathData} />
+          </svg>
+        )}
+        {mode !== "icon" && category}
+      </>
+    );
+  };
 
   if (points.length === 0) {
     return (
@@ -98,13 +117,13 @@ export default function DataTable({ points, selectedId, onSelectPoint }: Props) 
                   </div>
                   <div className="mt-0.5 text-xs text-gray-500 md:hidden">
                     <span
-                      className="inline-block rounded-full px-2 py-0.5 text-[10px] font-medium"
+                      className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-medium"
                       style={{
                         backgroundColor: catInfo.bgColor,
                         color: catInfo.color,
                       }}
                     >
-                      {point.category}
+                      {renderCatContent(point.category, catInfo)}
                     </span>
                   </div>
                   <div className="mt-0.5 text-xs text-gray-400 lg:hidden">
@@ -119,13 +138,13 @@ export default function DataTable({ points, selectedId, onSelectPoint }: Props) 
                 {/* Category badge (desktop) */}
                 <td className="hidden px-4 py-3 md:table-cell">
                   <span
-                    className="inline-block rounded-full px-2.5 py-1 text-xs font-medium"
+                    className="inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-medium"
                     style={{
                       backgroundColor: catInfo.bgColor,
                       color: catInfo.color,
                     }}
                   >
-                    {point.category}
+                    {renderCatContent(point.category, catInfo)}
                   </span>
                 </td>
 

@@ -114,8 +114,8 @@ export default function MapEditorContent({
   );
 
   const handleFlyTo = useCallback((lat: number, lng: number, zoom?: number) => {
-    localMapRef.current?.flyTo([lat, lng], zoom ?? 12, { duration: 0.8 });
-  }, []);
+    localMapRef.current?.flyTo([lat, lng], zoom ?? design.flyToZoom, { duration: 0.8 });
+  }, [design.flyToZoom]);
 
   // ── Selection state for customize mode ─────────────────────
   const [selectedElement, setSelectedElement] = useState<SelectedElement | null>(null);

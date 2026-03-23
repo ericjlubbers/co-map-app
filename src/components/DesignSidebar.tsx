@@ -301,6 +301,15 @@ export default function DesignSidebar({ onClose, categories = [] }: DesignSideba
                   suffix="px"
                 />
               </Field>
+              <Field label="Fly-to Zoom Level">
+                <Slider
+                  min={8}
+                  max={18}
+                  step={1}
+                  value={design.flyToZoom}
+                  onChange={(v) => set("flyToZoom", v)}
+                />
+              </Field>
             </div>
           </AccordionSection>
 
@@ -632,9 +641,59 @@ export default function DesignSidebar({ onClose, categories = [] }: DesignSideba
                 </select>
               </Field>
               {design.embedLayout === "sidebar-filter" && (
-                <p className="text-[11px] text-gray-400 italic">
-                  Desktop: category sidebar + map + table. Mobile: horizontal category bar + map.
-                </p>
+                <>
+                  <Field label="Sidebar Width">
+                    <input
+                      type="text"
+                      value={design.sfSidebarWidth}
+                      onChange={(e) => set("sfSidebarWidth", e.target.value)}
+                      className="w-full rounded-md border border-gray-300 bg-white px-2.5 py-1.5 text-xs text-gray-700"
+                      placeholder="200px"
+                    />
+                  </Field>
+                  <Field label="Button Font Size">
+                    <Slider
+                      min={10}
+                      max={18}
+                      step={1}
+                      value={design.sfBtnFontSize}
+                      onChange={(v) => set("sfBtnFontSize", v)}
+                    />
+                  </Field>
+                  <Field label="Button Padding">
+                    <input
+                      type="text"
+                      value={design.sfBtnPadding}
+                      onChange={(e) => set("sfBtnPadding", e.target.value)}
+                      className="w-full rounded-md border border-gray-300 bg-white px-2.5 py-1.5 text-xs text-gray-700"
+                      placeholder="8px 10px"
+                    />
+                  </Field>
+                  <Field label="Button Border Radius">
+                    <input
+                      type="text"
+                      value={design.sfBtnBorderRadius}
+                      onChange={(e) => set("sfBtnBorderRadius", e.target.value)}
+                      className="w-full rounded-md border border-gray-300 bg-white px-2.5 py-1.5 text-xs text-gray-700"
+                      placeholder="8px"
+                    />
+                  </Field>
+                  <Field label="Button Gap">
+                    <input
+                      type="text"
+                      value={design.sfBtnGap}
+                      onChange={(e) => set("sfBtnGap", e.target.value)}
+                      className="w-full rounded-md border border-gray-300 bg-white px-2.5 py-1.5 text-xs text-gray-700"
+                      placeholder="4px"
+                    />
+                  </Field>
+                  <Field label="Wrap Labels">
+                    <ToggleSwitch
+                      checked={design.sfLabelWrap}
+                      onChange={(v) => set("sfLabelWrap", v)}
+                    />
+                  </Field>
+                </>
               )}
             </div>
           </AccordionSection>
@@ -649,6 +708,7 @@ export default function DesignSidebar({ onClose, categories = [] }: DesignSideba
                 />
               </Field>
               {design.showDataPanel && (
+                <>
                 <Field label="Map / Table Ratio">
                   <select
                     value={design.mapTableRatio}
@@ -662,6 +722,18 @@ export default function DesignSidebar({ onClose, categories = [] }: DesignSideba
                     ))}
                   </select>
                 </Field>
+                <Field label="Category Display">
+                  <SegmentedControl
+                    options={[
+                      { value: "text" as const, label: "Text" },
+                      { value: "icon" as const, label: "Icon" },
+                      { value: "both" as const, label: "Both" },
+                    ]}
+                    value={design.categoryDisplayMode}
+                    onChange={(v) => set("categoryDisplayMode", v)}
+                  />
+                </Field>
+                </>
               )}
             </div>
           </AccordionSection>

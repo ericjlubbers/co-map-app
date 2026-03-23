@@ -74,11 +74,20 @@ const PARAM_MAP: Record<keyof DesignState, string> = {
   pointColor: "ptColor",
   pointColorMode: "ptMode",
   categoryColors: "catColors",
+  categoryIcons: "catIcons",
   embedAspectRatio: "eRatio",
   embedMobileAspectRatio: "eMobileRatio",
   embedHeight: "eHeight",
   embedHeightUnit: "eHeightUnit",
   embedLayout: "eLayout",
+  sfSidebarWidth: "sfW",
+  sfBtnFontSize: "sfFont",
+  sfBtnPadding: "sfPad",
+  sfBtnBorderRadius: "sfRad",
+  sfBtnGap: "sfGap",
+  sfLabelWrap: "sfWrap",
+  flyToZoom: "ftz",
+  categoryDisplayMode: "catDisp",
 };
 
 // ── Font shorthand mapping ──────────────────────────────────
@@ -263,6 +272,31 @@ function parseFromURL(): Partial<DesignState> {
   if (eLayout && ["standard", "sidebar-filter"].includes(eLayout))
     partial.embedLayout = eLayout as DesignState["embedLayout"];
 
+  const catIcons = params.get(PARAM_MAP.categoryIcons);
+  if (catIcons) {
+    try { partial.categoryIcons = JSON.parse(decodeURIComponent(catIcons)); } catch { /* ignore */ }
+  }
+
+  const sfW = params.get(PARAM_MAP.sfSidebarWidth);
+  if (sfW) partial.sfSidebarWidth = sfW;
+  const sfFont = params.get(PARAM_MAP.sfBtnFontSize);
+  if (sfFont) partial.sfBtnFontSize = parseInt(sfFont, 10);
+  const sfPad = params.get(PARAM_MAP.sfBtnPadding);
+  if (sfPad) partial.sfBtnPadding = decodeURIComponent(sfPad);
+  const sfRad = params.get(PARAM_MAP.sfBtnBorderRadius);
+  if (sfRad) partial.sfBtnBorderRadius = sfRad;
+  const sfGap = params.get(PARAM_MAP.sfBtnGap);
+  if (sfGap) partial.sfBtnGap = sfGap;
+  const sfWrap = params.get(PARAM_MAP.sfLabelWrap);
+  if (sfWrap) partial.sfLabelWrap = sfWrap === "1";
+
+  const ftz = params.get(PARAM_MAP.flyToZoom);
+  if (ftz) partial.flyToZoom = parseInt(ftz, 10);
+
+  const catDisp = params.get(PARAM_MAP.categoryDisplayMode);
+  if (catDisp && ["text", "icon", "both"].includes(catDisp))
+    partial.categoryDisplayMode = catDisp as DesignState["categoryDisplayMode"];
+
   return partial;
 }
 
@@ -391,6 +425,27 @@ function serializeToURL(state: DesignState, includeDesignMode: boolean): string 
 
   if (state.embedLayout !== DEFAULT_DESIGN.embedLayout)
     params.set(PARAM_MAP.embedLayout, state.embedLayout);
+
+  if (Object.keys(state.categoryIcons).length > 0)
+    params.set(PARAM_MAP.categoryIcons, encodeURIComponent(JSON.stringify(state.categoryIcons)));
+
+  if (state.sfSidebarWidth !== DEFAULT_DESIGN.sfSidebarWidth)
+    params.set(PARAM_MAP.sfSidebarWidth, state.sfSidebarWidth);
+  if (state.sfBtnFontSize !== DEFAULT_DESIGN.sfBtnFontSize)
+    params.set(PARAM_MAP.sfBtnFontSize, String(state.sfBtnFontSize));
+  if (state.sfBtnPadding !== DEFAULT_DESIGN.sfBtnPadding)
+    params.set(PARAM_MAP.sfBtnPadding, encodeURIComponent(state.sfBtnPadding));
+  if (state.sfBtnBorderRadius !== DEFAULT_DESIGN.sfBtnBorderRadius)
+    params.set(PARAM_MAP.sfBtnBorderRadius, state.sfBtnBorderRadius);
+  if (state.sfBtnGap !== DEFAULT_DESIGN.sfBtnGap)
+    params.set(PARAM_MAP.sfBtnGap, state.sfBtnGap);
+  if (state.sfLabelWrap !== DEFAULT_DESIGN.sfLabelWrap)
+    params.set(PARAM_MAP.sfLabelWrap, state.sfLabelWrap ? "1" : "0");
+
+  if (state.flyToZoom !== DEFAULT_DESIGN.flyToZoom)
+    params.set(PARAM_MAP.flyToZoom, String(state.flyToZoom));
+  if (state.categoryDisplayMode !== DEFAULT_DESIGN.categoryDisplayMode)
+    params.set(PARAM_MAP.categoryDisplayMode, state.categoryDisplayMode);
 
   if (includeDesignMode) params.set("design", "1");
 
