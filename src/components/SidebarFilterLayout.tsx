@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback, useMemo } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faLayerGroup } from "@fortawesome/free-solid-svg-icons";
 import MapView from "./MapView";
@@ -7,7 +7,83 @@ import PointPopup from "./PointPopup";
 import { useDesign } from "../context/DesignContext";
 import { getCategoryInfo } from "../config";
 import { getFaIconSvg } from "../lib/faIcons";
-import type { PointData, ViewCuration } from "../types";
+import type { PointData, ViewCuration, SfBtnPreset } from "../types";
+import { useAutoRotate } from "../hooks/useAutoRotate";
+
+// ── Hex → RGB helper for CSS custom property ────────────────
+function hexToRgb(hex: string): string {
+  const h = hex.replace("#", "");
+  const n = parseInt(h, 16);
+  return `${(n >> 16) & 255}, ${(n >> 8) & 255}, ${n & 255}`;
+}
+
+// ── Button style presets ────────────────────────────────────
+function getButtonStyles(
+  preset: SfBtnPreset,
+  catColor: string,
+  isActive: boolean,
+  isDemoGlow: boolean,
+): { style: React.CSSProperties; className: string } {
+  const cls = isDemoGlow ? "sf-glow-active" : "";
+  const glowVar = { "--glow-color": hexToRgb(catColor) } as React.CSSProperties;
+
+  switch (preset) {
+    case "filled":
+      return {
+        style: {
+          backgroundColor: isActive ? catColor : `${catColor}1f`,
+          color: isActive ? "#ffffff" : catColor,
+          border: "none",
+          ...glowVar,
+        },
+        className: cls,
+      };
+    case "outlined":
+      return {
+        style: {
+          backgroundColor: "transparent",
+          color: isActive ? catColor : `${catColor}99`,
+          border: isActive ? `2px solid ${catColor}` : `1px solid ${catColor}4d`,
+          ...glowVar,
+        },
+        className: cls,
+      };
+    case "ghost":
+      return {
+        style: {
+          backgroundColor: isActive ? `${catColor}26` : "transparent",
+          color: isActive ? catColor : "#6b7280",
+          border: "none",
+          fontWeight: isActive ? 700 : undefined,
+          ...glowVar,
+        },
+        className: cls,
+      };
+    case "pill":
+      return {
+        style: {
+          backgroundColor: isActive ? catColor : "#f3f4f6",
+          color: isActive ? "#ffffff" : "#4b5563",
+          border: "none",
+          borderRadius: "9999px",
+          ...glowVar,
+        },
+        className: cls,
+      };
+    case "minimal":
+      return {
+        style: {
+          backgroundColor: "transparent",
+          color: isActive ? catColor : "#9ca3af",
+          border: "none",
+          borderBottom: isActive ? `2px solid ${catColor}` : "2px solid transparent",
+          borderRadius: "0",
+          ...glowVar,
+        },
+        className: cls,
+      };
+  }
+}
 
 interface SidebarFilterLayoutProps {
   points: PointData[];
@@ -17,9 +93,6 @@ interface SidebarFilterLayoutProps {
   /** When true, fill parent container instead of using fixed vh height */
   fillContainer?: boolean;
 }
-
-type DemoState = "running" | "paused";
-const AUTO_RESUME_DELAY_MS = 10_000;
 
 /** Render an FA icon as inline SVG using getFaIconSvg */
 function FaIconSvg({ name, className }: { name: string; className?: string }) {
@@ -55,10 +128,40 @@ export default function SidebarFilterLayout({
   // ── Filtering ───────────────────────────────────────────────
   const [activeCategory, setActiveCategory] = useState<string | null>(null);
 
+  // ── Auto-rotate demo ───────────────────────────────────────
+  const rotation = useAutoRotate({
+    categories,
+    points,
+    enabled: demoMode,
+    mode: design.demoRotationMode,
+    order: design.demoRotationOrder,
+    categoryIntervalMs: design.demoIntervalMs,
+    pointIntervalMs: design.demoPointIntervalMs,
+  });
+
+  // Sync rotation's active category to local state (allows manual override when paused)
+  useEffect(() => {
+    if (demoMode && rotation.demoState === "running") {
+      setActiveCategory(rotation.activeCategory);
+    }
+  }, [demoMode, rotation.demoState, rotation.activeCategory]);
+
   const filteredPoints = useMemo(() => {
     if (!activeCategory) return points;
     return points.filter((p) => p.category === activeCategory);
   }, [points, activeCategory]);
+
+  // ── Dim-mode state ──────────────────────────────────────────
+  const isDimMode = demoMode && rotation.demoState === "running" && design.demoHighlightStyle === "dim";
+
+  const activePointIds = useMemo(() => {
+    if (!isDimMode || !activeCategory) return undefined;
+    return new Set(points.filter((p) => p.category === activeCategory).map((p) => p.id));
+  }, [isDimMode, activeCategory, points]);
+
+  // In dim mode, pass all points to the map; in filter mode, pass filtered
+  const mapPoints = isDimMode ? points : filteredPoints;
+  const tablePoints = isDimMode ? points : filteredPoints;
 
   // ── Selection ───────────────────────────────────────────────
   const [selectedId, setSelectedId] = useState<string | null>(null);
@@ -67,82 +170,49 @@ export default function SidebarFilterLayout({
     setSelectedId(id);
   }, []);
 
-  // ── Auto-rotate demo ───────────────────────────────────────
-  const [demoState, setDemoState] = useState<DemoState>("running");
-  const [demoIndex, setDemoIndex] = useState(0);
-  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const resumeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-
-  const clearTimers = useCallback(() => {
-    if (timerRef.current) { clearTimeout(timerRef.current); timerRef.current = null; }
-    if (resumeTimerRef.current) { clearTimeout(resumeTimerRef.current); resumeTimerRef.current = null; }
-  }, []);
-
-  // When demo is running, set the active category from the index
+  // When rotation selects a point (by-point mode), sync to selectedId
   useEffect(() => {
-    if (!demoMode || categories.length === 0) return;
-    if (demoState === "running") {
-      setActiveCategory(categories[demoIndex % categories.length]);
+    if (demoMode && rotation.demoState === "running" && rotation.activePointId) {
+      setSelectedId(rotation.activePointId);
     }
-  }, [demoMode, demoState, demoIndex, categories]);
+  }, [demoMode, rotation.demoState, rotation.activePointId]);
 
-  // Advance timer
-  useEffect(() => {
-    if (!demoMode || demoState !== "running" || categories.length === 0) return;
-    timerRef.current = setTimeout(() => {
-      setDemoIndex((prev) => (prev + 1) % categories.length);
-    }, design.demoIntervalMs);
-    return () => { if (timerRef.current) clearTimeout(timerRef.current); };
-  }, [demoMode, demoState, demoIndex, design.demoIntervalMs, categories.length]);
-
-  // Pause on user interaction
-  const handleInteraction = useCallback(() => {
-    if (!demoMode || demoState !== "running") return;
-    clearTimers();
-    setDemoState("paused");
-    setActiveCategory(null); // show all on pause
-    resumeTimerRef.current = setTimeout(() => {
-      setDemoState("running");
-    }, AUTO_RESUME_DELAY_MS);
-  }, [demoMode, demoState, clearTimers]);
-
+  // Attach interaction listeners for demo mode
   useEffect(() => {
     if (!demoMode) return;
     const opts: AddEventListenerOptions = { passive: true };
-    window.addEventListener("click", handleInteraction, opts);
-    window.addEventListener("touchstart", handleInteraction, opts);
-    window.addEventListener("wheel", handleInteraction, opts);
-    window.addEventListener("keydown", handleInteraction);
+    window.addEventListener("click", rotation.handleInteraction, opts);
+    window.addEventListener("touchstart", rotation.handleInteraction, opts);
+    window.addEventListener("wheel", rotation.handleInteraction, opts);
+    window.addEventListener("keydown", rotation.handleInteraction);
     return () => {
-      window.removeEventListener("click", handleInteraction);
-      window.removeEventListener("touchstart", handleInteraction);
-      window.removeEventListener("wheel", handleInteraction);
-      window.removeEventListener("keydown", handleInteraction);
+      window.removeEventListener("click", rotation.handleInteraction);
+      window.removeEventListener("touchstart", rotation.handleInteraction);
+      window.removeEventListener("wheel", rotation.handleInteraction);
+      window.removeEventListener("keydown", rotation.handleInteraction);
     };
-  }, [demoMode, handleInteraction]);
+  }, [demoMode, rotation.handleInteraction]);
 
+  // When paused, clear active category to show all
   useEffect(() => {
-    return () => clearTimers();
-  }, [clearTimers]);
+    if (demoMode && rotation.demoState === "paused") {
+      setActiveCategory(null);
+      setSelectedId(null);
+    }
+  }, [demoMode, rotation.demoState]);
 
   // Manual category button click
   const handleCategoryClick = useCallback(
     (category: string | null) => {
-      // If demo is running, pause it
-      if (demoMode && demoState === "running") {
-        clearTimers();
-        setDemoState("paused");
+      if (demoMode && rotation.demoState === "running") {
+        rotation.pause();
       }
-      // Toggle: if already active, show all
       setActiveCategory((prev) => (prev === category ? null : category));
     },
-    [demoMode, demoState, clearTimers],
+    [demoMode, rotation],
   );
 
-  const handleResume = useCallback(() => {
-    clearTimers();
-    setDemoState("running");
-  }, [clearTimers]);
+  const demoState = rotation.demoState;
 
   // ── Render ──────────────────────────────────────────────────
   return (
@@ -167,7 +237,8 @@ export default function SidebarFilterLayout({
           style={{
             backgroundColor: !activeCategory ? "#1f2937" : "#f3f4f6",
             color: !activeCategory ? "#ffffff" : "#374151",
-          }}
+            "--glow-color": "31, 41, 55",
+          } as React.CSSProperties}
         >
           <FontAwesomeIcon icon={faLayerGroup} className="sf-cat-icon" />
           <span className="sf-cat-label">All</span>
@@ -179,15 +250,18 @@ export default function SidebarFilterLayout({
           const catColor = design.categoryColors[cat] || info.color;
           const catIcon = design.categoryIcons[cat] || info.icon;
           const isActive = activeCategory === cat;
+          const isDemoGlow = demoMode && demoState === "running" && isActive;
+          const isButtonDimmed = isDimMode && activeCategory !== null && !isActive;
           const count = points.filter((p) => p.category === cat).length;
+          const btnStyles = getButtonStyles(design.sfBtnPreset, catColor, isActive, isDemoGlow);
           return (
             <button
               key={cat}
               onClick={() => handleCategoryClick(cat)}
-              className="sf-cat-btn"
+              className={`sf-cat-btn ${btnStyles.className}`}
               style={{
-                backgroundColor: isActive ? catColor : info.bgColor,
-                color: isActive ? "#ffffff" : catColor,
+                ...btnStyles.style,
+                ...(isButtonDimmed ? { opacity: 0.4, filter: "grayscale(30%)", transition: "opacity 300ms ease, filter 300ms ease" } : { transition: "opacity 300ms ease, filter 300ms ease" }),
               }}
             >
               <FaIconSvg name={catIcon} className="sf-cat-icon" />
@@ -197,10 +271,9 @@ export default function SidebarFilterLayout({
           );
         })}
 
-        {/* Demo resume */}
         {demoMode && demoState === "paused" && (
           <button
-            onClick={(e) => { e.stopPropagation(); handleResume(); }}
+            onClick={(e) => { e.stopPropagation(); rotation.resume(); }}
             className="mt-2 rounded-lg bg-gray-800 px-3 py-1.5 text-xs font-medium text-white hover:bg-gray-700"
           >
             Resume tour
@@ -226,15 +299,18 @@ export default function SidebarFilterLayout({
             const catColor = design.categoryColors[cat] || info.color;
             const catIcon = design.categoryIcons[cat] || info.icon;
             const isActive = activeCategory === cat;
+            const isDemoGlow = demoMode && demoState === "running" && isActive;
+            const isButtonDimmed = isDimMode && activeCategory !== null && !isActive;
+            const btnStyles = getButtonStyles(design.sfBtnPreset, catColor, isActive, isDemoGlow);
             return (
               <button
                 key={cat}
                 onClick={() => handleCategoryClick(cat)}
-                className="sf-mobile-btn"
+                className={`sf-mobile-btn ${btnStyles.className}`}
                 style={{
-                  backgroundColor: isActive ? catColor : info.bgColor,
-                  color: isActive ? "#ffffff" : catColor,
+                  ...btnStyles.style,
                   borderColor: isActive ? catColor : "transparent",
+                  ...(isButtonDimmed ? { opacity: 0.4, filter: "grayscale(30%)", transition: "opacity 300ms ease, filter 300ms ease" } : { transition: "opacity 300ms ease, filter 300ms ease" }),
                 }}
               >
                 <FaIconSvg name={catIcon} className="h-3 w-3 shrink-0" />
@@ -246,7 +322,7 @@ export default function SidebarFilterLayout({
 
         {demoMode && demoState === "paused" && (
           <button
-            onClick={(e) => { e.stopPropagation(); handleResume(); }}
+            onClick={(e) => { e.stopPropagation(); rotation.resume(); }}
             className="ml-1 shrink-0 rounded-full bg-gray-800 px-2.5 py-1 text-[10px] font-medium text-white"
           >
             Resume
@@ -259,11 +335,15 @@ export default function SidebarFilterLayout({
         {/* Map */}
         <div className="sf-map">
           <MapView
-            points={filteredPoints}
+            points={mapPoints}
             selectedId={selectedId}
             onSelectPoint={handleSelectPoint}
             viewCuration={viewCuration}
             viewLocked={viewLocked}
+            activePointIds={activePointIds}
+            dimActive={isDimMode}
+            dimOpacity={design.demoDimOpacity}
+            rotationActive={demoMode && demoState === "running"}
           />
         </div>
 
@@ -271,15 +351,27 @@ export default function SidebarFilterLayout({
         {design.showDataPanel && (
           <div className="sf-table">
             <DataTable
-              points={filteredPoints}
+              points={tablePoints}
               selectedId={selectedId}
               onSelectPoint={handleSelectPoint}
+              activePointIds={activePointIds}
+              dimActive={isDimMode && design.demoDimTable}
+              dimOpacity={design.demoDimOpacity}
             />
           </div>
         )}
       </div>
 
       <style>{`
+        /* ── Glow animation ── */
+        @keyframes sf-glow {
+          0%, 100% { box-shadow: 0 0 0 3px rgba(var(--glow-color), 0.35); }
+          50% { box-shadow: 0 0 0 6px rgba(var(--glow-color), 0.12); }
+        }
+        .sf-glow-active {
+          animation: sf-glow 1.5s ease-in-out infinite;
+        }
+
         /* ── Sidebar-filter layout ── */
         .sf-layout {
           display: flex;

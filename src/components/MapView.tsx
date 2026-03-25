@@ -12,6 +12,7 @@ import {
   CircleMarker,
 } from "react-leaflet";
 import MarkerClusterGroup from "react-leaflet-cluster";
+import NativeMarkerClusterGroup from "./NativeMarkerClusterGroup";
 import "leaflet/dist/leaflet.css";
 import type { PointData, DrawingMode, DrawnFeatureCollection, ViewCuration, EditorMode, SelectedElement, PrimaryElement, PublicationBounds } from "../types";
 import {
@@ -80,6 +81,14 @@ interface Props {
   publicationBounds?: PublicationBounds;
   /** Update publication bounds (corner dragging) */
   onUpdatePublicationBounds?: (bounds: PublicationBounds | undefined) => void;
+  /** IDs of points currently highlighted (if empty/undefined, all are active) */
+  activePointIds?: Set<string>;
+  /** Whether dimming is active */
+  dimActive?: boolean;
+  /** Opacity for dimmed markers */
+  dimOpacity?: number;
+  /** Whether auto-rotation is active (disables flyTo) */
+  rotationActive?: boolean;
 }
 
 // ── FlyToSelected ────────────────────────────────────────────
@@ -90,6 +99,7 @@ function FlyToSelected({
   flyToZoom,
   homeCenter,
   homeZoom,
+  rotationActive,
 }: {
   point: PointData | null;
   mapRef: React.RefObject<LeafletMap | null>;
@@ -97,6 +107,7 @@ function FlyToSelected({
   flyToZoom: number;
   homeCenter: [number, number];
   homeZoom: number;
+  rotationActive?: boolean;
 }) {
   const map = useMap();
   const prevPointRef = useRef<PointData | null>(null);
@@ -109,6 +120,11 @@ function FlyToSelected({
   }, [map, mapRef, onMapRef]);
 
   useEffect(() => {
+    if (rotationActive) {
+      // During rotation, don't move the map
+      prevPointRef.current = point;
+      return;
+    }
     if (point) {
       map.flyTo([point.lat, point.lng], flyToZoom, { duration: 0.8 });
     } else if (prevPointRef.current) {
@@ -116,7 +132,7 @@ function FlyToSelected({
       map.flyTo(homeCenter, homeZoom, { duration: 0.8 });
     }
     prevPointRef.current = point;
-  }, [point, map, flyToZoom, homeCenter, homeZoom]);
+  }, [point, map, flyToZoom, homeCenter, homeZoom, rotationActive]);
 
   return null;
 }
@@ -323,6 +339,10 @@ export default function MapView({
   onUpdatePrimaryElement,
   publicationBounds,
   onUpdatePublicationBounds,
+  activePointIds,
+  dimActive,
+  dimOpacity: dimOpacityProp,
+  rotationActive,
 }: Props) {
   const { design } = useDesign();
   const tileConfig = getTileConfig(design.tilePreset);
@@ -436,6 +456,7 @@ export default function MapView({
           flyToZoom={design.flyToZoom}
           homeCenter={viewCuration?.center ?? MAP_CENTER}
           homeZoom={viewCuration?.zoom ?? MAP_ZOOM}
+          rotationActive={rotationActive}
         />
         <MapClickDeselect onSelectPoint={onSelectPoint} drawingMode={drawingMode ?? null} />
 
@@ -458,6 +479,37 @@ export default function MapView({
           onDeleteFeature={onDeleteFeature ?? (() => {})}
         />
 
+        {design.clusterPlugin === "leaflet-markercluster" ? (
+          <NativeMarkerClusterGroup
+            key={`native-${design.clusterStyle}`}
+            points={points}
+            selectedId={selectedId}
+            onSelectPoint={onSelectPoint}
+            drawingMode={drawingMode}
+            clusterStyle={design.clusterStyle}
+            categoryColors={design.pointColorMode === "by-category" ? design.categoryColors : undefined}
+            categoryIcons={Object.keys(design.categoryIcons).length > 0 ? design.categoryIcons : undefined}
+            maxClusterRadius={design.clusterMaxRadius}
+            disableClusteringAtZoom={design.clusterDisableAtZoom}
+            animate={design.clusterAnimate}
+            spiderfyOnMaxZoom={design.clusterSpiderfyOnMaxZoom}
+            showCoverageOnHover={design.clusterShowCoverageOnHover}
+            zoomToBoundsOnClick={design.clusterZoomToBoundsOnClick}
+            placementStrategy={design.clusterPlacementStrategy}
+            placementReveal={design.clusterPlacementReveal}
+            showList={design.clusterShowList}
+            markerSize={design.markerSize}
+            pointColor={design.pointColor}
+            pointColorMode={design.pointColorMode}
+            markerShape={design.markerShape}
+            markerConnector={design.markerConnector}
+            markerPadding={design.markerPadding}
+            categoryShapes={design.categoryShapes}
+            activePointIds={activePointIds}
+            dimActive={dimActive}
+            dimOpacity={dimOpacityProp}
+          />
+        ) : (
         <MarkerClusterGroup
           key={design.clusterStyle}
           iconCreateFunction={(cluster: unknown) =>
@@ -476,7 +528,9 @@ export default function MapView({
           zoomToBoundsOnClick={CLUSTER_SETTINGS.zoomToBoundsOnClick}
           showCoverageOnHover={CLUSTER_SETTINGS.showCoverageOnHover}
         >
-          {points.map((point) => (
+          {points.map((point) => {
+            const isDimmed = dimActive && activePointIds != null && !activePointIds.has(point.id);
+            return (
             <Marker
               key={point.id}
               position={[point.lat, point.lng]}
@@ -488,9 +542,15 @@ export default function MapView({
                   ? design.categoryColors[point.category]
                   : design.pointColor,
                 design.categoryIcons[point.category] || point.icon,
+                isDimmed,
+                dimOpacityProp,
+                design.categoryShapes[point.category] || design.markerShape,
+                design.markerConnector,
+                design.markerPadding,
               )}
               category={point.category}
               ref={handleMarkerRef(point.id)}
+              zIndexOffset={isDimmed ? -1000 : 0}
               eventHandlers={{
                 click: () => {
                   // Don't select data points while in an active drawing mode (except select)
@@ -504,8 +564,10 @@ export default function MapView({
                 <PointPopup point={point} />
               </Popup>
             </Marker>
-          ))}
+            );
+          })}
         </MarkerClusterGroup>
+        )}
 
         {/* Feature layers */}
         <RoadLayer

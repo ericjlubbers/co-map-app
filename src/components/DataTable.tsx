@@ -14,9 +14,15 @@ interface Props {
   points: PointData[];
   selectedId: string | null;
   onSelectPoint: (id: string) => void;
+  /** IDs of highlighted points (for dim mode) */
+  activePointIds?: Set<string>;
+  /** Whether row dimming is active */
+  dimActive?: boolean;
+  /** Opacity for dimmed rows */
+  dimOpacity?: number;
 }
 
-export default function DataTable({ points, selectedId, onSelectPoint }: Props) {
+export default function DataTable({ points, selectedId, onSelectPoint, activePointIds, dimActive, dimOpacity }: Props) {
   const { design } = useDesign();
   const rowRefs = useRef<Record<string, HTMLTableRowElement | null>>({});
 
@@ -76,6 +82,7 @@ export default function DataTable({ points, selectedId, onSelectPoint }: Props) 
         <tbody className="divide-y divide-gray-100">
           {points.map((point) => {
             const isSelected = point.id === selectedId;
+            const isRowDimmed = dimActive && activePointIds != null && !activePointIds.has(point.id);
             const catInfo = getCategoryInfo(point.category);
             return (
               <tr
@@ -84,6 +91,13 @@ export default function DataTable({ points, selectedId, onSelectPoint }: Props) 
                 onClick={() => onSelectPoint(point.id)}
                 className={`cursor-pointer transition-colors hover:bg-gray-50
                   ${isSelected ? "bg-blue-50 ring-2 ring-inset ring-blue-300" : ""}`}
+                style={isRowDimmed ? {
+                  opacity: dimOpacity ?? 0.3,
+                  filter: "grayscale(20%)",
+                  transition: "opacity 300ms ease, filter 300ms ease",
+                } : {
+                  transition: "opacity 300ms ease, filter 300ms ease",
+                }}
               >
                 {/* Thumbnail */}
                 <td className="px-4 py-3">

@@ -9,7 +9,7 @@ import {
   faChevronRight,
 } from "@fortawesome/free-solid-svg-icons";
 import { useDesign } from "../context/DesignContext";
-import type { DesignState, FontFamily, ClusterStyle, TilePreset } from "../types";
+import type { DesignState, FontFamily, ClusterStyle, ClusterPlugin, PlacementStrategy, TilePreset, SfBtnPreset, DemoRotationMode, DemoRotationOrder, MarkerShape, MarkerConnector, MarkerPadding } from "../types";
 import AccordionSection from "./AccordionSection";
 import SidebarGroup from "./SidebarGroup";
 import ColorPicker, { CARBON_CATEGORICAL } from "./ColorPicker";
@@ -76,6 +76,48 @@ const DASH_PATTERNS: { value: string; label: string }[] = [
   { value: "6 3", label: "Dashed" },
   { value: "2 4", label: "Dotted" },
   { value: "10 5 2 5", label: "Dash-dot" },
+];
+
+const MARKER_SHAPES: { value: MarkerShape; label: string }[] = [
+  { value: "pin", label: "Pin" },
+  { value: "rounded-square", label: "Rounded Square" },
+  { value: "circle", label: "Circle" },
+  { value: "stadium", label: "Stadium" },
+  { value: "soft-diamond", label: "Diamond" },
+  { value: "shield", label: "Shield" },
+];
+
+const MARKER_CONNECTORS: { value: MarkerConnector; label: string }[] = [
+  { value: "stem", label: "Stem" },
+  { value: "dot", label: "Dot" },
+  { value: "none", label: "None" },
+];
+
+const MARKER_PADDINGS: { value: MarkerPadding; label: string }[] = [
+  { value: "compact", label: "Compact" },
+  { value: "normal", label: "Normal" },
+  { value: "spacious", label: "Spacious" },
+];
+
+const CLUSTER_PLUGINS: { value: ClusterPlugin; label: string }[] = [
+  { value: "react-leaflet-cluster", label: "React Cluster" },
+  { value: "leaflet-markercluster", label: "Native Cluster" },
+];
+
+const PLACEMENT_STRATEGIES: { value: PlacementStrategy; label: string }[] = [
+  { value: "default", label: "Default" },
+  { value: "clock", label: "Clock" },
+  { value: "concentric", label: "Concentric" },
+  { value: "spiral", label: "Spiral" },
+  { value: "one-circle", label: "One Circle" },
+];
+
+const BTN_PRESETS: { value: SfBtnPreset; label: string }[] = [
+  { value: "filled", label: "Filled" },
+  { value: "outlined", label: "Outlined" },
+  { value: "ghost", label: "Ghost" },
+  { value: "pill", label: "Pill" },
+  { value: "minimal", label: "Minimal" },
 ];
 
 // ── Main Component ──────────────────────────────────────────
@@ -292,6 +334,75 @@ export default function DesignSidebar({ onClose, categories = [] }: DesignSideba
                   onChange={(v) => set("clusterStyle", v)}
                 />
               </Field>
+              <Field label="Cluster Plugin">
+                <select
+                  value={design.clusterPlugin}
+                  onChange={(e) => set("clusterPlugin", e.target.value as ClusterPlugin)}
+                  className="w-full rounded-md border border-gray-300 bg-white px-2.5 py-1.5 text-xs text-gray-700"
+                >
+                  {CLUSTER_PLUGINS.map((p) => (
+                    <option key={p.value} value={p.value}>{p.label}</option>
+                  ))}
+                </select>
+              </Field>
+              {design.clusterPlugin === "leaflet-markercluster" && (
+                <>
+                  <Field label="Max Cluster Radius">
+                    <Slider
+                      min={20}
+                      max={150}
+                      step={5}
+                      value={design.clusterMaxRadius}
+                      onChange={(v) => set("clusterMaxRadius", v)}
+                      suffix="px"
+                    />
+                  </Field>
+                  <Field label="Disable at Zoom">
+                    <Slider
+                      min={10}
+                      max={18}
+                      step={1}
+                      value={design.clusterDisableAtZoom}
+                      onChange={(v) => set("clusterDisableAtZoom", v)}
+                    />
+                  </Field>
+                  <Field label="Placement Strategy">
+                    <select
+                      value={design.clusterPlacementStrategy}
+                      onChange={(e) => set("clusterPlacementStrategy", e.target.value as PlacementStrategy)}
+                      className="w-full rounded-md border border-gray-300 bg-white px-2.5 py-1.5 text-xs text-gray-700"
+                    >
+                      {PLACEMENT_STRATEGIES.map((s) => (
+                        <option key={s.value} value={s.value}>{s.label}</option>
+                      ))}
+                    </select>
+                  </Field>
+                  <Field label="Show List on Hover">
+                    <ToggleSwitch
+                      checked={design.clusterShowList}
+                      onChange={(v) => set("clusterShowList", v)}
+                    />
+                  </Field>
+                  <Field label="Animate">
+                    <ToggleSwitch
+                      checked={design.clusterAnimate}
+                      onChange={(v) => set("clusterAnimate", v)}
+                    />
+                  </Field>
+                  <Field label="Zoom to Bounds">
+                    <ToggleSwitch
+                      checked={design.clusterZoomToBoundsOnClick}
+                      onChange={(v) => set("clusterZoomToBoundsOnClick", v)}
+                    />
+                  </Field>
+                  <Field label="Coverage on Hover">
+                    <ToggleSwitch
+                      checked={design.clusterShowCoverageOnHover}
+                      onChange={(v) => set("clusterShowCoverageOnHover", v)}
+                    />
+                  </Field>
+                </>
+              )}
               <Field label="Marker Size">
                 <Slider
                   min={20}
@@ -302,6 +413,60 @@ export default function DesignSidebar({ onClose, categories = [] }: DesignSideba
                   suffix="px"
                 />
               </Field>
+              <Field label="Marker Shape">
+                <select
+                  value={design.markerShape}
+                  onChange={(e) => set("markerShape", e.target.value as MarkerShape)}
+                  className="w-full rounded-md border border-gray-300 bg-white px-2.5 py-1.5 text-xs text-gray-700"
+                >
+                  {MARKER_SHAPES.map((s) => (
+                    <option key={s.value} value={s.value}>{s.label}</option>
+                  ))}
+                </select>
+              </Field>
+              <Field label="Connector">
+                <SegmentedControl
+                  options={MARKER_CONNECTORS}
+                  value={design.markerConnector}
+                  onChange={(v) => set("markerConnector", v)}
+                />
+              </Field>
+              <Field label="Icon Padding">
+                <SegmentedControl
+                  options={MARKER_PADDINGS}
+                  value={design.markerPadding}
+                  onChange={(v) => set("markerPadding", v)}
+                />
+              </Field>
+              {design.pointColorMode === "by-category" && categories.length > 0 && (
+                <Field label="Per-Category Shapes">
+                  <div className="space-y-1.5">
+                    {categories.map((cat) => (
+                      <div key={cat} className="flex items-center gap-2">
+                        <span className="flex-1 truncate text-xs text-gray-600">{cat}</span>
+                        <select
+                          value={design.categoryShapes[cat] || design.markerShape}
+                          onChange={(e) => {
+                            const val = e.target.value as MarkerShape;
+                            const updated = { ...design.categoryShapes };
+                            if (val === design.markerShape) {
+                              delete updated[cat];
+                            } else {
+                              updated[cat] = val;
+                            }
+                            set("categoryShapes", updated);
+                          }}
+                          className="w-28 rounded-md border border-gray-300 bg-white px-1.5 py-1 text-xs text-gray-700"
+                        >
+                          {MARKER_SHAPES.map((s) => (
+                            <option key={s.value} value={s.value}>{s.label}</option>
+                          ))}
+                        </select>
+                      </div>
+                    ))}
+                  </div>
+                </Field>
+              )}
               <Field label="Fly-to Zoom Level">
                 <Slider
                   min={8}
@@ -643,6 +808,19 @@ export default function DesignSidebar({ onClose, categories = [] }: DesignSideba
               </Field>
               {design.embedLayout === "sidebar-filter" && (
                 <>
+                  <Field label="Button Style">
+                    <select
+                      value={design.sfBtnPreset}
+                      onChange={(e) => set("sfBtnPreset", e.target.value as SfBtnPreset)}
+                      className="w-full rounded-md border border-gray-300 bg-white px-2.5 py-1.5 text-xs text-gray-700"
+                    >
+                      {BTN_PRESETS.map((p) => (
+                        <option key={p.value} value={p.value}>
+                          {p.label}
+                        </option>
+                      ))}
+                    </select>
+                  </Field>
                   <Field label="Sidebar Width">
                     <input
                       type="text"
@@ -752,16 +930,91 @@ export default function DesignSidebar({ onClose, categories = [] }: DesignSideba
                 Automatically cycles through each category, spotlighting points one group at a time.
               </p>
               {design.enableDemoMode && (
-                <Field label="Rotation Interval">
-                  <Slider
-                    min={2000}
-                    max={10000}
-                    step={500}
-                    value={design.demoIntervalMs}
-                    onChange={(v) => set("demoIntervalMs", v)}
-                    format={(v) => `${(v / 1000).toFixed(1)}s`}
-                  />
-                </Field>
+                <>
+                  <Field label="Rotation Mode">
+                    <SegmentedControl<DemoRotationMode>
+                      options={[
+                        { value: "by-category", label: "By Category" },
+                        { value: "by-point", label: "By Point" },
+                      ]}
+                      value={design.demoRotationMode}
+                      onChange={(v) => set("demoRotationMode", v)}
+                    />
+                  </Field>
+                  <Field label="Rotation Order">
+                    <SegmentedControl<DemoRotationOrder>
+                      options={[
+                        { value: "sequential", label: "Sequential" },
+                        { value: "shuffled", label: "Shuffled" },
+                      ]}
+                      value={design.demoRotationOrder}
+                      onChange={(v) => set("demoRotationOrder", v)}
+                    />
+                  </Field>
+                  <Field label="Category Interval">
+                    <Slider
+                      min={2000}
+                      max={10000}
+                      step={500}
+                      value={design.demoIntervalMs}
+                      onChange={(v) => set("demoIntervalMs", v)}
+                      format={(v) => `${(v / 1000).toFixed(1)}s`}
+                    />
+                  </Field>
+                  {design.demoRotationMode === "by-point" && (
+                    <Field label="Point Interval">
+                      <Slider
+                        min={3000}
+                        max={15000}
+                        step={500}
+                        value={design.demoPointIntervalMs}
+                        onChange={(v) => set("demoPointIntervalMs", v)}
+                        format={(v) => `${(v / 1000).toFixed(1)}s`}
+                      />
+                    </Field>
+                  )}
+                </>
+              )}
+              {design.enableDemoMode && (
+                <>
+                  <Field label="Highlight Style">
+                    <div className="flex rounded-md border border-gray-300 overflow-hidden text-xs">
+                      {(["filter", "dim"] as const).map((style) => (
+                        <button
+                          key={style}
+                          onClick={() => set("demoHighlightStyle", style)}
+                          className={`flex-1 px-3 py-1.5 font-medium capitalize ${
+                            design.demoHighlightStyle === style
+                              ? "bg-gray-800 text-white"
+                              : "bg-white text-gray-600 hover:bg-gray-50"
+                          }`}
+                        >
+                          {style === "filter" ? "Filter" : "Dim"}
+                        </button>
+                      ))}
+                    </div>
+                  </Field>
+                  {design.demoHighlightStyle === "dim" && (
+                    <>
+                      <Field label="Dim Opacity">
+                        <Slider
+                          min={0.1}
+                          max={0.5}
+                          step={0.05}
+                          value={design.demoDimOpacity}
+                          onChange={(v) => set("demoDimOpacity", v)}
+                          format={(v) => v.toFixed(2)}
+                        />
+                      </Field>
+                      <Field label="Dim Table Rows">
+                        <ToggleSwitch
+                          checked={design.demoDimTable}
+                          onChange={(v) => set("demoDimTable", v)}
+                        />
+                      </Field>
+                    </>
+                  )}
+                </>
               )}
             </div>
           </AccordionSection>

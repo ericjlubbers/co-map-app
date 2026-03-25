@@ -58,6 +58,15 @@ export interface CategoryInfo {
 }
 
 export type ClusterStyle = "donut" | "gradient" | "minimal" | "ring";
+export type ClusterPlugin = "react-leaflet-cluster" | "leaflet-markercluster";
+export type PlacementStrategy = "default" | "clock" | "concentric" | "spiral" | "one-circle";
+export type MarkerShape = "pin" | "rounded-square" | "circle" | "stadium" | "soft-diamond" | "shield";
+export type MarkerConnector = "stem" | "dot" | "none";
+export type MarkerPadding = "compact" | "normal" | "spacious";
+export type SfBtnPreset = "filled" | "outlined" | "ghost" | "pill" | "minimal";
+export type DemoHighlightStyle = "filter" | "dim";
+export type DemoRotationMode = "by-category" | "by-point";
+export type DemoRotationOrder = "sequential" | "shuffled";
 export type FontFamily = "Libre Franklin" | "Atkinson Hyperlegible" | "Plus Jakarta Sans";
 export type TilePreset =
   | "carto-light"
@@ -218,6 +227,12 @@ export interface DesignState {
   // Demo auto-rotate
   demoIntervalMs: number;
   enableDemoMode: boolean;
+  demoHighlightStyle: DemoHighlightStyle;
+  demoDimOpacity: number;
+  demoDimTable: boolean;
+  demoRotationMode: DemoRotationMode;
+  demoRotationOrder: DemoRotationOrder;
+  demoPointIntervalMs: number;
   // Units
   useMetricUnits: boolean;
   // Roads layer
@@ -259,6 +274,11 @@ export interface DesignState {
   pointColorMode: "single" | "by-category";
   categoryColors: Record<string, string>;
   categoryIcons: Record<string, string>;
+  // Marker shape
+  markerShape: MarkerShape;
+  markerConnector: MarkerConnector;
+  markerPadding: MarkerPadding;
+  categoryShapes: Record<string, MarkerShape>;
   // Data panel visibility
   showDataPanel: boolean;
   // Embed sizing
@@ -275,8 +295,22 @@ export interface DesignState {
   sfBtnBorderRadius: string;
   sfBtnGap: string;
   sfLabelWrap: boolean;
+  sfBtnPreset: SfBtnPreset;
   // Map interaction
   flyToZoom: number;
   // Category display in data table
   categoryDisplayMode: "text" | "icon" | "both";
+  // Cluster plugin
+  clusterPlugin: ClusterPlugin;
+  clusterMaxRadius: number;
+  clusterDisableAtZoom: number;
+  clusterAnimate: boolean;
+  clusterSpiderfyOnMaxZoom: boolean;
+  clusterShowCoverageOnHover: boolean;
+  clusterZoomToBoundsOnClick: boolean;
+  // PlacementStrategies
+  clusterPlacementStrategy: PlacementStrategy;
+  clusterPlacementReveal: boolean;
+  // List plugin
+  clusterShowList: boolean;
 }

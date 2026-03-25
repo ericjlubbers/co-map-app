@@ -6,7 +6,7 @@ import {
   useCallback,
   type ReactNode,
 } from "react";
-import type { DesignState, ClusterStyle, FontFamily, TilePreset } from "../types";
+import type { DesignState, ClusterStyle, ClusterPlugin, PlacementStrategy, FontFamily, TilePreset, SfBtnPreset, DemoHighlightStyle, DemoRotationMode, DemoRotationOrder, MarkerShape, MarkerConnector, MarkerPadding } from "../types";
 import { DEFAULT_DESIGN } from "../config";
 
 // ── URL param keys ──────────────────────────────────────────
@@ -41,6 +41,12 @@ const PARAM_MAP: Record<keyof DesignState, string> = {
   outsideFadeOpacity: "fadeOp",
   demoIntervalMs: "demoMs",
   enableDemoMode: "demoOn",
+  demoHighlightStyle: "dhs",
+  demoDimOpacity: "ddo",
+  demoDimTable: "ddt",
+  demoRotationMode: "drm",
+  demoRotationOrder: "dro",
+  demoPointIntervalMs: "dpi",
   useMetricUnits: "metric",
   showRoads: "roads",
   showMotorways: "motorways",
@@ -75,6 +81,10 @@ const PARAM_MAP: Record<keyof DesignState, string> = {
   pointColorMode: "ptMode",
   categoryColors: "catColors",
   categoryIcons: "catIcons",
+  markerShape: "msh",
+  markerConnector: "mco",
+  markerPadding: "mpd",
+  categoryShapes: "csh",
   embedAspectRatio: "eRatio",
   embedMobileAspectRatio: "eMobileRatio",
   embedHeight: "eHeight",
@@ -86,8 +96,19 @@ const PARAM_MAP: Record<keyof DesignState, string> = {
   sfBtnBorderRadius: "sfRad",
   sfBtnGap: "sfGap",
   sfLabelWrap: "sfWrap",
+  sfBtnPreset: "sbp",
   flyToZoom: "ftz",
   categoryDisplayMode: "catDisp",
+  clusterPlugin: "cpg",
+  clusterMaxRadius: "cmr",
+  clusterDisableAtZoom: "cdz",
+  clusterAnimate: "can",
+  clusterSpiderfyOnMaxZoom: "csm",
+  clusterShowCoverageOnHover: "csc",
+  clusterZoomToBoundsOnClick: "czb",
+  clusterPlacementStrategy: "cps",
+  clusterPlacementReveal: "cpr",
+  clusterShowList: "csl",
 };
 
 // ── Font shorthand mapping ──────────────────────────────────
@@ -191,6 +212,23 @@ function parseFromURL(): Partial<DesignState> {
   const metric = params.get(PARAM_MAP.useMetricUnits);
   if (metric) partial.useMetricUnits = metric === "1";
 
+  const dhs = params.get(PARAM_MAP.demoHighlightStyle);
+  if (dhs && ["filter", "dim"].includes(dhs))
+    partial.demoHighlightStyle = dhs as DemoHighlightStyle;
+  const ddo = params.get(PARAM_MAP.demoDimOpacity);
+  if (ddo) partial.demoDimOpacity = parseFloat(ddo);
+  const ddt = params.get(PARAM_MAP.demoDimTable);
+  if (ddt) partial.demoDimTable = ddt === "1";
+
+  const drm = params.get(PARAM_MAP.demoRotationMode);
+  if (drm && ["by-category", "by-point"].includes(drm))
+    partial.demoRotationMode = drm as DemoRotationMode;
+  const dro = params.get(PARAM_MAP.demoRotationOrder);
+  if (dro && ["sequential", "shuffled"].includes(dro))
+    partial.demoRotationOrder = dro as DemoRotationOrder;
+  const dpi = params.get(PARAM_MAP.demoPointIntervalMs);
+  if (dpi) partial.demoPointIntervalMs = parseInt(dpi, 10);
+
   const showRoads = params.get(PARAM_MAP.showRoads);
   if (showRoads) partial.showRoads = showRoads === "1";
 
@@ -277,6 +315,30 @@ function parseFromURL(): Partial<DesignState> {
     try { partial.categoryIcons = JSON.parse(decodeURIComponent(catIcons)); } catch { /* ignore */ }
   }
 
+  const SHAPES: MarkerShape[] = ["pin", "rounded-square", "circle", "stadium", "soft-diamond", "shield"];
+  const CONNECTORS: MarkerConnector[] = ["stem", "dot", "none"];
+  const PADDINGS: MarkerPadding[] = ["compact", "normal", "spacious"];
+
+  const msh = params.get(PARAM_MAP.markerShape);
+  if (msh) {
+    const idx = parseInt(msh, 10);
+    if (idx >= 0 && idx < SHAPES.length) partial.markerShape = SHAPES[idx];
+  }
+  const mco = params.get(PARAM_MAP.markerConnector);
+  if (mco) {
+    const idx = parseInt(mco, 10);
+    if (idx >= 0 && idx < CONNECTORS.length) partial.markerConnector = CONNECTORS[idx];
+  }
+  const mpd = params.get(PARAM_MAP.markerPadding);
+  if (mpd) {
+    const idx = parseInt(mpd, 10);
+    if (idx >= 0 && idx < PADDINGS.length) partial.markerPadding = PADDINGS[idx];
+  }
+  const csh = params.get(PARAM_MAP.categoryShapes);
+  if (csh) {
+    try { partial.categoryShapes = JSON.parse(decodeURIComponent(csh)); } catch { /* ignore */ }
+  }
+
   const sfW = params.get(PARAM_MAP.sfSidebarWidth);
   if (sfW) partial.sfSidebarWidth = sfW;
   const sfFont = params.get(PARAM_MAP.sfBtnFontSize);
@@ -290,12 +352,48 @@ function parseFromURL(): Partial<DesignState> {
   const sfWrap = params.get(PARAM_MAP.sfLabelWrap);
   if (sfWrap) partial.sfLabelWrap = sfWrap === "1";
 
+  const sbp = params.get(PARAM_MAP.sfBtnPreset);
+  const SF_BTN_PRESETS: SfBtnPreset[] = ["filled", "outlined", "ghost", "pill", "minimal"];
+  if (sbp) {
+    const idx = parseInt(sbp, 10);
+    if (idx >= 0 && idx < SF_BTN_PRESETS.length) partial.sfBtnPreset = SF_BTN_PRESETS[idx];
+  }
+
   const ftz = params.get(PARAM_MAP.flyToZoom);
   if (ftz) partial.flyToZoom = parseInt(ftz, 10);
 
   const catDisp = params.get(PARAM_MAP.categoryDisplayMode);
   if (catDisp && ["text", "icon", "both"].includes(catDisp))
     partial.categoryDisplayMode = catDisp as DesignState["categoryDisplayMode"];
+
+  const CLUSTER_PLUGINS: ClusterPlugin[] = ["react-leaflet-cluster", "leaflet-markercluster"];
+  const cpg = params.get(PARAM_MAP.clusterPlugin);
+  if (cpg) {
+    const idx = parseInt(cpg, 10);
+    if (idx >= 0 && idx < CLUSTER_PLUGINS.length) partial.clusterPlugin = CLUSTER_PLUGINS[idx];
+  }
+  const cmr = params.get(PARAM_MAP.clusterMaxRadius);
+  if (cmr) partial.clusterMaxRadius = parseInt(cmr, 10);
+  const cdz = params.get(PARAM_MAP.clusterDisableAtZoom);
+  if (cdz) partial.clusterDisableAtZoom = parseInt(cdz, 10);
+  const can = params.get(PARAM_MAP.clusterAnimate);
+  if (can) partial.clusterAnimate = can === "1";
+  const csm = params.get(PARAM_MAP.clusterSpiderfyOnMaxZoom);
+  if (csm) partial.clusterSpiderfyOnMaxZoom = csm === "1";
+  const csc = params.get(PARAM_MAP.clusterShowCoverageOnHover);
+  if (csc) partial.clusterShowCoverageOnHover = csc === "1";
+  const czb = params.get(PARAM_MAP.clusterZoomToBoundsOnClick);
+  if (czb) partial.clusterZoomToBoundsOnClick = czb === "1";
+  const PLACEMENTS: PlacementStrategy[] = ["default", "clock", "concentric", "spiral", "one-circle"];
+  const cps = params.get(PARAM_MAP.clusterPlacementStrategy);
+  if (cps) {
+    const idx = parseInt(cps, 10);
+    if (idx >= 0 && idx < PLACEMENTS.length) partial.clusterPlacementStrategy = PLACEMENTS[idx];
+  }
+  const cpr = params.get(PARAM_MAP.clusterPlacementReveal);
+  if (cpr) partial.clusterPlacementReveal = cpr === "1";
+  const csl = params.get(PARAM_MAP.clusterShowList);
+  if (csl) partial.clusterShowList = csl === "1";
 
   return partial;
 }
@@ -355,6 +453,18 @@ function serializeToURL(state: DesignState, includeDesignMode: boolean): string 
 
   if (state.demoIntervalMs !== DEFAULT_DESIGN.demoIntervalMs)
     params.set(PARAM_MAP.demoIntervalMs, String(state.demoIntervalMs));
+  if (state.demoHighlightStyle !== DEFAULT_DESIGN.demoHighlightStyle)
+    params.set(PARAM_MAP.demoHighlightStyle, state.demoHighlightStyle);
+  if (state.demoDimOpacity !== DEFAULT_DESIGN.demoDimOpacity)
+    params.set(PARAM_MAP.demoDimOpacity, String(state.demoDimOpacity));
+  if (state.demoDimTable !== DEFAULT_DESIGN.demoDimTable)
+    params.set(PARAM_MAP.demoDimTable, state.demoDimTable ? "1" : "0");
+  if (state.demoRotationMode !== DEFAULT_DESIGN.demoRotationMode)
+    params.set(PARAM_MAP.demoRotationMode, state.demoRotationMode);
+  if (state.demoRotationOrder !== DEFAULT_DESIGN.demoRotationOrder)
+    params.set(PARAM_MAP.demoRotationOrder, state.demoRotationOrder);
+  if (state.demoPointIntervalMs !== DEFAULT_DESIGN.demoPointIntervalMs)
+    params.set(PARAM_MAP.demoPointIntervalMs, String(state.demoPointIntervalMs));
 
   if (state.useMetricUnits !== DEFAULT_DESIGN.useMetricUnits)
     params.set(PARAM_MAP.useMetricUnits, state.useMetricUnits ? "1" : "0");
@@ -429,6 +539,21 @@ function serializeToURL(state: DesignState, includeDesignMode: boolean): string 
   if (Object.keys(state.categoryIcons).length > 0)
     params.set(PARAM_MAP.categoryIcons, encodeURIComponent(JSON.stringify(state.categoryIcons)));
 
+  if (state.markerShape !== DEFAULT_DESIGN.markerShape) {
+    const shapeIdx = (["pin", "rounded-square", "circle", "stadium", "soft-diamond", "shield"] as const).indexOf(state.markerShape);
+    params.set(PARAM_MAP.markerShape, String(shapeIdx));
+  }
+  if (state.markerConnector !== DEFAULT_DESIGN.markerConnector) {
+    const connIdx = (["stem", "dot", "none"] as const).indexOf(state.markerConnector);
+    params.set(PARAM_MAP.markerConnector, String(connIdx));
+  }
+  if (state.markerPadding !== DEFAULT_DESIGN.markerPadding) {
+    const padIdx = (["compact", "normal", "spacious"] as const).indexOf(state.markerPadding);
+    params.set(PARAM_MAP.markerPadding, String(padIdx));
+  }
+  if (Object.keys(state.categoryShapes).length > 0)
+    params.set(PARAM_MAP.categoryShapes, encodeURIComponent(JSON.stringify(state.categoryShapes)));
+
   if (state.sfSidebarWidth !== DEFAULT_DESIGN.sfSidebarWidth)
     params.set(PARAM_MAP.sfSidebarWidth, state.sfSidebarWidth);
   if (state.sfBtnFontSize !== DEFAULT_DESIGN.sfBtnFontSize)
@@ -441,11 +566,40 @@ function serializeToURL(state: DesignState, includeDesignMode: boolean): string 
     params.set(PARAM_MAP.sfBtnGap, state.sfBtnGap);
   if (state.sfLabelWrap !== DEFAULT_DESIGN.sfLabelWrap)
     params.set(PARAM_MAP.sfLabelWrap, state.sfLabelWrap ? "1" : "0");
+  if (state.sfBtnPreset !== DEFAULT_DESIGN.sfBtnPreset) {
+    const presetIdx = (["filled", "outlined", "ghost", "pill", "minimal"] as const).indexOf(state.sfBtnPreset);
+    params.set(PARAM_MAP.sfBtnPreset, String(presetIdx));
+  }
 
   if (state.flyToZoom !== DEFAULT_DESIGN.flyToZoom)
     params.set(PARAM_MAP.flyToZoom, String(state.flyToZoom));
   if (state.categoryDisplayMode !== DEFAULT_DESIGN.categoryDisplayMode)
     params.set(PARAM_MAP.categoryDisplayMode, state.categoryDisplayMode);
+
+  if (state.clusterPlugin !== DEFAULT_DESIGN.clusterPlugin) {
+    const cpIdx = (["react-leaflet-cluster", "leaflet-markercluster"] as const).indexOf(state.clusterPlugin);
+    params.set(PARAM_MAP.clusterPlugin, String(cpIdx));
+  }
+  if (state.clusterMaxRadius !== DEFAULT_DESIGN.clusterMaxRadius)
+    params.set(PARAM_MAP.clusterMaxRadius, String(state.clusterMaxRadius));
+  if (state.clusterDisableAtZoom !== DEFAULT_DESIGN.clusterDisableAtZoom)
+    params.set(PARAM_MAP.clusterDisableAtZoom, String(state.clusterDisableAtZoom));
+  if (state.clusterAnimate !== DEFAULT_DESIGN.clusterAnimate)
+    params.set(PARAM_MAP.clusterAnimate, state.clusterAnimate ? "1" : "0");
+  if (state.clusterSpiderfyOnMaxZoom !== DEFAULT_DESIGN.clusterSpiderfyOnMaxZoom)
+    params.set(PARAM_MAP.clusterSpiderfyOnMaxZoom, state.clusterSpiderfyOnMaxZoom ? "1" : "0");
+  if (state.clusterShowCoverageOnHover !== DEFAULT_DESIGN.clusterShowCoverageOnHover)
+    params.set(PARAM_MAP.clusterShowCoverageOnHover, state.clusterShowCoverageOnHover ? "1" : "0");
+  if (state.clusterZoomToBoundsOnClick !== DEFAULT_DESIGN.clusterZoomToBoundsOnClick)
+    params.set(PARAM_MAP.clusterZoomToBoundsOnClick, state.clusterZoomToBoundsOnClick ? "1" : "0");
+  if (state.clusterPlacementStrategy !== DEFAULT_DESIGN.clusterPlacementStrategy) {
+    const psIdx = (["default", "clock", "concentric", "spiral", "one-circle"] as const).indexOf(state.clusterPlacementStrategy);
+    params.set(PARAM_MAP.clusterPlacementStrategy, String(psIdx));
+  }
+  if (state.clusterPlacementReveal !== DEFAULT_DESIGN.clusterPlacementReveal)
+    params.set(PARAM_MAP.clusterPlacementReveal, state.clusterPlacementReveal ? "1" : "0");
+  if (state.clusterShowList !== DEFAULT_DESIGN.clusterShowList)
+    params.set(PARAM_MAP.clusterShowList, state.clusterShowList ? "1" : "0");
 
   if (includeDesignMode) params.set("design", "1");
 

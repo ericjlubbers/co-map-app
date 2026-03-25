@@ -368,8 +368,10 @@ export default function MapEditorContent({
         {demoMode && categories.length > 0 && (
           <AutoRotateDemo
             categories={categories}
+            points={data}
             intervalMs={design.demoIntervalMs}
             onCategoryChange={setDemoCategoryFilter}
+            onPointChange={handleSelectPoint}
           />
         )}
       </div>
