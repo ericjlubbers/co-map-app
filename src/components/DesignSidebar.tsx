@@ -7,9 +7,11 @@ import {
   faLink,
   faTimes,
   faChevronRight,
+  faPlay,
+  faStop,
 } from "@fortawesome/free-solid-svg-icons";
 import { useDesign } from "../context/DesignContext";
-import type { DesignState, FontFamily, ClusterStyle, ClusterPlugin, PlacementStrategy, TilePreset, SfBtnPreset, DemoRotationMode, DemoRotationOrder, MarkerShape, MarkerConnector, MarkerPadding } from "../types";
+import type { DesignState, FontFamily, ClusterStyle, ClusterPlugin, PlacementStrategy, TilePreset, SfBtnPreset, SfBtnFillMode, DemoRotationMode, DemoRotationOrder, MarkerShape, MarkerConnector, MarkerPadding } from "../types";
 import AccordionSection from "./AccordionSection";
 import SidebarGroup from "./SidebarGroup";
 import ColorPicker, { CARBON_CATEGORICAL } from "./ColorPicker";
@@ -102,6 +104,7 @@ const MARKER_PADDINGS: { value: MarkerPadding; label: string }[] = [
 const CLUSTER_PLUGINS: { value: ClusterPlugin; label: string }[] = [
   { value: "react-leaflet-cluster", label: "React Cluster" },
   { value: "leaflet-markercluster", label: "Native Cluster" },
+  { value: "none", label: "None (no clustering)" },
 ];
 
 const PLACEMENT_STRATEGIES: { value: PlacementStrategy; label: string }[] = [
@@ -126,9 +129,13 @@ interface DesignSidebarProps {
   onClose: () => void;
   /** Distinct categories from current point data, used for by-category color mode */
   categories?: string[];
+  /** Whether auto-rotate preview is currently active */
+  previewActive?: boolean;
+  /** Toggle auto-rotate preview on/off */
+  onPreviewToggle?: () => void;
 }
 
-export default function DesignSidebar({ onClose, categories = [] }: DesignSidebarProps) {
+export default function DesignSidebar({ onClose, categories = [], previewActive = false, onPreviewToggle }: DesignSidebarProps) {
   const { design, set, reset, getShareURL } = useDesign();
   const [copied, setCopied] = useState<"view" | "edit" | null>(null);
   const [openGroup, setOpenGroup] = useState<"layers" | "design">("layers");
@@ -403,6 +410,27 @@ export default function DesignSidebar({ onClose, categories = [] }: DesignSideba
                   </Field>
                 </>
               )}
+              <Field label="Dot Mode">
+                <ToggleSwitch
+                  checked={design.dotMode}
+                  onChange={(v) => set("dotMode", v)}
+                />
+              </Field>
+              {design.dotMode && (
+                <Field label="Dot Size">
+                  <Slider
+                    min={4}
+                    max={16}
+                    step={1}
+                    value={design.dotSize}
+                    onChange={(v) => set("dotSize", v)}
+                    suffix="px"
+                  />
+                </Field>
+              )}
+              <p className="text-[11px] text-gray-400 italic">
+                Dot mode shows simple dots for all markers. Selected or highlighted points expand to full markers.
+              </p>
               <Field label="Marker Size">
                 <Slider
                   min={20}
@@ -821,6 +849,28 @@ export default function DesignSidebar({ onClose, categories = [] }: DesignSideba
                       ))}
                     </select>
                   </Field>
+                  {design.sfBtnPreset === "filled" && (
+                    <>
+                      <Field label="Fill Color Mode">
+                        <SegmentedControl<SfBtnFillMode>
+                          options={[
+                            { value: "by-category", label: "By Category" },
+                            { value: "single", label: "Single Color" },
+                          ]}
+                          value={design.sfBtnFillMode}
+                          onChange={(v) => set("sfBtnFillMode", v)}
+                        />
+                      </Field>
+                      {design.sfBtnFillMode === "single" && (
+                        <Field label="Fill Color">
+                          <ColorPicker
+                            value={design.sfBtnFillColor}
+                            onChange={(v) => set("sfBtnFillColor", v)}
+                          />
+                        </Field>
+                      )}
+                    </>
+                  )}
                   <Field label="Sidebar Width">
                     <input
                       type="text"
@@ -929,6 +979,19 @@ export default function DesignSidebar({ onClose, categories = [] }: DesignSideba
               <p className="text-[11px] text-gray-400 italic">
                 Automatically cycles through each category, spotlighting points one group at a time.
               </p>
+              {design.enableDemoMode && onPreviewToggle && (
+                <button
+                  onClick={onPreviewToggle}
+                  className={`flex w-full items-center justify-center gap-2 rounded-md px-3 py-2 text-xs font-medium transition-colors ${
+                    previewActive
+                      ? "bg-red-50 text-red-600 border border-red-200 hover:bg-red-100"
+                      : "bg-blue-50 text-blue-600 border border-blue-200 hover:bg-blue-100"
+                  }`}
+                >
+                  <FontAwesomeIcon icon={previewActive ? faStop : faPlay} className="text-[10px]" />
+                  {previewActive ? "Stop Preview" : "Preview Rotation"}
+                </button>
+              )}
               {design.enableDemoMode && (
                 <>
                   <Field label="Rotation Mode">

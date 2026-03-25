@@ -6,7 +6,7 @@ import {
   useCallback,
   type ReactNode,
 } from "react";
-import type { DesignState, ClusterStyle, ClusterPlugin, PlacementStrategy, FontFamily, TilePreset, SfBtnPreset, DemoHighlightStyle, DemoRotationMode, DemoRotationOrder, MarkerShape, MarkerConnector, MarkerPadding } from "../types";
+import type { DesignState, ClusterStyle, ClusterPlugin, PlacementStrategy, FontFamily, TilePreset, SfBtnPreset, SfBtnFillMode, DemoHighlightStyle, DemoRotationMode, DemoRotationOrder, MarkerShape, MarkerConnector, MarkerPadding } from "../types";
 import { DEFAULT_DESIGN } from "../config";
 
 // ── URL param keys ──────────────────────────────────────────
@@ -97,8 +97,12 @@ const PARAM_MAP: Record<keyof DesignState, string> = {
   sfBtnGap: "sfGap",
   sfLabelWrap: "sfWrap",
   sfBtnPreset: "sbp",
+  sfBtnFillColor: "sbfc",
+  sfBtnFillMode: "sbfm",
   flyToZoom: "ftz",
   categoryDisplayMode: "catDisp",
+  dotMode: "dotM",
+  dotSize: "dotS",
   clusterPlugin: "cpg",
   clusterMaxRadius: "cmr",
   clusterDisableAtZoom: "cdz",
@@ -358,6 +362,11 @@ function parseFromURL(): Partial<DesignState> {
     const idx = parseInt(sbp, 10);
     if (idx >= 0 && idx < SF_BTN_PRESETS.length) partial.sfBtnPreset = SF_BTN_PRESETS[idx];
   }
+  const sbfc = params.get(PARAM_MAP.sfBtnFillColor);
+  if (sbfc) partial.sfBtnFillColor = `#${sbfc}`;
+  const sbfm = params.get(PARAM_MAP.sfBtnFillMode);
+  if (sbfm && ["single", "by-category"].includes(sbfm))
+    partial.sfBtnFillMode = sbfm as SfBtnFillMode;
 
   const ftz = params.get(PARAM_MAP.flyToZoom);
   if (ftz) partial.flyToZoom = parseInt(ftz, 10);
@@ -366,7 +375,12 @@ function parseFromURL(): Partial<DesignState> {
   if (catDisp && ["text", "icon", "both"].includes(catDisp))
     partial.categoryDisplayMode = catDisp as DesignState["categoryDisplayMode"];
 
-  const CLUSTER_PLUGINS: ClusterPlugin[] = ["react-leaflet-cluster", "leaflet-markercluster"];
+  const dotM = params.get(PARAM_MAP.dotMode);
+  if (dotM) partial.dotMode = dotM === "1";
+  const dotS = params.get(PARAM_MAP.dotSize);
+  if (dotS) partial.dotSize = parseInt(dotS, 10);
+
+  const CLUSTER_PLUGINS: ClusterPlugin[] = ["react-leaflet-cluster", "leaflet-markercluster", "none"];
   const cpg = params.get(PARAM_MAP.clusterPlugin);
   if (cpg) {
     const idx = parseInt(cpg, 10);
@@ -570,14 +584,23 @@ function serializeToURL(state: DesignState, includeDesignMode: boolean): string 
     const presetIdx = (["filled", "outlined", "ghost", "pill", "minimal"] as const).indexOf(state.sfBtnPreset);
     params.set(PARAM_MAP.sfBtnPreset, String(presetIdx));
   }
+  if (state.sfBtnFillColor !== DEFAULT_DESIGN.sfBtnFillColor)
+    params.set(PARAM_MAP.sfBtnFillColor, state.sfBtnFillColor.replace("#", ""));
+  if (state.sfBtnFillMode !== DEFAULT_DESIGN.sfBtnFillMode)
+    params.set(PARAM_MAP.sfBtnFillMode, state.sfBtnFillMode);
 
   if (state.flyToZoom !== DEFAULT_DESIGN.flyToZoom)
     params.set(PARAM_MAP.flyToZoom, String(state.flyToZoom));
   if (state.categoryDisplayMode !== DEFAULT_DESIGN.categoryDisplayMode)
     params.set(PARAM_MAP.categoryDisplayMode, state.categoryDisplayMode);
 
+  if (state.dotMode !== DEFAULT_DESIGN.dotMode)
+    params.set(PARAM_MAP.dotMode, state.dotMode ? "1" : "0");
+  if (state.dotSize !== DEFAULT_DESIGN.dotSize)
+    params.set(PARAM_MAP.dotSize, String(state.dotSize));
+
   if (state.clusterPlugin !== DEFAULT_DESIGN.clusterPlugin) {
-    const cpIdx = (["react-leaflet-cluster", "leaflet-markercluster"] as const).indexOf(state.clusterPlugin);
+    const cpIdx = (["react-leaflet-cluster", "leaflet-markercluster", "none"] as const).indexOf(state.clusterPlugin);
     params.set(PARAM_MAP.clusterPlugin, String(cpIdx));
   }
   if (state.clusterMaxRadius !== DEFAULT_DESIGN.clusterMaxRadius)

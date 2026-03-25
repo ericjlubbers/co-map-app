@@ -58,7 +58,8 @@ export interface CategoryInfo {
 }
 
 export type ClusterStyle = "donut" | "gradient" | "minimal" | "ring";
-export type ClusterPlugin = "react-leaflet-cluster" | "leaflet-markercluster";
+export type ClusterPlugin = "react-leaflet-cluster" | "leaflet-markercluster" | "none";
+export type SfBtnFillMode = "single" | "by-category";
 export type PlacementStrategy = "default" | "clock" | "concentric" | "spiral" | "one-circle";
 export type MarkerShape = "pin" | "rounded-square" | "circle" | "stadium" | "soft-diamond" | "shield";
 export type MarkerConnector = "stem" | "dot" | "none";
@@ -296,10 +297,16 @@ export interface DesignState {
   sfBtnGap: string;
   sfLabelWrap: boolean;
   sfBtnPreset: SfBtnPreset;
+  sfBtnFillColor: string;
+  sfBtnFillMode: SfBtnFillMode;
   // Map interaction
   flyToZoom: number;
   // Category display in data table
   categoryDisplayMode: "text" | "icon" | "both";
+  // Cluster plugin
+  // Dot mode
+  dotMode: boolean;
+  dotSize: number;
   // Cluster plugin
   clusterPlugin: ClusterPlugin;
   clusterMaxRadius: number;

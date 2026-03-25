@@ -23,7 +23,7 @@ import {
   getTileConfig,
 } from "../config";
 import { useDesign } from "../context/DesignContext";
-import { createMarkerIcon } from "./MarkerIcon";
+import { createMarkerIcon, createDotIcon } from "./MarkerIcon";
 import { createClusterIcon } from "./ClusterIcon";
 import PointPopup from "./PointPopup";
 import { COLORADO_COUNTIES } from "../data/coloradoCounties";
@@ -479,7 +479,54 @@ export default function MapView({
           onDeleteFeature={onDeleteFeature ?? (() => {})}
         />
 
-        {design.clusterPlugin === "leaflet-markercluster" ? (
+        {design.clusterPlugin === "none" ? (
+          // No clustering — render markers directly
+          <>
+            {points.map((point) => {
+              const isDimmed = dimActive && activePointIds != null && !activePointIds.has(point.id);
+              const isHighlighted = activePointIds != null && activePointIds.has(point.id);
+              const isSelected = point.id === selectedId;
+              const showDot = design.dotMode && !isSelected && !isHighlighted;
+              const pointColor = design.pointColorMode === "by-category"
+                ? (design.categoryColors[point.category] ?? design.pointColor)
+                : design.pointColor;
+              return (
+                <Marker
+                  key={point.id}
+                  position={[point.lat, point.lng]}
+                  icon={showDot
+                    ? createDotIcon(pointColor, design.dotSize, isDimmed, dimOpacityProp)
+                    : createMarkerIcon(
+                        point.category,
+                        isSelected,
+                        design.markerSize,
+                        pointColor,
+                        design.categoryIcons[point.category] || point.icon,
+                        isDimmed,
+                        dimOpacityProp,
+                        design.categoryShapes[point.category] || design.markerShape,
+                        design.markerConnector,
+                        design.markerPadding,
+                      )
+                  }
+                  ref={handleMarkerRef(point.id)}
+                  zIndexOffset={isSelected ? 1000 : isDimmed ? -1000 : 0}
+                  eventHandlers={{
+                    click: () => {
+                      if (!drawingMode || drawingMode === "select") {
+                        onSelectPoint(point.id);
+                      }
+                    },
+                  }}
+                >
+                  <Popup>
+                    <PointPopup point={point} />
+                  </Popup>
+                </Marker>
+              );
+            })}
+          </>
+        ) : design.clusterPlugin === "leaflet-markercluster" ? (
           <NativeMarkerClusterGroup
             key={`native-${design.clusterStyle}`}
             points={points}
@@ -508,6 +555,8 @@ export default function MapView({
             activePointIds={activePointIds}
             dimActive={dimActive}
             dimOpacity={dimOpacityProp}
+            dotMode={design.dotMode}
+            dotSize={design.dotSize}
           />
         ) : (
         <MarkerClusterGroup
@@ -530,30 +579,36 @@ export default function MapView({
         >
           {points.map((point) => {
             const isDimmed = dimActive && activePointIds != null && !activePointIds.has(point.id);
+            const isHighlighted = activePointIds != null && activePointIds.has(point.id);
+            const isSelected = point.id === selectedId;
+            const showDot = design.dotMode && !isSelected && !isHighlighted;
+            const ptColor = design.pointColorMode === "by-category"
+              ? design.categoryColors[point.category]
+              : design.pointColor;
             return (
             <Marker
               key={point.id}
               position={[point.lat, point.lng]}
-              icon={createMarkerIcon(
-                point.category,
-                point.id === selectedId,
-                design.markerSize,
-                design.pointColorMode === "by-category"
-                  ? design.categoryColors[point.category]
-                  : design.pointColor,
-                design.categoryIcons[point.category] || point.icon,
-                isDimmed,
-                dimOpacityProp,
-                design.categoryShapes[point.category] || design.markerShape,
-                design.markerConnector,
-                design.markerPadding,
-              )}
+              icon={showDot
+                ? createDotIcon(ptColor, design.dotSize, isDimmed, dimOpacityProp)
+                : createMarkerIcon(
+                    point.category,
+                    isSelected,
+                    design.markerSize,
+                    ptColor,
+                    design.categoryIcons[point.category] || point.icon,
+                    isDimmed,
+                    dimOpacityProp,
+                    design.categoryShapes[point.category] || design.markerShape,
+                    design.markerConnector,
+                    design.markerPadding,
+                  )
+              }
               category={point.category}
               ref={handleMarkerRef(point.id)}
-              zIndexOffset={isDimmed ? -1000 : 0}
+              zIndexOffset={isSelected ? 1000 : isDimmed ? -1000 : 0}
               eventHandlers={{
                 click: () => {
-                  // Don't select data points while in an active drawing mode (except select)
                   if (!drawingMode || drawingMode === "select") {
                     onSelectPoint(point.id);
                   }

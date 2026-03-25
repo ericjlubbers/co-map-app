@@ -12,6 +12,7 @@ import CustomizeSidebar from "./CustomizeSidebar";
 import AutoRotateDemo from "./AutoRotateDemo";
 import DrawingToolbar from "./DrawingToolbar";
 import DrawnFeatureForm from "./DrawnFeatureForm";
+import { useAutoRotate } from "../hooks/useAutoRotate";
 import DrawnFeaturesTable from "./DrawnFeaturesTable";
 import SidebarFilterLayout from "./SidebarFilterLayout";
 import {
@@ -199,12 +200,60 @@ export default function MapEditorContent({
     return Array.from(cats).sort();
   }, [data]);
 
+  // ── Preview auto-rotate (in-editor preview) ───────────────
+  const [previewDemoMode, setPreviewDemoMode] = useState(false);
+  const previewRotation = useAutoRotate({
+    categories,
+    points: data,
+    enabled: previewDemoMode,
+    mode: design.demoRotationMode,
+    order: design.demoRotationOrder,
+    categoryIntervalMs: design.demoIntervalMs,
+    pointIntervalMs: design.demoPointIntervalMs,
+  });
+
+  const previewActivePointIds = useMemo(() => {
+    if (!previewDemoMode || previewRotation.demoState !== "running") return undefined;
+    if (design.demoHighlightStyle !== "dim") return undefined;
+    const cat = previewRotation.activeCategory;
+    if (!cat) return undefined;
+    if (design.demoRotationMode === "by-point" && previewRotation.activePointId) {
+      return new Set([previewRotation.activePointId]);
+    }
+    return new Set(data.filter((p) => p.category === cat).map((p) => p.id));
+  }, [previewDemoMode, previewRotation.demoState, previewRotation.activeCategory, previewRotation.activePointId, design.demoHighlightStyle, design.demoRotationMode, data]);
+
+  const previewDimActive = previewDemoMode && previewRotation.demoState === "running" && design.demoHighlightStyle === "dim";
+
+  // Sync preview rotation's active point to selectedId
+  useEffect(() => {
+    if (previewDemoMode && previewRotation.demoState === "running" && previewRotation.activePointId) {
+      setSelectedId(previewRotation.activePointId);
+    }
+  }, [previewDemoMode, previewRotation.demoState, previewRotation.activePointId]);
+
+  // Clear selection when preview stops
+  useEffect(() => {
+    if (!previewDemoMode) {
+      setSelectedId(null);
+    }
+  }, [previewDemoMode]);
+
   const filteredPoints = useMemo(() => {
     let result = data;
 
     // Demo mode overrides manual category filter
     if (demoMode && demoCategoryFilter !== null) {
       return result.filter((p) => p.category === demoCategoryFilter);
+    }
+
+    // Preview filter mode (non-sidebar-filter layout)
+    if (previewDemoMode && previewRotation.demoState === "running" && design.demoHighlightStyle === "filter") {
+      if (design.demoRotationMode === "by-point" && previewRotation.activePointId) {
+        return result.filter((p) => p.id === previewRotation.activePointId);
+      } else if (previewRotation.activeCategory) {
+        return result.filter((p) => p.category === previewRotation.activeCategory);
+      }
     }
 
     // Category filter
@@ -221,7 +270,7 @@ export default function MapEditorContent({
       );
     }
     return result;
-  }, [data, activeCategories, debouncedSearch, demoMode, demoCategoryFilter]);
+  }, [data, activeCategories, debouncedSearch, demoMode, demoCategoryFilter, previewDemoMode, previewRotation.demoState, previewRotation.activeCategory, previewRotation.activePointId, design.demoHighlightStyle, design.demoRotationMode]);
 
   const handleToggleCategory = useCallback((category: string) => {
     setActiveCategories((prev) => {
@@ -411,6 +460,7 @@ export default function MapEditorContent({
           {design.embedLayout === "sidebar-filter" ? (
             <SidebarFilterLayout
               points={data}
+              demoMode={previewDemoMode}
               viewCuration={viewCuration}
               viewLocked={viewLocked}
               fillContainer
@@ -446,6 +496,10 @@ export default function MapEditorContent({
                 onUpdatePrimaryElement={onUpdatePrimaryElement}
                 publicationBounds={publicationBounds}
                 onUpdatePublicationBounds={onUpdatePublicationBounds}
+                activePointIds={previewActivePointIds}
+                dimActive={previewDimActive}
+                dimOpacity={design.demoDimOpacity}
+                rotationActive={previewDemoMode && previewRotation.demoState === "running"}
               />
 
               {/* Drawing toolbar overlay */}
@@ -611,7 +665,12 @@ export default function MapEditorContent({
             onQuickAddPrimary={handleQuickAddPrimary}
           />
         ) : (
-          <DesignSidebar onClose={() => setSidebarOpen(false)} categories={categories} />
+          <DesignSidebar
+            onClose={() => setSidebarOpen(false)}
+            categories={categories}
+            previewActive={previewDemoMode}
+            onPreviewToggle={() => setPreviewDemoMode((prev) => !prev)}
+          />
         )
       )}
     </div>

@@ -7,7 +7,7 @@ import "leaflet.markercluster.placementstrategies";
 import { useMap } from "react-leaflet";
 import type { PointData, ClusterStyle, PlacementStrategy } from "../types";
 import { createClusterIcon } from "./ClusterIcon";
-import { createMarkerIcon } from "./MarkerIcon";
+import { createMarkerIcon, createDotIcon } from "./MarkerIcon";
 import type { MarkerShape, MarkerConnector, MarkerPadding } from "../types";
 
 interface NativeMarkerClusterGroupProps {
@@ -40,6 +40,9 @@ interface NativeMarkerClusterGroupProps {
   activePointIds?: Set<string>;
   dimActive?: boolean;
   dimOpacity?: number;
+  // Dot mode
+  dotMode?: boolean;
+  dotSize?: number;
 }
 
 export default function NativeMarkerClusterGroup({
@@ -69,6 +72,8 @@ export default function NativeMarkerClusterGroup({
   activePointIds,
   dimActive,
   dimOpacity,
+  dotMode,
+  dotSize,
 }: NativeMarkerClusterGroupProps) {
   const map = useMap();
   const groupRef = useRef<L.MarkerClusterGroup | null>(null);
@@ -142,23 +147,29 @@ export default function NativeMarkerClusterGroup({
     const markers: L.Marker[] = [];
     for (const point of points) {
       const isDimmed = dimActive && activePointIds != null && !activePointIds.has(point.id);
-      const icon = createMarkerIcon(
-        point.category,
-        point.id === selectedId,
-        markerSize,
-        pointColorMode === "by-category" ? (categoryColors?.[point.category] ?? pointColor) : pointColor,
-        categoryIcons?.[point.category] || point.icon,
-        isDimmed,
-        dimOpacity,
-        categoryShapes[point.category] || markerShape,
-        markerConnector,
-        markerPadding,
-      );
+      const isHighlighted = activePointIds != null && activePointIds.has(point.id);
+      const isSelected = point.id === selectedId;
+      const showDot = dotMode && !isSelected && !isHighlighted;
+      const ptColor = pointColorMode === "by-category" ? (categoryColors?.[point.category] ?? pointColor) : pointColor;
+      const icon = showDot
+        ? createDotIcon(ptColor, dotSize ?? 8, isDimmed, dimOpacity)
+        : createMarkerIcon(
+            point.category,
+            isSelected,
+            markerSize,
+            ptColor,
+            categoryIcons?.[point.category] || point.icon,
+            isDimmed,
+            dimOpacity,
+            categoryShapes[point.category] || markerShape,
+            markerConnector,
+            markerPadding,
+          );
 
       const marker = L.marker([point.lat, point.lng], {
         icon,
         category: point.category,
-        zIndexOffset: isDimmed ? -1000 : 0,
+        zIndexOffset: isSelected ? 1000 : isDimmed ? -1000 : 0,
       });
 
       // Popup with point info
@@ -204,6 +215,8 @@ export default function NativeMarkerClusterGroup({
     activePointIds,
     dimActive,
     dimOpacity,
+    dotMode,
+    dotSize,
     drawingMode,
     onSelectPoint,
   ]);

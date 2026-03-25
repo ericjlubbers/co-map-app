@@ -248,12 +248,13 @@ export default function SidebarFilterLayout({
         {categories.map((cat) => {
           const info = getCategoryInfo(cat);
           const catColor = design.categoryColors[cat] || info.color;
+          const btnColor = design.sfBtnPreset === "filled" && design.sfBtnFillMode === "single" ? design.sfBtnFillColor : catColor;
           const catIcon = design.categoryIcons[cat] || info.icon;
           const isActive = activeCategory === cat;
           const isDemoGlow = demoMode && demoState === "running" && isActive;
           const isButtonDimmed = isDimMode && activeCategory !== null && !isActive;
           const count = points.filter((p) => p.category === cat).length;
-          const btnStyles = getButtonStyles(design.sfBtnPreset, catColor, isActive, isDemoGlow);
+          const btnStyles = getButtonStyles(design.sfBtnPreset, btnColor, isActive, isDemoGlow);
           return (
             <button
               key={cat}
@@ -297,11 +298,12 @@ export default function SidebarFilterLayout({
           {categories.map((cat) => {
             const info = getCategoryInfo(cat);
             const catColor = design.categoryColors[cat] || info.color;
+            const btnColor = design.sfBtnPreset === "filled" && design.sfBtnFillMode === "single" ? design.sfBtnFillColor : catColor;
             const catIcon = design.categoryIcons[cat] || info.icon;
             const isActive = activeCategory === cat;
             const isDemoGlow = demoMode && demoState === "running" && isActive;
             const isButtonDimmed = isDimMode && activeCategory !== null && !isActive;
-            const btnStyles = getButtonStyles(design.sfBtnPreset, catColor, isActive, isDemoGlow);
+            const btnStyles = getButtonStyles(design.sfBtnPreset, btnColor, isActive, isDemoGlow);
             return (
               <button
                 key={cat}

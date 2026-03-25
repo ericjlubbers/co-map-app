@@ -242,3 +242,27 @@ export function createMarkerIcon(
     popupAnchor: L.point(0, -result.anchorY + 4),
   });
 }
+
+/**
+ * Creates a simple circular dot icon (no icon, no stem).
+ * Used in "dot mode" for unselected/unhighlighted markers.
+ */
+export function createDotIcon(
+  color: string,
+  size: number,
+  dimmed?: boolean,
+  dimOpacity?: number,
+): L.DivIcon {
+  const r = size / 2;
+  const opacity = dimmed ? (dimOpacity ?? 0.3) : 1;
+  const svg = `<svg width="${size}" height="${size}" viewBox="0 0 ${size} ${size}" xmlns="http://www.w3.org/2000/svg">
+    <circle cx="${r}" cy="${r}" r="${r - 1}" fill="${color}" stroke="white" stroke-width="1" opacity="${opacity}" />
+  </svg>`;
+  return L.divIcon({
+    html: `<div class="dot-marker" style="transition: all 300ms ease;">${svg}</div>`,
+    className: "",
+    iconSize: L.point(size, size),
+    iconAnchor: L.point(r, r),
+    popupAnchor: L.point(0, -r),
+  });
+}
