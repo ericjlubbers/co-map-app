@@ -262,6 +262,20 @@ export const DEFAULT_DESIGN: DesignState = {
   clusterPlacementStrategy: "default",
   clusterPlacementReveal: true,
   clusterShowList: false,
+  transitionSpeed: 400,
+  cardConnectorPreset: "simple",
+  cardConnectorColor: "#ffffff",
+  cardConnectorWidth: 2,
+  cardConnectorDash: false,
+  cardFaceColor: "#6366f1",
+  cardFaceOpacity: 0.75,
+  cardBorderRadius: 12,
+  cardBgColor: "#ffffff",
+  cardShadow: true,
+  cardEdgeColor: "#000000",
+  cardEdgeWidth: 1,
+  cardEdgeOpacity: 0.4,
+  cardConnectorInset: -6,
 };
 
 // ── Clustering Settings ─────────────────────────────────────────────

@@ -17,7 +17,7 @@ export default function DataTabBar({
     <div className="flex flex-col border-b border-gray-200 bg-white">
       {/* Top-level tabs: Preview | Data */}
       <div className="flex items-center px-4">
-        {(["preview", "data"] as EditorTab[]).map((tab) => (
+        {(["layout", "data"] as EditorTab[]).map((tab) => (
           <button
             key={tab}
             onClick={() => onTabChange(tab)}

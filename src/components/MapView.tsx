@@ -3,7 +3,6 @@ import {
   MapContainer,
   TileLayer,
   Marker,
-  Popup,
   GeoJSON,
   useMap,
   useMapEvents,
@@ -25,7 +24,7 @@ import {
 import { useDesign } from "../context/DesignContext";
 import { createMarkerIcon, createDotIcon } from "./MarkerIcon";
 import { createClusterIcon } from "./ClusterIcon";
-import PointPopup from "./PointPopup";
+import FloatingPointCard from "./FloatingPointCard";
 import { COLORADO_COUNTIES } from "../data/coloradoCounties";
 import { COLORADO_BORDER, COLORADO_MASK } from "../data/coloradoBorder";
 import DrawnFeaturesLayer from "./layers/DrawnFeaturesLayer";
@@ -87,30 +86,27 @@ interface Props {
   dimActive?: boolean;
   /** Opacity for dimmed markers */
   dimOpacity?: number;
-  /** Whether auto-rotation is active (disables flyTo) */
-  rotationActive?: boolean;
+  /** Zoom into a specific point at flyToZoom */
+  onZoomToPoint?: (point: PointData) => void;
+  /** Navigate to next/prev point */
+  onNavigatePoint?: (direction: "prev" | "next") => void;
+  /** Whether auto-rotate is driving selection changes (choreographed transitions) */
+  autoRotateActive?: boolean;
 }
 
 // ── FlyToSelected ────────────────────────────────────────────
 function FlyToSelected({
-  point,
   mapRef,
   onMapRef,
+  zoomTarget,
   flyToZoom,
-  homeCenter,
-  homeZoom,
-  rotationActive,
 }: {
-  point: PointData | null;
   mapRef: React.RefObject<LeafletMap | null>;
   onMapRef?: (map: LeafletMap | null) => void;
+  zoomTarget: PointData | null;
   flyToZoom: number;
-  homeCenter: [number, number];
-  homeZoom: number;
-  rotationActive?: boolean;
 }) {
   const map = useMap();
-  const prevPointRef = useRef<PointData | null>(null);
 
   useEffect(() => {
     if (mapRef.current === null) {
@@ -119,20 +115,12 @@ function FlyToSelected({
     }
   }, [map, mapRef, onMapRef]);
 
+  // Only zoom when explicitly requested via the "Zoom In" button
   useEffect(() => {
-    if (rotationActive) {
-      // During rotation, don't move the map
-      prevPointRef.current = point;
-      return;
+    if (zoomTarget) {
+      map.flyTo([zoomTarget.lat, zoomTarget.lng], flyToZoom, { duration: 0.8 });
     }
-    if (point) {
-      map.flyTo([point.lat, point.lng], flyToZoom, { duration: 0.8 });
-    } else if (prevPointRef.current) {
-      // Point was deselected — fly back to initial view
-      map.flyTo(homeCenter, homeZoom, { duration: 0.8 });
-    }
-    prevPointRef.current = point;
-  }, [point, map, flyToZoom, homeCenter, homeZoom, rotationActive]);
+  }, [zoomTarget, map, flyToZoom]);
 
   return null;
 }
@@ -342,14 +330,17 @@ export default function MapView({
   activePointIds,
   dimActive,
   dimOpacity: dimOpacityProp,
-  rotationActive,
+  onZoomToPoint,
+  onNavigatePoint,
+  autoRotateActive = false,
 }: Props) {
   const { design } = useDesign();
   const tileConfig = getTileConfig(design.tilePreset);
   const mapRef = useRef<LeafletMap | null>(null);
-  const markerRefs = useRef<Record<string, L.Marker>>({});
 
   const [pendingVertices, setPendingVertices] = useState<LatLng[]>([]);
+  // Explicit zoom target — set only via "Zoom In" button
+  const [zoomTarget, setZoomTarget] = useState<PointData | null>(null);
 
   // ── View curation computed values ──────────────────────────
   const hiddenFeatureIds = useMemo(() => {
@@ -366,23 +357,84 @@ export default function MapView({
     [points, selectedId],
   );
 
-  useEffect(() => {
-    if (selectedId && markerRefs.current[selectedId]) {
-      const timer = setTimeout(() => {
-        markerRefs.current[selectedId]?.openPopup();
-      }, 900);
-      return () => clearTimeout(timer);
-    }
-  }, [selectedId]);
-
-  const handleMarkerRef = useCallback(
-    (id: string) => (ref: L.Marker | null) => {
-      if (ref) {
-        markerRefs.current[id] = ref;
-      }
-    },
-    [],
+  // Compute navigation index and label
+  const selectedIndex = useMemo(
+    () => (selectedId ? points.findIndex((p) => p.id === selectedId) : -1),
+    [points, selectedId],
   );
+  const navLabel = selectedIndex >= 0 ? `${selectedIndex + 1} of ${points.length}` : undefined;
+
+  const handleZoomIn = useCallback(() => {
+    if (selectedPoint) setZoomTarget(selectedPoint);
+  }, [selectedPoint]);
+
+  const handlePrev = useCallback(() => {
+    if (onNavigatePoint) { onNavigatePoint("prev"); return; }
+    if (selectedIndex > 0) onSelectPoint(points[selectedIndex - 1].id);
+  }, [onNavigatePoint, selectedIndex, points, onSelectPoint]);
+
+  const handleNext = useCallback(() => {
+    if (onNavigatePoint) { onNavigatePoint("next"); return; }
+    if (selectedIndex >= 0 && selectedIndex < points.length - 1) onSelectPoint(points[selectedIndex + 1].id);
+  }, [onNavigatePoint, selectedIndex, points, onSelectPoint]);
+
+  // Clear zoom target when selection changes
+  useEffect(() => { setZoomTarget(null); }, [selectedId]);
+
+  // Track pending popup open timer so we can cancel it immediately on click
+  const popupOpenTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // Use a ref for autoRotateActive so the popup effect only re-fires when
+  // selectedId actually changes (not when the auto-rotate flag toggles).
+  const autoRotateActiveRef = useRef(autoRotateActive);
+  autoRotateActiveRef.current = autoRotateActive;
+
+  // ── Floating card orchestration ──────────────────────────────
+  // Instead of Leaflet Popups, we render a custom FloatingPointCard
+  // overlay. `cardPoint` is the point currently displayed; choreography
+  // delays are handled here via the same timer pattern.
+  const [cardPoint, setCardPoint] = useState<PointData | null>(null);
+  const prevSelectedRef = useRef<string | null>(null);
+
+  useEffect(() => {
+    if (popupOpenTimerRef.current) {
+      clearTimeout(popupOpenTimerRef.current);
+      popupOpenTimerRef.current = null;
+    }
+
+    const prevId = prevSelectedRef.current;
+    prevSelectedRef.current = selectedId;
+
+    if (!selectedId) {
+      setCardPoint(null);
+      return;
+    }
+
+    const point = points.find((p) => p.id === selectedId) ?? null;
+    const isAutoRotating = autoRotateActiveRef.current;
+
+    // Choreography: always hide old card first, then show new card
+    // so the scale animation replays consistently
+    if (prevId !== null && prevId !== selectedId) {
+      setCardPoint(null); // collapse old card
+      const delay = isAutoRotating ? design.transitionSpeed : Math.min(design.transitionSpeed, 250);
+      popupOpenTimerRef.current = setTimeout(() => {
+        popupOpenTimerRef.current = null;
+        setCardPoint(point);
+      }, delay);
+    } else {
+      setCardPoint(point);
+    }
+
+    return () => {
+      if (popupOpenTimerRef.current) {
+        clearTimeout(popupOpenTimerRef.current);
+        popupOpenTimerRef.current = null;
+      }
+    };
+  // autoRotateActive intentionally read from ref, not in deps
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedId, points, design.transitionSpeed]);
 
   const cursorClass =
     drawingMode === "point" || drawingMode === "line" || drawingMode === "polygon"
@@ -392,7 +444,10 @@ export default function MapView({
         : "";
 
   return (
-    <div className={`h-full w-full ${cursorClass}${viewLocked ? " ring-2 ring-inset ring-amber-400/60" : ""}`}>
+    <div
+      className={`relative h-full w-full ${cursorClass}${viewLocked ? " ring-2 ring-inset ring-amber-400/60" : ""}`}
+      style={{ "--transition-speed": `${design.transitionSpeed}ms` } as React.CSSProperties}
+    >
       <MapContainer
         center={viewCuration?.center ?? MAP_CENTER}
         zoom={viewCuration?.zoom ?? MAP_ZOOM}
@@ -450,13 +505,10 @@ export default function MapView({
         )}
 
         <FlyToSelected
-          point={selectedPoint}
           mapRef={mapRef}
           onMapRef={onMapRef}
+          zoomTarget={zoomTarget}
           flyToZoom={design.flyToZoom}
-          homeCenter={viewCuration?.center ?? MAP_CENTER}
-          homeZoom={viewCuration?.zoom ?? MAP_ZOOM}
-          rotationActive={rotationActive}
         />
         <MapClickDeselect onSelectPoint={onSelectPoint} drawingMode={drawingMode ?? null} />
 
@@ -509,7 +561,6 @@ export default function MapView({
                         design.markerPadding,
                       )
                   }
-                  ref={handleMarkerRef(point.id)}
                   zIndexOffset={isSelected ? 1000 : isDimmed ? -1000 : 0}
                   eventHandlers={{
                     click: () => {
@@ -518,11 +569,7 @@ export default function MapView({
                       }
                     },
                   }}
-                >
-                  <Popup>
-                    <PointPopup point={point} />
-                  </Popup>
-                </Marker>
+                />
               );
             })}
           </>
@@ -605,7 +652,6 @@ export default function MapView({
                   )
               }
               category={point.category}
-              ref={handleMarkerRef(point.id)}
               zIndexOffset={isSelected ? 1000 : isDimmed ? -1000 : 0}
               eventHandlers={{
                 click: () => {
@@ -614,11 +660,7 @@ export default function MapView({
                   }
                 },
               }}
-            >
-              <Popup>
-                <PointPopup point={point} />
-              </Popup>
-            </Marker>
+            />
             );
           })}
         </MarkerClusterGroup>
@@ -681,6 +723,32 @@ export default function MapView({
         {/* Label overlay — rendered last so it always appears on top */}
         <LabelLayer />
       </MapContainer>
+
+      {/* Floating point card overlay — rendered outside Leaflet */}
+      {cardPoint && mapRef.current && (
+        <FloatingPointCard
+          point={cardPoint}
+          map={mapRef.current}
+          onZoomIn={onZoomToPoint ? () => onZoomToPoint(cardPoint) : handleZoomIn}
+          onPrev={selectedIndex > 0 ? handlePrev : undefined}
+          onNext={selectedIndex < points.length - 1 ? handleNext : undefined}
+          navLabel={navLabel}
+          transitionSpeed={design.transitionSpeed}
+          preset={design.cardConnectorPreset}
+          connectorColor={design.cardConnectorColor}
+          connectorWidth={design.cardConnectorWidth}
+          connectorDash={design.cardConnectorDash}
+          faceColor={design.cardFaceColor}
+          faceOpacity={design.cardFaceOpacity}
+          cardBorderRadius={design.cardBorderRadius}
+          cardBgColor={design.cardBgColor}
+          cardShadow={design.cardShadow}
+          edgeColor={design.cardEdgeColor}
+          edgeWidth={design.cardEdgeWidth}
+          edgeOpacity={design.cardEdgeOpacity}
+          connectorInset={design.cardConnectorInset}
+        />
+      )}
     </div>
   );
 }

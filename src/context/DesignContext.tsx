@@ -113,6 +113,20 @@ const PARAM_MAP: Record<keyof DesignState, string> = {
   clusterPlacementStrategy: "cps",
   clusterPlacementReveal: "cpr",
   clusterShowList: "csl",
+  transitionSpeed: "tsp",
+  cardConnectorPreset: "ccp",
+  cardConnectorColor: "ccColor",
+  cardConnectorWidth: "ccW",
+  cardConnectorDash: "ccDash",
+  cardFaceColor: "cfColor",
+  cardFaceOpacity: "cfOp",
+  cardBorderRadius: "cbr",
+  cardBgColor: "cbg",
+  cardShadow: "cSh",
+  cardEdgeColor: "ceColor",
+  cardEdgeWidth: "ceW",
+  cardEdgeOpacity: "ceOp",
+  cardConnectorInset: "ccIn",
 };
 
 // ── Font shorthand mapping ──────────────────────────────────
@@ -409,6 +423,41 @@ function parseFromURL(): Partial<DesignState> {
   const csl = params.get(PARAM_MAP.clusterShowList);
   if (csl) partial.clusterShowList = csl === "1";
 
+  const tsp = params.get(PARAM_MAP.transitionSpeed);
+  if (tsp) partial.transitionSpeed = parseInt(tsp, 10);
+
+  const CARD_PRESETS: import("../types").CardConnectorPreset[] = ["simple", "retro-3d"];
+  const ccp = params.get(PARAM_MAP.cardConnectorPreset);
+  if (ccp) {
+    const idx = parseInt(ccp, 10);
+    if (idx >= 0 && idx < CARD_PRESETS.length) partial.cardConnectorPreset = CARD_PRESETS[idx];
+  }
+  const ccColor = params.get(PARAM_MAP.cardConnectorColor);
+  if (ccColor) partial.cardConnectorColor = `#${ccColor}`;
+  const ccW = params.get(PARAM_MAP.cardConnectorWidth);
+  if (ccW) partial.cardConnectorWidth = parseInt(ccW, 10);
+  const ccDash = params.get(PARAM_MAP.cardConnectorDash);
+  if (ccDash) partial.cardConnectorDash = ccDash === "1";
+  const cfColor = params.get(PARAM_MAP.cardFaceColor);
+  if (cfColor) partial.cardFaceColor = `#${cfColor}`;
+  const cfOp = params.get(PARAM_MAP.cardFaceOpacity);
+  if (cfOp) partial.cardFaceOpacity = parseFloat(cfOp);
+
+  const cbr = params.get(PARAM_MAP.cardBorderRadius);
+  if (cbr) partial.cardBorderRadius = parseInt(cbr, 10);
+  const cbg = params.get(PARAM_MAP.cardBgColor);
+  if (cbg) partial.cardBgColor = `#${cbg}`;
+  const cSh = params.get(PARAM_MAP.cardShadow);
+  if (cSh) partial.cardShadow = cSh === "1";
+  const ceColor = params.get(PARAM_MAP.cardEdgeColor);
+  if (ceColor) partial.cardEdgeColor = `#${ceColor}`;
+  const ceW = params.get(PARAM_MAP.cardEdgeWidth);
+  if (ceW) partial.cardEdgeWidth = parseFloat(ceW);
+  const ceOp = params.get(PARAM_MAP.cardEdgeOpacity);
+  if (ceOp) partial.cardEdgeOpacity = parseFloat(ceOp);
+  const ccIn = params.get(PARAM_MAP.cardConnectorInset);
+  if (ccIn) partial.cardConnectorInset = parseFloat(ccIn);
+
   return partial;
 }
 
@@ -623,6 +672,38 @@ function serializeToURL(state: DesignState, includeDesignMode: boolean): string 
     params.set(PARAM_MAP.clusterPlacementReveal, state.clusterPlacementReveal ? "1" : "0");
   if (state.clusterShowList !== DEFAULT_DESIGN.clusterShowList)
     params.set(PARAM_MAP.clusterShowList, state.clusterShowList ? "1" : "0");
+
+  if (state.transitionSpeed !== DEFAULT_DESIGN.transitionSpeed)
+    params.set(PARAM_MAP.transitionSpeed, String(state.transitionSpeed));
+
+  if (state.cardConnectorPreset !== DEFAULT_DESIGN.cardConnectorPreset) {
+    const ccIdx = (["simple", "retro-3d"] as const).indexOf(state.cardConnectorPreset);
+    params.set(PARAM_MAP.cardConnectorPreset, String(ccIdx));
+  }
+  if (state.cardConnectorColor !== DEFAULT_DESIGN.cardConnectorColor)
+    params.set(PARAM_MAP.cardConnectorColor, state.cardConnectorColor.replace("#", ""));
+  if (state.cardConnectorWidth !== DEFAULT_DESIGN.cardConnectorWidth)
+    params.set(PARAM_MAP.cardConnectorWidth, String(state.cardConnectorWidth));
+  if (state.cardConnectorDash !== DEFAULT_DESIGN.cardConnectorDash)
+    params.set(PARAM_MAP.cardConnectorDash, state.cardConnectorDash ? "1" : "0");
+  if (state.cardFaceColor !== DEFAULT_DESIGN.cardFaceColor)
+    params.set(PARAM_MAP.cardFaceColor, state.cardFaceColor.replace("#", ""));
+  if (state.cardFaceOpacity !== DEFAULT_DESIGN.cardFaceOpacity)
+    params.set(PARAM_MAP.cardFaceOpacity, String(state.cardFaceOpacity));
+  if (state.cardBorderRadius !== DEFAULT_DESIGN.cardBorderRadius)
+    params.set(PARAM_MAP.cardBorderRadius, String(state.cardBorderRadius));
+  if (state.cardBgColor !== DEFAULT_DESIGN.cardBgColor)
+    params.set(PARAM_MAP.cardBgColor, state.cardBgColor.replace("#", ""));
+  if (state.cardShadow !== DEFAULT_DESIGN.cardShadow)
+    params.set(PARAM_MAP.cardShadow, state.cardShadow ? "1" : "0");
+  if (state.cardEdgeColor !== DEFAULT_DESIGN.cardEdgeColor)
+    params.set(PARAM_MAP.cardEdgeColor, state.cardEdgeColor.replace("#", ""));
+  if (state.cardEdgeWidth !== DEFAULT_DESIGN.cardEdgeWidth)
+    params.set(PARAM_MAP.cardEdgeWidth, String(state.cardEdgeWidth));
+  if (state.cardEdgeOpacity !== DEFAULT_DESIGN.cardEdgeOpacity)
+    params.set(PARAM_MAP.cardEdgeOpacity, String(state.cardEdgeOpacity));
+  if (state.cardConnectorInset !== DEFAULT_DESIGN.cardConnectorInset)
+    params.set(PARAM_MAP.cardConnectorInset, String(state.cardConnectorInset));
 
   if (includeDesignMode) params.set("design", "1");
 

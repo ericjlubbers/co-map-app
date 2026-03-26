@@ -137,6 +137,7 @@ export default function SidebarFilterLayout({
     order: design.demoRotationOrder,
     categoryIntervalMs: design.demoIntervalMs,
     pointIntervalMs: design.demoPointIntervalMs,
+    transitionSpeed: design.transitionSpeed,
   });
 
   // Sync rotation's active category to local state (allows manual override when paused)
@@ -148,11 +149,14 @@ export default function SidebarFilterLayout({
 
   const filteredPoints = useMemo(() => {
     if (!activeCategory) return points;
+    // In by-point mode, keep all points visible
+    if (demoMode && rotation.demoState === "running" && design.demoRotationMode === "by-point") return points;
     return points.filter((p) => p.category === activeCategory);
-  }, [points, activeCategory]);
+  }, [points, activeCategory, demoMode, rotation.demoState, design.demoRotationMode]);
 
   // ── Dim-mode state ──────────────────────────────────────────
-  const isDimMode = demoMode && rotation.demoState === "running" && design.demoHighlightStyle === "dim";
+  // In by-point mode, don't dim — just select the point and highlight button
+  const isDimMode = demoMode && rotation.demoState === "running" && design.demoHighlightStyle === "dim" && design.demoRotationMode !== "by-point";
 
   const activePointIds = useMemo(() => {
     if (!isDimMode || !activeCategory) return undefined;
@@ -345,7 +349,7 @@ export default function SidebarFilterLayout({
             activePointIds={activePointIds}
             dimActive={isDimMode}
             dimOpacity={design.demoDimOpacity}
-            rotationActive={demoMode && demoState === "running"}
+            autoRotateActive={demoMode && rotation.demoState === "running"}
           />
         </div>
 

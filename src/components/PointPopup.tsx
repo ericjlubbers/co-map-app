@@ -1,18 +1,37 @@
+import { useEffect } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faDirections, faGlobe } from "@fortawesome/free-solid-svg-icons";
+import { faDirections, faGlobe, faMagnifyingGlassPlus, faChevronLeft, faChevronRight } from "@fortawesome/free-solid-svg-icons";
 import type { PointData } from "../types";
 import { getCategoryInfo } from "../config";
 import { useDesign } from "../context/DesignContext";
 
 interface Props {
   point: PointData;
+  /** Zoom into this point at the configured flyToZoom level */
+  onZoomIn?: () => void;
+  /** Navigate to the previous point */
+  onPrev?: () => void;
+  /** Navigate to the next point */
+  onNext?: () => void;
+  /** "3 of 150" style label */
+  navLabel?: string;
 }
 
-export default function PointPopup({ point }: Props) {
+export default function PointPopup({ point, onZoomIn, onPrev, onNext, navLabel }: Props) {
   const { design } = useDesign();
   const catInfo = getCategoryInfo(point.category);
   const displayColor = design.categoryColors[point.category] || catInfo.color;
   const displayIcon = design.categoryIcons[point.category] || point.icon || catInfo.icon;
+
+  // Keyboard navigation: left/right arrows + Escape
+  useEffect(() => {
+    function handleKey(e: KeyboardEvent) {
+      if (e.key === "ArrowLeft" && onPrev) { e.preventDefault(); onPrev(); }
+      if (e.key === "ArrowRight" && onNext) { e.preventDefault(); onNext(); }
+    }
+    window.addEventListener("keydown", handleKey);
+    return () => window.removeEventListener("keydown", handleKey);
+  }, [onPrev, onNext]);
 
   return (
     <div className="min-w-[220px] max-w-[280px]">
@@ -62,7 +81,7 @@ export default function PointPopup({ point }: Props) {
       )}
 
       {/* Actions */}
-      <div className="flex gap-3">
+      <div className="flex flex-wrap items-center gap-3">
         {point.address && (
           <a
             href={`https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(point.address)}`}
@@ -85,7 +104,41 @@ export default function PointPopup({ point }: Props) {
             Website
           </a>
         )}
+        {onZoomIn && (
+          <button
+            onClick={onZoomIn}
+            className="inline-flex items-center gap-1 text-xs font-medium text-blue-600 hover:text-blue-800"
+          >
+            <FontAwesomeIcon icon={faMagnifyingGlassPlus} className="text-[10px]" />
+            Zoom In
+          </button>
+        )}
       </div>
+
+      {/* Prev / Next navigation */}
+      {(onPrev || onNext) && (
+        <div className="mt-2 flex items-center justify-between border-t border-gray-100 pt-2">
+          <button
+            onClick={onPrev}
+            disabled={!onPrev}
+            className="inline-flex items-center gap-1 rounded px-1.5 py-0.5 text-[11px] font-medium text-gray-500 hover:bg-gray-100 hover:text-gray-700 disabled:invisible"
+          >
+            <FontAwesomeIcon icon={faChevronLeft} className="text-[9px]" />
+            Prev
+          </button>
+          {navLabel && (
+            <span className="text-[10px] text-gray-400">{navLabel}</span>
+          )}
+          <button
+            onClick={onNext}
+            disabled={!onNext}
+            className="inline-flex items-center gap-1 rounded px-1.5 py-0.5 text-[11px] font-medium text-gray-500 hover:bg-gray-100 hover:text-gray-700 disabled:invisible"
+          >
+            Next
+            <FontAwesomeIcon icon={faChevronRight} className="text-[9px]" />
+          </button>
+        </div>
+      )}
     </div>
   );
 }

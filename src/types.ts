@@ -68,6 +68,7 @@ export type SfBtnPreset = "filled" | "outlined" | "ghost" | "pill" | "minimal";
 export type DemoHighlightStyle = "filter" | "dim";
 export type DemoRotationMode = "by-category" | "by-point";
 export type DemoRotationOrder = "sequential" | "shuffled";
+export type CardConnectorPreset = "simple" | "retro-3d";
 export type FontFamily = "Libre Franklin" | "Atkinson Hyperlegible" | "Plus Jakarta Sans";
 export type TilePreset =
   | "carto-light"
@@ -186,7 +187,7 @@ export interface DataConfig {
 }
 
 /** Active tabs in the editor */
-export type EditorTab = "preview" | "data";
+export type EditorTab = "layout" | "data";
 export type DataLayerTab = "regions" | "points";
 
 /** Editor mode: Settings (design controls) or Customize (element-level editing) */
@@ -320,4 +321,22 @@ export interface DesignState {
   clusterPlacementReveal: boolean;
   // List plugin
   clusterShowList: boolean;
+  // Animation / transition speed (ms)
+  transitionSpeed: number;
+  // Card connector style
+  cardConnectorPreset: CardConnectorPreset;
+  cardConnectorColor: string;
+  cardConnectorWidth: number;
+  cardConnectorDash: boolean;
+  cardFaceColor: string;
+  cardFaceOpacity: number;
+  // Card appearance
+  cardBorderRadius: number;
+  cardBgColor: string;
+  cardShadow: boolean;
+  // Card edge lines (retro-3d)
+  cardEdgeColor: string;
+  cardEdgeWidth: number;
+  cardEdgeOpacity: number;
+  cardConnectorInset: number;
 }

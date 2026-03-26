@@ -7,11 +7,9 @@ import {
   faLink,
   faTimes,
   faChevronRight,
-  faPlay,
-  faStop,
 } from "@fortawesome/free-solid-svg-icons";
 import { useDesign } from "../context/DesignContext";
-import type { DesignState, FontFamily, ClusterStyle, ClusterPlugin, PlacementStrategy, TilePreset, SfBtnPreset, SfBtnFillMode, DemoRotationMode, DemoRotationOrder, MarkerShape, MarkerConnector, MarkerPadding } from "../types";
+import type { DesignState, FontFamily, ClusterStyle, ClusterPlugin, PlacementStrategy, TilePreset, SfBtnPreset, SfBtnFillMode, DemoRotationMode, DemoRotationOrder, MarkerShape, MarkerConnector, MarkerPadding, CardConnectorPreset } from "../types";
 import AccordionSection from "./AccordionSection";
 import SidebarGroup from "./SidebarGroup";
 import ColorPicker, { CARBON_CATEGORICAL } from "./ColorPicker";
@@ -101,6 +99,11 @@ const MARKER_PADDINGS: { value: MarkerPadding; label: string }[] = [
   { value: "spacious", label: "Spacious" },
 ];
 
+const CARD_CONNECTOR_PRESETS: { value: CardConnectorPreset; label: string }[] = [
+  { value: "simple", label: "Simple" },
+  { value: "retro-3d", label: "Retro 3D" },
+];
+
 const CLUSTER_PLUGINS: { value: ClusterPlugin; label: string }[] = [
   { value: "react-leaflet-cluster", label: "React Cluster" },
   { value: "leaflet-markercluster", label: "Native Cluster" },
@@ -129,13 +132,9 @@ interface DesignSidebarProps {
   onClose: () => void;
   /** Distinct categories from current point data, used for by-category color mode */
   categories?: string[];
-  /** Whether auto-rotate preview is currently active */
-  previewActive?: boolean;
-  /** Toggle auto-rotate preview on/off */
-  onPreviewToggle?: () => void;
 }
 
-export default function DesignSidebar({ onClose, categories = [], previewActive = false, onPreviewToggle }: DesignSidebarProps) {
+export default function DesignSidebar({ onClose, categories = [] }: DesignSidebarProps) {
   const { design, set, reset, getShareURL } = useDesign();
   const [copied, setCopied] = useState<"view" | "edit" | null>(null);
   const [openGroup, setOpenGroup] = useState<"layers" | "design">("layers");
@@ -967,6 +966,127 @@ export default function DesignSidebar({ onClose, categories = [], previewActive 
             </div>
           </AccordionSection>
 
+          {/* ── Card ── */}
+          <AccordionSection title="Card">
+            <div className="space-y-3">
+              <Field label="Border Radius">
+                <Slider
+                  min={0}
+                  max={24}
+                  step={1}
+                  value={design.cardBorderRadius}
+                  onChange={(v) => set("cardBorderRadius", v)}
+                  suffix="px"
+                />
+              </Field>
+              <Field label="Background">
+                <ColorPicker
+                  value={design.cardBgColor}
+                  onChange={(v) => set("cardBgColor", v)}
+                />
+              </Field>
+              <Field label="Shadow">
+                <ToggleSwitch
+                  checked={design.cardShadow}
+                  onChange={(v) => set("cardShadow", v)}
+                />
+              </Field>
+            </div>
+          </AccordionSection>
+
+          {/* ── Card Connector ── */}
+          <AccordionSection title="Card Connector">
+            <div className="space-y-3">
+              <Field label="Style">
+                <SegmentedControl
+                  options={CARD_CONNECTOR_PRESETS}
+                  value={design.cardConnectorPreset}
+                  onChange={(v) => set("cardConnectorPreset", v)}
+                />
+              </Field>
+              {design.cardConnectorPreset === "simple" && (
+                <>
+                  <Field label="Line Color">
+                    <ColorPicker
+                      value={design.cardConnectorColor}
+                      onChange={(v) => set("cardConnectorColor", v)}
+                    />
+                  </Field>
+                  <Field label="Line Width">
+                    <Slider
+                      min={1}
+                      max={6}
+                      step={0.5}
+                      value={design.cardConnectorWidth}
+                      onChange={(v) => set("cardConnectorWidth", v)}
+                      suffix="px"
+                    />
+                  </Field>
+                  <Field label="Dashed">
+                    <ToggleSwitch
+                      checked={design.cardConnectorDash}
+                      onChange={(v) => set("cardConnectorDash", v)}
+                    />
+                  </Field>
+                </>
+              )}
+              {design.cardConnectorPreset === "retro-3d" && (
+                <>
+                  <Field label="Face Color">
+                    <ColorPicker
+                      value={design.cardFaceColor}
+                      onChange={(v) => set("cardFaceColor", v)}
+                    />
+                  </Field>
+                  <Field label="Face Opacity">
+                    <Slider
+                      min={0.1}
+                      max={1}
+                      step={0.05}
+                      value={design.cardFaceOpacity}
+                      onChange={(v) => set("cardFaceOpacity", v)}
+                    />
+                  </Field>
+                  <Field label="Edge Color">
+                    <ColorPicker
+                      value={design.cardEdgeColor}
+                      onChange={(v) => set("cardEdgeColor", v)}
+                    />
+                  </Field>
+                  <Field label="Edge Width">
+                    <Slider
+                      min={0}
+                      max={4}
+                      step={0.5}
+                      value={design.cardEdgeWidth}
+                      onChange={(v) => set("cardEdgeWidth", v)}
+                      suffix="px"
+                    />
+                  </Field>
+                  <Field label="Edge Opacity">
+                    <Slider
+                      min={0}
+                      max={1}
+                      step={0.05}
+                      value={design.cardEdgeOpacity}
+                      onChange={(v) => set("cardEdgeOpacity", v)}
+                    />
+                  </Field>
+                  <Field label="Connector Inset">
+                    <Slider
+                      min={-12}
+                      max={12}
+                      step={1}
+                      value={design.cardConnectorInset}
+                      onChange={(v) => set("cardConnectorInset", v)}
+                      suffix="px"
+                    />
+                  </Field>
+                </>
+              )}
+            </div>
+          </AccordionSection>
+
           {/* ── Auto-Rotate ── */}
           <AccordionSection title="Auto-Rotate">
             <div className="space-y-3">
@@ -979,19 +1099,6 @@ export default function DesignSidebar({ onClose, categories = [], previewActive 
               <p className="text-[11px] text-gray-400 italic">
                 Automatically cycles through each category, spotlighting points one group at a time.
               </p>
-              {design.enableDemoMode && onPreviewToggle && (
-                <button
-                  onClick={onPreviewToggle}
-                  className={`flex w-full items-center justify-center gap-2 rounded-md px-3 py-2 text-xs font-medium transition-colors ${
-                    previewActive
-                      ? "bg-red-50 text-red-600 border border-red-200 hover:bg-red-100"
-                      : "bg-blue-50 text-blue-600 border border-blue-200 hover:bg-blue-100"
-                  }`}
-                >
-                  <FontAwesomeIcon icon={previewActive ? faStop : faPlay} className="text-[10px]" />
-                  {previewActive ? "Stop Preview" : "Preview Rotation"}
-                </button>
-              )}
               {design.enableDemoMode && (
                 <>
                   <Field label="Rotation Mode">
@@ -1078,6 +1185,18 @@ export default function DesignSidebar({ onClose, categories = [], previewActive 
                     </>
                   )}
                 </>
+              )}
+              {design.enableDemoMode && (
+                <Field label="Transition Speed">
+                  <Slider
+                    min={100}
+                    max={800}
+                    step={50}
+                    value={design.transitionSpeed}
+                    onChange={(v) => set("transitionSpeed", v)}
+                    format={(v) => `${v}ms`}
+                  />
+                </Field>
               )}
             </div>
           </AccordionSection>

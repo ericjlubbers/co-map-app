@@ -42,6 +42,13 @@ body {
   box-shadow: 0 4px 20px rgba(0, 0, 0, 0.12) !important;
 }
 
+/* Smooth popup open/close — only fade, never animate transform (Leaflet
+   uses translate3d for positioning and a transform transition causes popups
+   to slide/shudder between markers). */
+.leaflet-popup {
+  transition: opacity var(--transition-speed, 400ms) ease;
+}
+
 .leaflet-popup-content {
   margin: 12px 16px !important;
   line-height: 1.5 !important;
@@ -49,6 +56,14 @@ body {
 
 .leaflet-popup-tip {
   box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08) !important;
+}
+
+/* ── Dot/Marker transitions ─────────────────────────────────── */
+.dot-marker {
+  transition: transform var(--transition-speed, 400ms) ease, opacity var(--transition-speed, 400ms) ease;
+}
+.leaflet-marker-icon {
+  transition: transform var(--transition-speed, 400ms) ease;
 }
 
 /* ── CO150 Triple Border ────────────────────────────────────── */

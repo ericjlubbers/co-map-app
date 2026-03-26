@@ -3,8 +3,6 @@ import type { PointData, DemoRotationMode, DemoRotationOrder } from "../types";
 
 /** Milliseconds of inactivity before the demo auto-resumes after a pause */
 const AUTO_RESUME_DELAY_MS = 10_000;
-/** Milliseconds for the overlay fade transition */
-const FADE_TRANSITION_MS = 400;
 
 export interface UseAutoRotateOptions {
   /** All available categories */
@@ -21,6 +19,8 @@ export interface UseAutoRotateOptions {
   categoryIntervalMs: number;
   /** Interval for point rotation (ms) */
   pointIntervalMs: number;
+  /** Transition speed in ms (controls fade duration) */
+  transitionSpeed: number;
 }
 
 export interface UseAutoRotateResult {
@@ -64,6 +64,7 @@ export function useAutoRotate({
   order,
   categoryIntervalMs,
   pointIntervalMs,
+  transitionSpeed,
 }: UseAutoRotateOptions): UseAutoRotateResult {
   const [demoState, setDemoState] = useState<"running" | "paused">("running");
   const [stepIndex, setStepIndex] = useState(0);
@@ -164,12 +165,30 @@ export function useAutoRotate({
         return next;
       });
       setVisible(true);
-    }, FADE_TRANSITION_MS);
-  }, [order, itemCount]);
+    }, transitionSpeed);
+  }, [order, itemCount, transitionSpeed]);
+
+  // Track whether this is the first tick after enable — skip delay for immediate first item
+  const isFirstTickRef = useRef(true);
+
+  // Reset first-tick flag when enabled/mode/order changes
+  useEffect(() => {
+    isFirstTickRef.current = true;
+  }, [enabled, mode, order]);
 
   // Advance timer when running
   useEffect(() => {
     if (!enabled || demoState !== "running" || itemCount === 0) return;
+
+    // First tick: show the current item immediately, then start the interval timer
+    if (isFirstTickRef.current) {
+      isFirstTickRef.current = false;
+      setVisible(true);
+      // Schedule next advance after full interval
+      timerRef.current = setTimeout(advance, intervalMs);
+      return () => { if (timerRef.current) clearTimeout(timerRef.current); };
+    }
+
     timerRef.current = setTimeout(advance, intervalMs);
     return () => { if (timerRef.current) clearTimeout(timerRef.current); };
   }, [enabled, demoState, stepIndex, intervalMs, itemCount, advance]);

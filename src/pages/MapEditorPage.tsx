@@ -101,7 +101,7 @@ export default function MapEditorPage() {
   const [viewLocked, setViewLocked] = useState(false);
 
   // ── Tab state ─────────────────────────────────────────────
-  const [activeTab, setActiveTab] = useState<EditorTab>("preview");
+  const [activeTab, setActiveTab] = useState<EditorTab>("layout");
   const [activeLayer, setActiveLayer] = useState<DataLayerTab>("points");
 
   // ── Data config (local copy — saved on changes) ───────────
@@ -757,7 +757,7 @@ export default function MapEditorPage() {
 
         {/* Main content — switches between Preview and Data tab */}
         <div className="min-h-0 flex-1">
-          {activeTab === "preview" ? (
+          {activeTab === "layout" ? (
             <MapEditorContent
               mapId={id}
               points={mapPoints}

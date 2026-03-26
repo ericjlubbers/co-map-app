@@ -38,6 +38,7 @@ export default function AutoRotateDemo({
     order: design.demoRotationOrder,
     categoryIntervalMs: intervalMs,
     pointIntervalMs: design.demoPointIntervalMs,
+    transitionSpeed: design.transitionSpeed,
   });
 
   // Attach interaction listeners

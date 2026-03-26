@@ -172,15 +172,6 @@ export default function NativeMarkerClusterGroup({
         zIndexOffset: isSelected ? 1000 : isDimmed ? -1000 : 0,
       });
 
-      // Popup with point info
-      const popupContent = `<div class="point-popup">
-        ${point.imageUrl ? `<img src="${encodeURI(point.imageUrl)}" alt="" style="width:100%;max-height:120px;object-fit:cover;border-radius:4px;margin-bottom:4px" />` : ""}
-        <strong>${point.title.replace(/</g, "&lt;")}</strong>
-        ${point.category ? `<div style="color:#6b7280;font-size:11px;margin-top:2px">${point.category.replace(/</g, "&lt;")}</div>` : ""}
-        ${point.description ? `<div style="margin-top:4px;font-size:12px">${point.description.replace(/</g, "&lt;")}</div>` : ""}
-      </div>`;
-      marker.bindPopup(popupContent, { maxWidth: 250 });
-
       marker.on("click", () => {
         if (!drawingMode || drawingMode === "select") {
           onSelectPoint(point.id);

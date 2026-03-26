@@ -3,6 +3,7 @@ import { useDesign } from "../context/DesignContext";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
   faGear,
+  faEye,
 } from "@fortawesome/free-solid-svg-icons";
 import MapView from "./MapView";
 import DataTable from "./DataTable";
@@ -12,8 +13,8 @@ import CustomizeSidebar from "./CustomizeSidebar";
 import AutoRotateDemo from "./AutoRotateDemo";
 import DrawingToolbar from "./DrawingToolbar";
 import DrawnFeatureForm from "./DrawnFeatureForm";
-import { useAutoRotate } from "../hooks/useAutoRotate";
 import DrawnFeaturesTable from "./DrawnFeaturesTable";
+import PreviewModal from "./PreviewModal";
 import SidebarFilterLayout from "./SidebarFilterLayout";
 import {
   emptyCollection,
@@ -200,44 +201,8 @@ export default function MapEditorContent({
     return Array.from(cats).sort();
   }, [data]);
 
-  // ── Preview auto-rotate (in-editor preview) ───────────────
-  const [previewDemoMode, setPreviewDemoMode] = useState(false);
-  const previewRotation = useAutoRotate({
-    categories,
-    points: data,
-    enabled: previewDemoMode,
-    mode: design.demoRotationMode,
-    order: design.demoRotationOrder,
-    categoryIntervalMs: design.demoIntervalMs,
-    pointIntervalMs: design.demoPointIntervalMs,
-  });
-
-  const previewActivePointIds = useMemo(() => {
-    if (!previewDemoMode || previewRotation.demoState !== "running") return undefined;
-    if (design.demoHighlightStyle !== "dim") return undefined;
-    const cat = previewRotation.activeCategory;
-    if (!cat) return undefined;
-    if (design.demoRotationMode === "by-point" && previewRotation.activePointId) {
-      return new Set([previewRotation.activePointId]);
-    }
-    return new Set(data.filter((p) => p.category === cat).map((p) => p.id));
-  }, [previewDemoMode, previewRotation.demoState, previewRotation.activeCategory, previewRotation.activePointId, design.demoHighlightStyle, design.demoRotationMode, data]);
-
-  const previewDimActive = previewDemoMode && previewRotation.demoState === "running" && design.demoHighlightStyle === "dim";
-
-  // Sync preview rotation's active point to selectedId
-  useEffect(() => {
-    if (previewDemoMode && previewRotation.demoState === "running" && previewRotation.activePointId) {
-      setSelectedId(previewRotation.activePointId);
-    }
-  }, [previewDemoMode, previewRotation.demoState, previewRotation.activePointId]);
-
-  // Clear selection when preview stops
-  useEffect(() => {
-    if (!previewDemoMode) {
-      setSelectedId(null);
-    }
-  }, [previewDemoMode]);
+  // ── Preview modal (isolated embed preview) ────────────────
+  const [showPreviewModal, setShowPreviewModal] = useState(false);
 
   const filteredPoints = useMemo(() => {
     let result = data;
@@ -245,15 +210,6 @@ export default function MapEditorContent({
     // Demo mode overrides manual category filter
     if (demoMode && demoCategoryFilter !== null) {
       return result.filter((p) => p.category === demoCategoryFilter);
-    }
-
-    // Preview filter mode (non-sidebar-filter layout)
-    if (previewDemoMode && previewRotation.demoState === "running" && design.demoHighlightStyle === "filter") {
-      if (design.demoRotationMode === "by-point" && previewRotation.activePointId) {
-        return result.filter((p) => p.id === previewRotation.activePointId);
-      } else if (previewRotation.activeCategory) {
-        return result.filter((p) => p.category === previewRotation.activeCategory);
-      }
     }
 
     // Category filter
@@ -270,7 +226,7 @@ export default function MapEditorContent({
       );
     }
     return result;
-  }, [data, activeCategories, debouncedSearch, demoMode, demoCategoryFilter, previewDemoMode, previewRotation.demoState, previewRotation.activeCategory, previewRotation.activePointId, design.demoHighlightStyle, design.demoRotationMode]);
+  }, [data, activeCategories, debouncedSearch, demoMode, demoCategoryFilter]);
 
   const handleToggleCategory = useCallback((category: string) => {
     setActiveCategories((prev) => {
@@ -431,15 +387,27 @@ export default function MapEditorContent({
   return (
     <div className="flex h-full" style={{ backgroundColor: design.pageBg }}>
       <div className="flex min-w-0 flex-1 flex-col">
-        {!embedMode && !sidebarOpen && (
-          <button
-            onClick={() => setSidebarOpen(true)}
-            className="absolute right-3 top-14 z-[1000] rounded-md bg-white px-2.5 py-1.5 text-xs font-medium text-gray-600 shadow-md border border-gray-200 hover:bg-gray-50 transition-colors"
-            title="Open design panel (⌘⇧D)"
-          >
-            <FontAwesomeIcon icon={faGear} className="mr-1.5" />
-            Design
-          </button>
+        {!embedMode && (
+          <div className="absolute right-3 top-14 z-[1000] flex gap-1.5">
+            <button
+              onClick={() => setShowPreviewModal(true)}
+              className="rounded-md bg-white px-2.5 py-1.5 text-xs font-medium text-gray-600 shadow-md border border-gray-200 hover:bg-gray-50 transition-colors"
+              title="Preview embed"
+            >
+              <FontAwesomeIcon icon={faEye} className="mr-1.5" />
+              Preview
+            </button>
+            {!sidebarOpen && (
+              <button
+                onClick={() => setSidebarOpen(true)}
+                className="rounded-md bg-white px-2.5 py-1.5 text-xs font-medium text-gray-600 shadow-md border border-gray-200 hover:bg-gray-50 transition-colors"
+                title="Open design panel (⌘⇧D)"
+              >
+                <FontAwesomeIcon icon={faGear} className="mr-1.5" />
+                Design
+              </button>
+            )}
+          </div>
         )}
         <div
           className={`${design.showBorder ? "co150" : ""} min-h-0 flex-1`}
@@ -460,7 +428,6 @@ export default function MapEditorContent({
           {design.embedLayout === "sidebar-filter" ? (
             <SidebarFilterLayout
               points={data}
-              demoMode={previewDemoMode}
               viewCuration={viewCuration}
               viewLocked={viewLocked}
               fillContainer
@@ -496,10 +463,7 @@ export default function MapEditorContent({
                 onUpdatePrimaryElement={onUpdatePrimaryElement}
                 publicationBounds={publicationBounds}
                 onUpdatePublicationBounds={onUpdatePublicationBounds}
-                activePointIds={previewActivePointIds}
-                dimActive={previewDimActive}
-                dimOpacity={design.demoDimOpacity}
-                rotationActive={previewDemoMode && previewRotation.demoState === "running"}
+
               />
 
               {/* Drawing toolbar overlay */}
@@ -668,10 +632,17 @@ export default function MapEditorContent({
           <DesignSidebar
             onClose={() => setSidebarOpen(false)}
             categories={categories}
-            previewActive={previewDemoMode}
-            onPreviewToggle={() => setPreviewDemoMode((prev) => !prev)}
           />
         )
+      )}
+      {/* Preview modal — isolated embed view with demo mode */}
+      {showPreviewModal && (
+        <PreviewModal
+          points={data}
+          viewCuration={viewCuration}
+          viewLocked={!!viewCuration}
+          onClose={() => setShowPreviewModal(false)}
+        />
       )}
     </div>
   );
