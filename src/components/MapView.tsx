@@ -457,7 +457,7 @@ export default function MapView({
         zoomControl={true}
         attributionControl={false}
       >
-        <TileLayer key={design.tilePreset} url={tileConfig.url} attribution={tileConfig.attribution} maxZoom={tileConfig.maxZoom} />
+        <TileLayer key={design.tilePreset} url={tileConfig.url} attribution={tileConfig.attribution} maxZoom={tileConfig.maxZoom} keepBuffer={4} />
         {design.showLabels && tileConfig.labelsUrl && (
           <TileLayer
             key={`${design.tilePreset}-labels`}

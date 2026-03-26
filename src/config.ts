@@ -84,7 +84,7 @@ const TILE_PRESETS: Record<TilePreset, TileConfig> = {
     attribution:
       '&copy; <a href="https://stadiamaps.com/">Stadia Maps</a> &middot; <a href="https://stamen.com/">Stamen Design</a>',
     maxZoom: 18,
-    labelsUrl: `https://tiles.stadiamaps.com/tiles/stamen_terrain_labels/{z}/{x}/{y}{r}.png${stadiaQ}`,
+    labelsUrl: "https://{s}.basemaps.cartocdn.com/light_only_labels/{z}/{x}/{y}{r}.png",
   },
   "stadia-toner": {
     url: `https://tiles.stadiamaps.com/tiles/stamen_toner/{z}/{x}/{y}{r}.png${stadiaQ}`,
@@ -103,7 +103,7 @@ const TILE_PRESETS: Record<TilePreset, TileConfig> = {
     attribution:
       '&copy; <a href="https://stadiamaps.com/">Stadia Maps</a> &middot; <a href="https://stamen.com/">Stamen Design</a>',
     maxZoom: 18,
-    labelsUrl: `https://tiles.stadiamaps.com/tiles/stamen_toner_labels/{z}/{x}/{y}{r}.png${stadiaQ}`,
+    labelsUrl: "https://{s}.basemaps.cartocdn.com/dark_only_labels/{z}/{x}/{y}{r}.png",
   },
   "stadia-smooth": {
     url: `https://tiles.stadiamaps.com/tiles/alidade_smooth/{z}/{x}/{y}{r}.png${stadiaQ}`,
@@ -128,7 +128,7 @@ const TILE_PRESETS: Record<TilePreset, TileConfig> = {
     attribution:
       '&copy; <a href="https://stadiamaps.com/">Stadia Maps</a> &middot; <a href="https://stamen.com/">Stamen Design</a>',
     maxZoom: 18,
-    labelsUrl: `https://tiles.stadiamaps.com/tiles/stamen_terrain_labels/{z}/{x}/{y}{r}.png${stadiaQ}`,
+    labelsUrl: "https://{s}.basemaps.cartocdn.com/light_only_labels/{z}/{x}/{y}{r}.png",
   },
 };
 

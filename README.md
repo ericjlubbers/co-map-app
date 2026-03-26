@@ -1,6 +1,6 @@
 # Colorado Map App
 
-An interactive map of Colorado locations built with React, Leaflet, and Tailwind CSS. Features categorized markers with clustering, filtering, text search, a synced data table, geographic overlays (county boundaries, state border, outside-state fade), and a live **Design Mode** for collaboratively tweaking every visual option.
+An interactive map of Colorado locations built with React, Leaflet, and Tailwind CSS. Features categorized markers with clustering, filtering, text search, a synced data table, geographic overlays (county boundaries, state border, outside-state fade), and a live **Design Mode** for collaboratively tweaking every visual option. Embedded maps prefetch tiles for the Colorado region at multiple zoom levels for instant pan/zoom performance.
 
 Deployed automatically to Cloudflare Workers on push to `main`.
 

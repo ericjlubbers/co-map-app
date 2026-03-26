@@ -75,6 +75,12 @@ interface MapEditorContentProps {
   onUpdatePublicationBounds?: (bounds: PublicationBounds | undefined) => void;
   /** Capture current view as desktop or mobile bounds */
   onSetBoundsFromView?: (target: "desktop" | "mobile") => void;
+  /** Lock the current view */
+  onLockView?: () => void;
+  /** Unlock the view */
+  onUnlockView?: () => void;
+  /** Clear all curation */
+  onClearCuration?: () => void;
 }
 
 type DataTab = "points" | "drawn";
@@ -99,6 +105,9 @@ export default function MapEditorContent({
   publicationBounds,
   onUpdatePublicationBounds,
   onSetBoundsFromView,
+  onLockView,
+  onUnlockView,
+  onClearCuration,
 }: MapEditorContentProps) {
   const { design, designMode } = useDesign();
   const data = externalPoints ?? [];
@@ -627,6 +636,10 @@ export default function MapEditorContent({
             onUpdatePublicationBounds={onUpdatePublicationBounds}
             onFlyTo={handleFlyTo}
             onQuickAddPrimary={handleQuickAddPrimary}
+            viewLocked={viewLocked}
+            onLockView={onLockView}
+            onUnlockView={onUnlockView}
+            onClearCuration={onClearCuration}
           />
         ) : (
           <DesignSidebar

@@ -4,8 +4,10 @@ import {
   faTimes, faPlus, faTrash, faRoad, faWater, faCity, faTree, faTint,
   faBolt, faSun, faAdjust, faPalette, faUndo,
   faSearch, faDesktop, faMobileAlt, faCrosshairs, faBan, faExclamationTriangle, faCheck,
+  faTriangleExclamation, faLock, faLockOpen, faChevronRight,
 } from "@fortawesome/free-solid-svg-icons";
 import ColorPicker from "./ColorPicker";
+import { useDesign } from "../context/DesignContext";
 import { searchCachedFeatures, checkBoundsStatus, getCombinedBounds } from "../lib/vectorTiles";
 import type { SelectedElement, PrimaryElement, PrimaryElementSourceType, StyleOverrides, ConnectorStyle, PublicationBounds } from "../types";
 
@@ -22,6 +24,10 @@ interface CustomizeSidebarProps {
   onUpdatePublicationBounds?: (bounds: PublicationBounds | undefined) => void;
   onFlyTo?: (lat: number, lng: number, zoom?: number) => void;
   onQuickAddPrimary?: (element: SelectedElement) => void;
+  viewLocked?: boolean;
+  onLockView?: () => void;
+  onUnlockView?: () => void;
+  onClearCuration?: () => void;
 }
 
 const SOURCE_TYPE_LABELS: Record<PrimaryElementSourceType, string> = {
@@ -61,6 +67,10 @@ export default function CustomizeSidebar({
   onUpdatePublicationBounds,
   onFlyTo,
   onQuickAddPrimary,
+  viewLocked,
+  onLockView,
+  onUnlockView,
+  onClearCuration,
 }: CustomizeSidebarProps) {
   // Check if selected element is already a primary element
   const selectedIsPrimary = useMemo(() => {
@@ -70,6 +80,9 @@ export default function CustomizeSidebar({
       pe.sourceIds.every((id) => selectedElement.sourceIds.includes(id))
     ) ?? null;
   }, [selectedElement, primaryElements]);
+
+  const { design, set } = useDesign();
+  const [layersExpanded, setLayersExpanded] = useState(false);
 
   const isShape = selectedIsPrimary && selectedIsPrimary.sourceType !== "city";
   const isCity = selectedIsPrimary?.sourceType === "city";
@@ -187,6 +200,168 @@ export default function CustomizeSidebar({
         >
           <FontAwesomeIcon icon={faTimes} className="text-xs" />
         </button>
+      </div>
+
+      {/* Under Development banner */}
+      <div className="mx-3 mt-3 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2.5">
+        <div className="flex items-center gap-2 text-amber-800">
+          <FontAwesomeIcon icon={faTriangleExclamation} className="text-sm" />
+          <span className="text-xs font-semibold">Under Development</span>
+        </div>
+        <p className="mt-1 text-[11px] leading-relaxed text-amber-700">
+          These features are under active development and may change. Use the Settings tab for production-ready map controls.
+        </p>
+      </div>
+
+      {/* Lock View controls */}
+      <div className="border-b border-gray-100 px-4 py-3">
+        <p className="text-xs font-medium text-gray-400 uppercase tracking-wider mb-2">Lock View</p>
+        <div className="flex items-center gap-1.5">
+          {viewLocked ? (
+            <>
+              <button
+                onClick={onUnlockView}
+                className="inline-flex items-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-medium text-amber-700 bg-amber-50 hover:bg-amber-100 transition-colors"
+              >
+                <FontAwesomeIcon icon={faLock} className="text-[10px]" />
+                View Locked
+              </button>
+              <button
+                onClick={onClearCuration}
+                className="rounded-md px-2 py-1.5 text-[10px] text-gray-400 hover:text-red-500 hover:bg-gray-100 transition-colors"
+              >
+                Clear
+              </button>
+            </>
+          ) : (
+            <button
+              onClick={onLockView}
+              className="inline-flex items-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-medium text-gray-600 hover:bg-gray-100 transition-colors"
+            >
+              <FontAwesomeIcon icon={faLockOpen} className="text-[10px]" />
+              Lock View
+            </button>
+          )}
+        </div>
+      </div>
+
+      {/* Map Layers (moved from Settings) */}
+      <div className="border-b border-gray-100">
+        <button
+          onClick={() => setLayersExpanded(!layersExpanded)}
+          className="flex w-full items-center justify-between px-4 py-3 text-xs font-medium text-gray-400 uppercase tracking-wider hover:bg-gray-50 transition-colors"
+        >
+          Map Layers
+          <FontAwesomeIcon
+            icon={faChevronRight}
+            className={`text-[10px] text-gray-400 transition-transform ${layersExpanded ? "rotate-90" : ""}`}
+          />
+        </button>
+        {layersExpanded && (
+          <div className="px-4 pb-3 space-y-4">
+            {/* Roads */}
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <span className="text-xs text-gray-600">Show Roads</span>
+                <LayerToggle checked={design.showRoads} onChange={(v) => set("showRoads", v)} />
+              </div>
+              {design.showRoads && (
+                <div className="space-y-2 pl-2 border-l-2 border-gray-100">
+                  <div className="flex flex-wrap gap-1">
+                    <TogglePill label="Motorways" checked={design.showMotorways} onChange={(v) => set("showMotorways", v)} />
+                    <TogglePill label="Trunk" checked={design.showTrunkRoads} onChange={(v) => set("showTrunkRoads", v)} />
+                    <TogglePill label="Primary" checked={design.showPrimaryRoads} onChange={(v) => set("showPrimaryRoads", v)} />
+                    <TogglePill label="Secondary" checked={design.showSecondaryRoads} onChange={(v) => set("showSecondaryRoads", v)} />
+                    <TogglePill label="Tertiary" checked={design.showTertiaryRoads} onChange={(v) => set("showTertiaryRoads", v)} />
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-[11px] text-gray-500">Color</span>
+                    <ColorPicker value={design.roadColor} onChange={(v) => set("roadColor", v)} />
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className="text-[11px] text-gray-500">Weight</span>
+                    <input type="range" min={1} max={8} step={0.5} value={design.roadWeight} onChange={(e) => set("roadWeight", parseFloat(e.target.value))} className="h-1 w-20 accent-blue-500" />
+                    <span className="w-10 text-right text-[10px] text-gray-400">{design.roadWeight}px</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className="text-[11px] text-gray-500">Opacity</span>
+                    <input type="range" min={0.1} max={1} step={0.1} value={design.roadOpacity} onChange={(e) => set("roadOpacity", parseFloat(e.target.value))} className="h-1 w-20 accent-blue-500" />
+                    <span className="w-10 text-right text-[10px] text-gray-400">{design.roadOpacity.toFixed(1)}</span>
+                  </div>
+                </div>
+              )}
+            </div>
+            {/* Waterways */}
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <span className="text-xs text-gray-600">Show Waterways</span>
+                <LayerToggle checked={design.showWaterways} onChange={(v) => set("showWaterways", v)} />
+              </div>
+              {design.showWaterways && (
+                <div className="space-y-2 pl-2 border-l-2 border-gray-100">
+                  <div className="flex flex-wrap gap-1">
+                    <TogglePill label="Rivers" checked={design.showRivers} onChange={(v) => set("showRivers", v)} />
+                    <TogglePill label="Streams" checked={design.showStreams} onChange={(v) => set("showStreams", v)} />
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-[11px] text-gray-500">Color</span>
+                    <ColorPicker value={design.waterwayColor} onChange={(v) => set("waterwayColor", v)} />
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className="text-[11px] text-gray-500">Weight</span>
+                    <input type="range" min={1} max={8} step={0.5} value={design.waterwayWeight} onChange={(e) => set("waterwayWeight", parseFloat(e.target.value))} className="h-1 w-20 accent-blue-500" />
+                    <span className="w-10 text-right text-[10px] text-gray-400">{design.waterwayWeight}px</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className="text-[11px] text-gray-500">Opacity</span>
+                    <input type="range" min={0.1} max={1} step={0.1} value={design.waterwayOpacity} onChange={(e) => set("waterwayOpacity", parseFloat(e.target.value))} className="h-1 w-20 accent-blue-500" />
+                    <span className="w-10 text-right text-[10px] text-gray-400">{design.waterwayOpacity.toFixed(1)}</span>
+                  </div>
+                </div>
+              )}
+            </div>
+            {/* Parks */}
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <span className="text-xs text-gray-600">Show Parks</span>
+                <LayerToggle checked={design.showParks} onChange={(v) => set("showParks", v)} />
+              </div>
+              {design.showParks && (
+                <div className="space-y-2 pl-2 border-l-2 border-gray-100">
+                  <div className="flex items-center justify-between">
+                    <span className="text-[11px] text-gray-500">Color</span>
+                    <ColorPicker value={design.parkColor} onChange={(v) => set("parkColor", v)} />
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className="text-[11px] text-gray-500">Opacity</span>
+                    <input type="range" min={0.1} max={0.8} step={0.05} value={design.parkOpacity} onChange={(e) => set("parkOpacity", parseFloat(e.target.value))} className="h-1 w-20 accent-blue-500" />
+                    <span className="w-10 text-right text-[10px] text-gray-400">{design.parkOpacity.toFixed(2)}</span>
+                  </div>
+                </div>
+              )}
+            </div>
+            {/* Lakes */}
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <span className="text-xs text-gray-600">Show Lakes</span>
+                <LayerToggle checked={design.showLakes} onChange={(v) => set("showLakes", v)} />
+              </div>
+              {design.showLakes && (
+                <div className="space-y-2 pl-2 border-l-2 border-gray-100">
+                  <div className="flex items-center justify-between">
+                    <span className="text-[11px] text-gray-500">Color</span>
+                    <ColorPicker value={design.lakeColor} onChange={(v) => set("lakeColor", v)} />
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className="text-[11px] text-gray-500">Opacity</span>
+                    <input type="range" min={0.1} max={0.8} step={0.05} value={design.lakeOpacity} onChange={(e) => set("lakeOpacity", parseFloat(e.target.value))} className="h-1 w-20 accent-blue-500" />
+                    <span className="w-10 text-right text-[10px] text-gray-400">{design.lakeOpacity.toFixed(2)}</span>
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Style Controls — shows selected element info + style editors */}
@@ -699,5 +874,37 @@ function StyleRow({ label, children }: { label: string; children: React.ReactNod
       <span className="w-16 shrink-0 text-[11px] text-gray-500">{label}</span>
       <div className="flex flex-1 items-center">{children}</div>
     </div>
+  );
+}
+
+function LayerToggle({ checked, onChange }: { checked: boolean; onChange: (v: boolean) => void }) {
+  return (
+    <button
+      onClick={() => onChange(!checked)}
+      className={`relative inline-flex h-5 w-9 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors ${
+        checked ? "bg-blue-600" : "bg-gray-300"
+      }`}
+    >
+      <span
+        className={`pointer-events-none inline-block h-4 w-4 rounded-full bg-white shadow transition-transform ${
+          checked ? "translate-x-4" : "translate-x-0"
+        }`}
+      />
+    </button>
+  );
+}
+
+function TogglePill({ label, checked, onChange }: { label: string; checked: boolean; onChange: (v: boolean) => void }) {
+  return (
+    <button
+      onClick={() => onChange(!checked)}
+      className={`rounded-full px-2.5 py-1 text-[11px] font-medium transition-colors ${
+        checked
+          ? "bg-blue-100 text-blue-700 ring-1 ring-blue-300"
+          : "bg-gray-100 text-gray-400 ring-1 ring-gray-200"
+      }`}
+    >
+      {label}
+    </button>
   );
 }

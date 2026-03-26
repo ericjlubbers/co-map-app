@@ -609,6 +609,7 @@ export default function MapEditorPage() {
             >
               <FontAwesomeIcon icon={faPaintBrush} className="text-[11px]" />
               Customize
+              <span className="ml-1 rounded bg-amber-100 px-1 py-0.5 text-[9px] font-semibold text-amber-600">DEV</span>
             </button>
           </div>
           <div className="flex items-center gap-2">
@@ -673,7 +674,8 @@ export default function MapEditorPage() {
             {publishError && (
               <span className="text-xs text-red-500">{publishError}</span>
             )}
-            {/* Lock/Unlock View */}
+            {/* Lock/Unlock View — only in Customize mode */}
+            {editorMode === "customize" && (
             <div className="flex items-center gap-1">
               {viewLocked ? (
                 <>
@@ -734,6 +736,7 @@ export default function MapEditorPage() {
                 </button>
               )}
             </div>
+            )}
             <button
               onClick={() => setShowEmbedCode(!showEmbedCode)}
               className="inline-flex items-center gap-1.5 rounded-md px-3 py-1.5 text-sm font-medium text-gray-600 hover:bg-gray-100 transition-colors"
@@ -777,6 +780,9 @@ export default function MapEditorPage() {
               publicationBounds={dataConfig.publicationBounds}
               onUpdatePublicationBounds={handleUpdatePublicationBounds}
               onSetBoundsFromView={handleSetBoundsFromView}
+              onLockView={handleLockView}
+              onUnlockView={handleUnlockView}
+              onClearCuration={handleClearCuration}
             />
           ) : (
             /* Data tab: editor + sidebar side-by-side */

@@ -1,13 +1,61 @@
 # CO Map App — Production Roadmap
 
-Internal mapping platform for The Colorado Sun newsroom. Reporters and data visualization staff create maps ranging from simple locator maps to complex choropleth/multi-point visualizations. Maps are embedded in WordPress via iframe. Built with React 19 + Vite + Tailwind v4 + Leaflet, backed by Cloudflare Workers + D1.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+Update ROADMAP.md: change L1 status from 🔲 to ✅.## After completion3. Visual check: Carto labels on Watercolor have a clean modern look vs. the vintage tile style. If it looks jarring, consider adding an opacity prop to the label TileLayer (stretch — not required for this phase).   - Select **Terrain (no labels)** → toggle Labels ON → confirm labels, no metric elevations   - Select **Toner (no labels)** → toggle Labels ON → confirm dark-themed labels, no metric elevations   - Toggle **Cities & Peaks ON** → peaks should show elevation in feet (e.g., "14,440 ft")   - Select **Watercolor** tile preset → toggle **Labels Overlay ON** → confirm labels show road/city names without metric peak elevations2. Run dev server, create/open a map:1. `npx tsc --noEmit` — no type errors## Verification- `DesignSidebar.tsx` Labels section with Elevation Units toggle works independently — no changes needed- `CityLayer.tsx` independently renders peaks with feet — no changes needed- `LabelLayer.tsx` reads `labelsUrl` generically — no changes needed### No other files need changes   ```   labelsUrl: "https://{s}.basemaps.cartocdn.com/light_only_labels/{z}/{x}/{y}{r}.png",   ```3. **`stadia-terrain-nolabels`** labelsUrl: change from `stamen_terrain_labels` to Carto `light_only_labels`:   ```   labelsUrl: "https://{s}.basemaps.cartocdn.com/dark_only_labels/{z}/{x}/{y}{r}.png",   ```2. **`stadia-toner-nolabels`** labelsUrl: change from `stamen_toner_labels` to Carto `dark_only_labels` (toner is dark-themed):   ```   labelsUrl: "https://{s}.basemaps.cartocdn.com/light_only_labels/{z}/{x}/{y}{r}.png",   ```1. **`stadia-watercolor`** labelsUrl: change from `stamen_terrain_labels` to Carto `light_only_labels`:### `src/config.ts`## Changes Required- Other presets (carto-light-nolabels, carto-dark-nolabels, carto-voyager-nolabels) already use Carto label tiles correctly.  - Dark: `https://{s}.basemaps.cartocdn.com/dark_only_labels/{z}/{x}/{y}{r}.png`  - Light: `https://{s}.basemaps.cartocdn.com/light_only_labels/{z}/{x}/{y}{r}.png`- Carto provides labels-only tiles with no elevation data:  3. `stadia-terrain-nolabels` (line ~131): `stamen_terrain_labels` → shows metric peaks  2. `stadia-toner-nolabels` (line ~106): `stamen_toner_labels` → shows metric peaks  1. `stadia-watercolor` (line ~87): `stamen_terrain_labels` → shows metric peaks- Three tile presets currently use Stamen terrain/toner label tiles that include metric peak elevations:- It reads `tileConfig.labelsUrl` from `src/config.ts` via `getTileConfig(design.tilePreset)`- The Labels Overlay is a raster `TileLayer` rendered by `src/components/layers/LabelLayer.tsx`## ContextReplace Stamen terrain label overlays with Carto labels-only tiles so that peak elevations are NOT baked into the raster overlay (they show metric). Our CityLayer already renders peaks with imperial feet via the `formatElevation()` function and `useMetricUnits` design param — that's sufficient for peak labels.## GoalInternal mapping platform for The Colorado Sun newsroom. Reporters and data visualization staff create maps ranging from simple locator maps to complex choropleth/multi-point visualizations. Maps are embedded in WordPress via iframe. Built with React 19 + Vite + Tailwind v4 + Leaflet, backed by Cloudflare Workers + D1.
 
 **Production URL**: `https://co-map-worker.newsroom-569.workers.dev`
 **Target domain**: `maps.coloradosun.com`
 
 ---
 
-## Status Summary (updated 2026-03-23)
+## Status Summary (updated 2026-03-26)
 
 ### Completed Phases
 
@@ -34,20 +82,23 @@ Internal mapping platform for The Colorado Sun newsroom. Reporters and data visu
 | C4 — Quicksearch & Bounds | ✅ | Feature search, publication crop tool, out-of-bounds management |
 | C5 — Polish & Embed | 🔲 | Mode re-entry workflow, embed rendering, persistence, Publish integration |
 
-### Next Up
+### Sprint 9 — Production Launch Polish
 
-- **Proof-of-concept map**: 🔄 Building CO150 production map — sidebar-filter template, geocoding, live preview working
-- **Refinement pass**: 🔄 Addressing UX issues discovered during proof-of-concept testing
-- **C5 — Polish & Embed**: Finalize embed rendering, persistence reliability, mode transitions
+| Phase | Status | Focus |
+|-------|--------|-------|
+| L1 — Label Tile Swap | ✅ | Switch Stamen terrain label overlays → Carto labels-only tiles (no metric peak elevations) |
+| L2 — Sidebar Reorganization | ✅ | Move Roads/Waterways/Parks/Lakes + Lock View into Customize tab behind "Under Development" banner; keep Tiles, Labels, Regions, Points, Cities & Peaks, State Border in Settings |
+| L3 — Tile Prefetching | ✅ | Prefetch tiles for CO bounding box at common zoom levels on embed load for snappy UX |
 
-### Deferred
+### Deferred / Post-Launch
 
 | Item | Status | Notes |
 |------|--------|-------|
+| C5 — Customize Polish & Embed | 🔲 | Mode re-entry workflow, embed rendering, persistence, Publish integration |
 | Phase 6 — Locator Map Wizard | 🔲 | Workflow shortcut; editors can create locator maps manually today |
 | Multiple Data Input Methods | 🔲 | Google Sheets connector (existing), CSV paste into editor, CSV file upload, image/PDF upload with AI-assisted data extraction (OCR → editable table) |
 | Sprint 5 — Region Choropleth Layer | 🔲 | Gradient fills for county regions, auto-toggle region layer, design controls |
-| Sprint 6 — Vector Tile Labels & Local Data | 🔲 | Client-side vector labels, local CO data cache, tile caching |
+| Sprint 6 — Vector Tile Labels & Local Data | 🔲 | Client-side vector labels, local CO data cache, tile caching (includes full vector label layer) |
 | Sprint 7 — Responsive Preview Toolbar | 🔲 | Desktop/mobile/article preview modes in the editor |
 | Embed Preview Panel | 🔲 | Last-look preview in embed code menu; device-size previews (phone/tablet/desktop), iframe simulation |
 

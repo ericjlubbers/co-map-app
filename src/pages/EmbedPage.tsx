@@ -1,9 +1,11 @@
 import { useState, useEffect, useMemo } from "react";
 import { useParams, useSearchParams } from "react-router-dom";
 import { getMap, type MapDetail } from "../lib/api";
-import { DesignProvider } from "../context/DesignContext";
+import { DesignProvider, useDesign } from "../context/DesignContext";
 import MapEditorContent from "../components/MapEditorContent";
 import { layerDataToPoints } from "../lib/starterData";
+import { prefetchTiles } from "../lib/tilePrefetch";
+import { getTileConfig, MAP_MAX_BOUNDS } from "../config";
 import type { ViewCuration, LayerData, PointData } from "../types";
 
 /**
@@ -11,6 +13,29 @@ import type { ViewCuration, LayerData, PointData } from "../types";
  * Loaded via /embed/:id
  * Add ?demo=1 to activate auto-rotate category demo mode.
  */
+
+function TilePrefetcher() {
+  const { design } = useDesign();
+  useEffect(() => {
+    const tileConfig = getTileConfig(design.tilePreset);
+    const doPrefetch = () => {
+      prefetchTiles({
+        tileUrl: tileConfig.url,
+        labelsUrl: design.showLabels ? tileConfig.labelsUrl : undefined,
+        bounds: [MAP_MAX_BOUNDS[0][0], MAP_MAX_BOUNDS[0][1], MAP_MAX_BOUNDS[1][0], MAP_MAX_BOUNDS[1][1]],
+        zoomLevels: [6, 7, 8, 9],
+        concurrency: 4,
+      });
+    };
+    if ("requestIdleCallback" in window) {
+      (window as Window).requestIdleCallback(doPrefetch);
+    } else {
+      setTimeout(doPrefetch, 2000);
+    }
+  }, [design.tilePreset, design.showLabels]);
+  return null;
+}
+
 export default function EmbedPage() {
   const { id } = useParams<{ id: string }>();
   const [searchParams] = useSearchParams();
@@ -63,6 +88,7 @@ export default function EmbedPage() {
 
   return (
     <DesignProvider initialDesignState={mapData.design_state} embedMode>
+      <TilePrefetcher />
       <div className="h-dvh w-dvw">
         <MapEditorContent
           embedMode
