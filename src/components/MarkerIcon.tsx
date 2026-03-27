@@ -211,6 +211,8 @@ export function createMarkerIcon(
   shape: MarkerShape = "pin",
   connector: MarkerConnector = "stem",
   padding: MarkerPadding = "normal",
+  isUpcoming?: boolean,
+  upcomingOpacity?: number,
 ): L.DivIcon {
   const info = getCategoryInfo(category);
   const dimScale = dimmed ? 0.85 : 1;
@@ -234,8 +236,15 @@ export function createMarkerIcon(
     dimOpacity ?? 0.3,
   );
 
+  const wrapStyle = isUpcoming
+    ? `display:inline-block;opacity:${upcomingOpacity ?? 0.3};filter:grayscale(50%);pointer-events:none;`
+    : "";
+  const html = isUpcoming
+    ? `<div style="${wrapStyle}">${result.svg}</div>`
+    : result.svg;
+
   return L.divIcon({
-    html: result.svg,
+    html,
     className: "",
     iconSize: L.point(result.totalWidth, result.totalHeight),
     iconAnchor: L.point(result.anchorX, result.anchorY),
@@ -252,14 +261,20 @@ export function createDotIcon(
   size: number,
   dimmed?: boolean,
   dimOpacity?: number,
+  isUpcoming?: boolean,
+  upcomingOpacity?: number,
 ): L.DivIcon {
   const r = size / 2;
-  const opacity = dimmed ? (dimOpacity ?? 0.3) : 1;
+  const opacity = isUpcoming
+    ? (upcomingOpacity ?? 0.3)
+    : dimmed ? (dimOpacity ?? 0.3) : 1;
+  const filter = isUpcoming ? "grayscale(50%)" : "none";
+  const pointerEvents = isUpcoming ? "none" : "auto";
   const svg = `<svg width="${size}" height="${size}" viewBox="0 0 ${size} ${size}" xmlns="http://www.w3.org/2000/svg">
-    <circle cx="${r}" cy="${r}" r="${r - 1}" fill="${color}" stroke="white" stroke-width="1" opacity="${opacity}" />
+    <circle cx="${r}" cy="${r}" r="${r - 1}" fill="${color}" stroke="white" stroke-width="1" />
   </svg>`;
   return L.divIcon({
-    html: `<div class="dot-marker" style="transition: all 300ms ease;">${svg}</div>`,
+    html: `<div class="dot-marker" style="transition: all 300ms ease; opacity: ${opacity}; filter: ${filter}; pointer-events: ${pointerEvents};">${svg}</div>`,
     className: "",
     iconSize: L.point(size, size),
     iconAnchor: L.point(r, r),

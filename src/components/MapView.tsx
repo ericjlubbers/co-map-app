@@ -9,6 +9,7 @@ import {
   Polyline,
   Polygon,
   CircleMarker,
+  Popup,
 } from "react-leaflet";
 import MarkerClusterGroup from "react-leaflet-cluster";
 import NativeMarkerClusterGroup from "./NativeMarkerClusterGroup";
@@ -92,6 +93,37 @@ interface Props {
   onNavigatePoint?: (direction: "prev" | "next") => void;
   /** Whether auto-rotate is driving selection changes (choreographed transitions) */
   autoRotateActive?: boolean;
+  /** Active category filter (from sidebar-filter layout); triggers dot→marker upgrade */
+  activeCategory?: string | null;
+  /** Incremented when the container is resized — triggers invalidateSize + zoom reset */
+  resizeSignal?: number;
+}
+
+// ── FitBoundsHandler ─────────────────────────────────────────
+// Watches fitBoundsSignal and fits map to Colorado when it changes.
+const CO_BOUNDS: [[number, number], [number, number]] = [[36.993, -109.060], [41.003, -102.042]];
+
+function FitBoundsHandler({ signal }: { signal: number }) {
+  const map = useMap();
+  const isFirstRef = useRef(true);
+  useEffect(() => {
+    if (isFirstRef.current) { isFirstRef.current = false; return; }
+    map.fitBounds(CO_BOUNDS, { padding: [20, 20], animate: true });
+  }, [signal, map]);
+  return null;
+}
+
+// ── MapResizeHandler ──────────────────────────────────────────
+// Watches resizeSignal, invalidates tile layout, and resets zoom.
+function MapResizeHandler({ resizeSignal, defaultZoom }: { resizeSignal: number; defaultZoom: number }) {
+  const map = useMap();
+  const isFirstRef = useRef(true);
+  useEffect(() => {
+    if (isFirstRef.current) { isFirstRef.current = false; return; }
+    map.invalidateSize({ animate: false });
+    setTimeout(() => map.setZoom(defaultZoom, { animate: false }), 50);
+  }, [resizeSignal, map, defaultZoom]);
+  return null;
 }
 
 // ── FlyToSelected ────────────────────────────────────────────
@@ -333,6 +365,8 @@ export default function MapView({
   onZoomToPoint,
   onNavigatePoint,
   autoRotateActive = false,
+  activeCategory,
+  resizeSignal = 0,
 }: Props) {
   const { design } = useDesign();
   const tileConfig = getTileConfig(design.tilePreset);
@@ -414,10 +448,12 @@ export default function MapView({
     const isAutoRotating = autoRotateActiveRef.current;
 
     // Choreography: always hide old card first, then show new card
-    // so the scale animation replays consistently
+    // so the scale animation replays consistently.
+    // When auto-rotating, useAutoRotate already handles fade-out timing before
+    // activePointId changes — so we show the new card immediately to sync with marker.
     if (prevId !== null && prevId !== selectedId) {
       setCardPoint(null); // collapse old card
-      const delay = isAutoRotating ? design.transitionSpeed : Math.min(design.transitionSpeed, 250);
+      const delay = isAutoRotating ? 30 : Math.min(design.transitionSpeed, 250);
       popupOpenTimerRef.current = setTimeout(() => {
         popupOpenTimerRef.current = null;
         setCardPoint(point);
@@ -448,14 +484,20 @@ export default function MapView({
       className={`relative h-full w-full ${cursorClass}${viewLocked ? " ring-2 ring-inset ring-amber-400/60" : ""}`}
       style={{ "--transition-speed": `${design.transitionSpeed}ms` } as React.CSSProperties}
     >
+      {/* Upcoming tooltip opacity */}
+      <style>{`.upcoming-popup .leaflet-popup-content-wrapper { opacity: ${design.upcomingTooltipOpacity}; transition: opacity 0.15s; } .upcoming-popup .leaflet-popup-tip { opacity: ${design.upcomingTooltipOpacity}; }`}</style>
       <MapContainer
         center={viewCuration?.center ?? MAP_CENTER}
-        zoom={viewCuration?.zoom ?? MAP_ZOOM}
+        zoom={viewCuration?.zoom ?? (design.mapDefaultZoom ?? MAP_ZOOM)}
+        minZoom={design.mapMinZoom}
+        maxZoom={design.mapMaxZoom}
         maxBounds={MAP_MAX_BOUNDS}
         maxBoundsViscosity={0.8}
         className="h-full w-full"
         zoomControl={true}
         attributionControl={false}
+        aria-label="Interactive map of Colorado"
+        role="application"
       >
         <TileLayer key={design.tilePreset} url={tileConfig.url} attribution={tileConfig.attribution} maxZoom={tileConfig.maxZoom} keepBuffer={4} />
         {design.showLabels && tileConfig.labelsUrl && (
@@ -510,6 +552,8 @@ export default function MapView({
           zoomTarget={zoomTarget}
           flyToZoom={design.flyToZoom}
         />
+        <FitBoundsHandler signal={design.fitBoundsSignal} />
+        <MapResizeHandler resizeSignal={resizeSignal} defaultZoom={design.mapDefaultZoom} />
         <MapClickDeselect onSelectPoint={onSelectPoint} drawingMode={drawingMode ?? null} />
 
         {drawingMode && onDrawingComplete && (
@@ -535,9 +579,12 @@ export default function MapView({
           // No clustering — render markers directly
           <>
             {points.map((point) => {
-              const isDimmed = dimActive && activePointIds != null && !activePointIds.has(point.id);
-              const isHighlighted = activePointIds != null && activePointIds.has(point.id);
-              const isSelected = point.id === selectedId;
+              const isUpcoming = point.status === "upcoming";
+              if (isUpcoming && !design.showUpcoming) return null;
+              const isDimmed = !isUpcoming && dimActive && activePointIds != null && !activePointIds.has(point.id);
+              const isHighlighted = !isUpcoming && activePointIds != null && activePointIds.has(point.id);
+              const isSelected = !isUpcoming && point.id === selectedId;
+              // Only the actively selected point upgrades to full marker (autorotate fix)
               const showDot = design.dotMode && !isSelected && !isHighlighted;
               const pointColor = design.pointColorMode === "by-category"
                 ? (design.categoryColors[point.category] ?? design.pointColor)
@@ -547,7 +594,7 @@ export default function MapView({
                   key={point.id}
                   position={[point.lat, point.lng]}
                   icon={showDot
-                    ? createDotIcon(pointColor, design.dotSize, isDimmed, dimOpacityProp)
+                    ? createDotIcon(pointColor, design.dotSize, isDimmed, dimOpacityProp, isUpcoming, design.upcomingOpacity)
                     : createMarkerIcon(
                         point.category,
                         isSelected,
@@ -559,17 +606,26 @@ export default function MapView({
                         design.categoryShapes[point.category] || design.markerShape,
                         design.markerConnector,
                         design.markerPadding,
+                        isUpcoming,
+                        design.upcomingOpacity,
                       )
                   }
-                  zIndexOffset={isSelected ? 1000 : isDimmed ? -1000 : 0}
+                  zIndexOffset={isSelected ? 1000 : isUpcoming ? -2000 : isDimmed ? -1000 : 0}
                   eventHandlers={{
                     click: () => {
+                      if (isUpcoming) return;
                       if (!drawingMode || drawingMode === "select") {
                         onSelectPoint(point.id);
                       }
                     },
                   }}
-                />
+                >
+                  {isUpcoming && (
+                    <Popup autoPan={false} closeButton={false} className="upcoming-popup">
+                      <span className="text-xs font-medium text-gray-700">{design.upcomingTooltipText}</span>
+                    </Popup>
+                  )}
+                </Marker>
               );
             })}
           </>
@@ -625,9 +681,11 @@ export default function MapView({
           showCoverageOnHover={CLUSTER_SETTINGS.showCoverageOnHover}
         >
           {points.map((point) => {
-            const isDimmed = dimActive && activePointIds != null && !activePointIds.has(point.id);
-            const isHighlighted = activePointIds != null && activePointIds.has(point.id);
-            const isSelected = point.id === selectedId;
+            const isUpcoming = point.status === "upcoming";
+            if (isUpcoming && !design.showUpcoming) return null;
+            const isDimmed = !isUpcoming && dimActive && activePointIds != null && !activePointIds.has(point.id);
+            const isHighlighted = !isUpcoming && activePointIds != null && activePointIds.has(point.id);
+            const isSelected = !isUpcoming && point.id === selectedId;
             const showDot = design.dotMode && !isSelected && !isHighlighted;
             const ptColor = design.pointColorMode === "by-category"
               ? design.categoryColors[point.category]
@@ -637,7 +695,7 @@ export default function MapView({
               key={point.id}
               position={[point.lat, point.lng]}
               icon={showDot
-                ? createDotIcon(ptColor, design.dotSize, isDimmed, dimOpacityProp)
+                ? createDotIcon(ptColor, design.dotSize, isDimmed, dimOpacityProp, isUpcoming, design.upcomingOpacity)
                 : createMarkerIcon(
                     point.category,
                     isSelected,
@@ -649,18 +707,27 @@ export default function MapView({
                     design.categoryShapes[point.category] || design.markerShape,
                     design.markerConnector,
                     design.markerPadding,
+                    isUpcoming,
+                    design.upcomingOpacity,
                   )
               }
               category={point.category}
-              zIndexOffset={isSelected ? 1000 : isDimmed ? -1000 : 0}
+              zIndexOffset={isSelected ? 1000 : isUpcoming ? -2000 : isDimmed ? -1000 : 0}
               eventHandlers={{
                 click: () => {
+                  if (isUpcoming) return;
                   if (!drawingMode || drawingMode === "select") {
                     onSelectPoint(point.id);
                   }
                 },
               }}
-            />
+            >
+              {isUpcoming && (
+                <Popup autoPan={false} closeButton={false} className="upcoming-popup">
+                  <span className="text-xs font-medium text-gray-700">{design.upcomingTooltipText}</span>
+                </Popup>
+              )}
+            </Marker>
             );
           })}
         </MarkerClusterGroup>
@@ -697,6 +764,7 @@ export default function MapView({
           viewLocked={viewLocked}
           editorMode={editorMode}
           onSelectElement={onSelectElement}
+          points={points}
         />
 
         {/* Primary elements + selection overlay (rendered above base layers) */}
@@ -729,6 +797,7 @@ export default function MapView({
         <FloatingPointCard
           point={cardPoint}
           map={mapRef.current}
+          onDismiss={() => onSelectPoint(null)}
           onZoomIn={onZoomToPoint ? () => onZoomToPoint(cardPoint) : handleZoomIn}
           onPrev={selectedIndex > 0 ? handlePrev : undefined}
           onNext={selectedIndex < points.length - 1 ? handleNext : undefined}

@@ -1,4 +1,4 @@
-import type { LayerData, DataRow, PointData } from "../types";
+import type { LayerData, DataRow, PointData, PointStatus } from "../types";
 import { COLORADO_COUNTIES } from "../data/coloradoCounties";
 
 // ── Convert LayerData rows → PointData[] for map display ─────
@@ -15,6 +15,7 @@ export function layerDataToPoints(layer: LayerData): PointData[] {
   const imageCol = columns.find((c) => columnMappings[c] === "image");
   const addressCol = columns.find((c) => columnMappings[c] === "address");
   const urlCol = columns.find((c) => columnMappings[c] === "url");
+  const statusCol = columns.find((c) => columnMappings[c] === "status");
   const metaCols = columns.filter((c) => columnMappings[c] === "metadata");
   const geoCols = columns.filter((c) => columnMappings[c] === "geometry");
 
@@ -59,6 +60,9 @@ export function layerDataToPoints(layer: LayerData): PointData[] {
       lat,
       lng,
       icon: iconCol ? (row[iconCol] ?? undefined) : undefined,
+      status: statusCol
+        ? ((row[statusCol] ?? "").trim().toLowerCase() === "upcoming" ? "upcoming" : "active") as PointStatus
+        : undefined,
     });
   }
 

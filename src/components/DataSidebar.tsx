@@ -32,6 +32,7 @@ const COLUMN_ROLES: { value: ColumnRole; label: string; description: string }[] 
   { value: "address", label: "Address", description: "Street address for geocoding & display" },
   { value: "url", label: "URL", description: "Website link shown in popup" },
   { value: "metadata", label: "Metadata", description: "Extra info, shown in popup" },
+  { value: "status", label: "Status", description: "\"active\" or \"upcoming\" — controls visibility & interactivity" },
   { value: "none", label: "None", description: "Ignore this column" },
 ];
 

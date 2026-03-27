@@ -74,11 +74,11 @@ export function useAutoRotate({
   const resumeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const transitionRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  // Items list depends on mode
-  const items = useMemo(
-    () => (mode === "by-category" ? categories : points),
-    [mode, categories, points],
-  );
+  // Items list depends on mode — exclude upcoming points from rotation
+  const items = useMemo(() => {
+    if (mode === "by-category") return categories;
+    return points.filter((p) => p.status !== "upcoming");
+  }, [mode, categories, points]);
   const itemCount = items.length;
 
   // Shuffled order array — regenerated when items change or when we complete a cycle

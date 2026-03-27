@@ -1,4 +1,4 @@
-import type { ClusterStyle, FontFamily, CategoryInfo, TilePreset, DesignState } from "./types";
+import type { ClusterStyle, FontFamily, CategoryInfo, TilePreset, DesignState, SfMobileLayout } from "./types";
 
 // ── Font Configuration ──────────────────────────────────────────────
 // Change this one value to swap the entire app's font:
@@ -248,6 +248,7 @@ export const DEFAULT_DESIGN: DesignState = {
   sfBtnPreset: "filled",
   sfBtnFillColor: "#2563eb",
   sfBtnFillMode: "by-category",
+  sfMobileLayout: "drawer" as SfMobileLayout,
   flyToZoom: 14,
   categoryDisplayMode: "text",
   dotMode: false,
@@ -276,6 +277,34 @@ export const DEFAULT_DESIGN: DesignState = {
   cardEdgeWidth: 1,
   cardEdgeOpacity: 0.4,
   cardConnectorInset: -6,
+  showUpcoming: true,
+  upcomingOpacity: 0.3,
+  sfUpcomingColor: "#9ca3af",
+  upcomingTooltipText: "Coming soon!",
+  upcomingTooltipOpacity: 0.75,
+  showInstructionalToasts: true,
+  toastMessagesDesktop: ["Use arrow keys to navigate between points", "Click a category to filter"],
+  toastMessagesMobile: ["Pinch to zoom · Swipe to explore", "Tap a category to filter"],
+  cityLabelBgColor: "#ffffff",
+  cityLabelBgOpacity: 0.85,
+  cityLabelPaddingH: 5,
+  cityLabelPaddingV: 2,
+  cityConnectorColor: "#94a3b8",
+  cityConnectorWeight: 1,
+  cityConnectorOpacity: 0.55,
+  cityConnectorDash: "solid" as const,
+  cityLabelOffset: 14,
+  cityLabelBaselineX: 0,
+  cityLabelBaselineY: 0,
+  cityLabelBorderRadius: 4,
+  cityLabelShadow: true,
+  cityDotShow: true,
+  cityDotRadius: 3,
+  cityConnectorStyle: "straight" as const,
+  mapMinZoom: 6,
+  mapMaxZoom: 16,
+  mapDefaultZoom: 7,
+  fitBoundsSignal: 0,
 };
 
 // ── Clustering Settings ─────────────────────────────────────────────

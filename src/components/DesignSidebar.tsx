@@ -9,7 +9,7 @@ import {
   faChevronRight,
 } from "@fortawesome/free-solid-svg-icons";
 import { useDesign } from "../context/DesignContext";
-import type { DesignState, FontFamily, ClusterStyle, ClusterPlugin, PlacementStrategy, TilePreset, SfBtnPreset, SfBtnFillMode, DemoRotationMode, DemoRotationOrder, MarkerShape, MarkerConnector, MarkerPadding, CardConnectorPreset } from "../types";
+import type { DesignState, FontFamily, ClusterStyle, ClusterPlugin, PlacementStrategy, TilePreset, SfBtnPreset, SfBtnFillMode, SfMobileLayout, DemoRotationMode, DemoRotationOrder, MarkerShape, MarkerConnector, MarkerPadding, CardConnectorPreset } from "../types";
 import AccordionSection from "./AccordionSection";
 import SidebarGroup from "./SidebarGroup";
 import ColorPicker, { CARBON_CATEGORICAL } from "./ColorPicker";
@@ -503,6 +503,54 @@ export default function DesignSidebar({ onClose, categories = [] }: DesignSideba
                   onChange={(v) => set("flyToZoom", v)}
                 />
               </Field>
+              <hr className="border-gray-200" />
+              <p className="text-[11px] text-gray-400 font-medium uppercase tracking-wider">Upcoming Points</p>
+              <Field label="Show Upcoming">
+                <ToggleSwitch
+                  checked={design.showUpcoming}
+                  onChange={(v) => set("showUpcoming", v)}
+                />
+              </Field>
+              {design.showUpcoming && (
+                <>
+                  <Field label="Upcoming Opacity">
+                    <Slider
+                      min={0.05}
+                      max={0.6}
+                      step={0.05}
+                      value={design.upcomingOpacity}
+                      onChange={(v) => set("upcomingOpacity", v)}
+                    />
+                  </Field>
+                  <Field label="Upcoming Button Color">
+                    <ColorPicker
+                      value={design.sfUpcomingColor}
+                      onChange={(v) => set("sfUpcomingColor", v)}
+                    />
+                  </Field>
+                  <Field label="Upcoming Tooltip Text">
+                    <input
+                      type="text"
+                      value={design.upcomingTooltipText}
+                      onChange={(e) => set("upcomingTooltipText", e.target.value)}
+                      className="w-full rounded-md border border-gray-300 bg-white px-2.5 py-1.5 text-xs text-gray-700"
+                      placeholder="Coming soon!"
+                    />
+                  </Field>
+                  <Field label="Tooltip Opacity">
+                    <Slider
+                      min={0.1}
+                      max={1}
+                      step={0.05}
+                      value={design.upcomingTooltipOpacity}
+                      onChange={(v) => set("upcomingTooltipOpacity", v)}
+                    />
+                  </Field>
+                </>
+              )}
+              <p className="text-[11px] text-gray-400 italic">
+                Points with status "upcoming" are faded and non-interactive. Map them via the Status column role in the Data tab.
+              </p>
             </div>
           </AccordionSection>
 
@@ -547,6 +595,165 @@ export default function DesignSidebar({ onClose, categories = [] }: DesignSideba
                       suffix="px"
                     />
                   </Field>
+                  <hr className="border-gray-200" />
+                  <p className="text-[11px] text-gray-400 font-medium uppercase tracking-wider">Label Background</p>
+                  <Field label="Background Color">
+                    <ColorPicker
+                      value={design.cityLabelBgColor}
+                      onChange={(v) => set("cityLabelBgColor", v)}
+                    />
+                  </Field>
+                  <Field label="Background Opacity">
+                    <Slider
+                      min={0}
+                      max={1}
+                      step={0.05}
+                      value={design.cityLabelBgOpacity}
+                      onChange={(v) => set("cityLabelBgOpacity", v)}
+                    />
+                  </Field>
+                  <Field label="Padding H">
+                    <Slider
+                      min={0}
+                      max={16}
+                      step={1}
+                      value={design.cityLabelPaddingH}
+                      onChange={(v) => set("cityLabelPaddingH", v)}
+                      suffix="px"
+                    />
+                  </Field>
+                  <Field label="Padding V">
+                    <Slider
+                      min={0}
+                      max={10}
+                      step={1}
+                      value={design.cityLabelPaddingV}
+                      onChange={(v) => set("cityLabelPaddingV", v)}
+                      suffix="px"
+                    />
+                  </Field>
+                  <hr className="border-gray-200" />
+                  <p className="text-[11px] text-gray-400 font-medium uppercase tracking-wider">Collision Connector</p>
+                  <Field label="Connector Color">
+                    <ColorPicker
+                      value={design.cityConnectorColor}
+                      onChange={(v) => set("cityConnectorColor", v)}
+                    />
+                  </Field>
+                  <Field label="Connector Opacity">
+                    <Slider
+                      min={0}
+                      max={1}
+                      step={0.05}
+                      value={design.cityConnectorOpacity}
+                      onChange={(v) => set("cityConnectorOpacity", v)}
+                    />
+                  </Field>
+                  <Field label="Connector Weight">
+                    <Slider
+                      min={1}
+                      max={5}
+                      step={1}
+                      value={design.cityConnectorWeight}
+                      onChange={(v) => set("cityConnectorWeight", v)}
+                      suffix="px"
+                    />
+                  </Field>
+                  <Field label="Nudge Distance">
+                    <Slider
+                      min={4}
+                      max={40}
+                      step={1}
+                      value={design.cityLabelOffset}
+                      onChange={(v) => set("cityLabelOffset", v)}
+                      suffix="px"
+                    />
+                  </Field>
+                  <p className="text-[11px] text-gray-400 italic">
+                    Nudge distance only applies in auto-placement mode (Baseline X/Y = 0).
+                  </p>
+                  <hr className="border-gray-200" />
+                  <p className="text-[11px] text-gray-400 font-medium uppercase tracking-wider">Baseline Offset (all labels)</p>
+                  <p className="text-[11px] text-gray-400 italic">
+                    Set X/Y to offset all labels uniformly. 0,0 uses auto collision placement.
+                  </p>
+                  <Field label="Baseline X">
+                    <Slider
+                      min={-60}
+                      max={60}
+                      step={1}
+                      value={design.cityLabelBaselineX}
+                      onChange={(v) => set("cityLabelBaselineX", v)}
+                      suffix="px"
+                    />
+                  </Field>
+                  <Field label="Baseline Y">
+                    <Slider
+                      min={-60}
+                      max={60}
+                      step={1}
+                      value={design.cityLabelBaselineY}
+                      onChange={(v) => set("cityLabelBaselineY", v)}
+                      suffix="px"
+                    />
+                  </Field>
+                  <Field label="Corner Radius">
+                    <Slider
+                      min={0}
+                      max={12}
+                      step={1}
+                      value={design.cityLabelBorderRadius}
+                      onChange={(v) => set("cityLabelBorderRadius", v)}
+                      suffix="px"
+                    />
+                  </Field>
+                  <Field label="Label Shadow">
+                    <ToggleSwitch
+                      checked={design.cityLabelShadow}
+                      onChange={(v) => set("cityLabelShadow", v)}
+                    />
+                  </Field>
+                  <Field label="Connector Style">
+                    <SegmentedControl<"straight" | "jointed">
+                      options={[
+                        { value: "straight", label: "Straight" },
+                        { value: "jointed", label: "Jointed" },
+                      ]}
+                      value={design.cityConnectorStyle}
+                      onChange={(v) => set("cityConnectorStyle", v)}
+                    />
+                  </Field>
+                  <Field label="Connector Line">
+                    <SegmentedControl<"solid" | "dashed" | "dotted">
+                      options={[
+                        { value: "solid", label: "Solid" },
+                        { value: "dashed", label: "Dashed" },
+                        { value: "dotted", label: "Dotted" },
+                      ]}
+                      value={design.cityConnectorDash}
+                      onChange={(v) => set("cityConnectorDash", v)}
+                    />
+                  </Field>
+                  <hr className="border-gray-200" />
+                  <p className="text-[11px] text-gray-400 font-medium uppercase tracking-wider">City Dot</p>
+                  <Field label="Show Dot">
+                    <ToggleSwitch
+                      checked={design.cityDotShow}
+                      onChange={(v) => set("cityDotShow", v)}
+                    />
+                  </Field>
+                  {design.cityDotShow && (
+                    <Field label="Dot Radius">
+                      <Slider
+                        min={1}
+                        max={8}
+                        step={1}
+                        value={design.cityDotRadius}
+                        onChange={(v) => set("cityDotRadius", v)}
+                        suffix="px"
+                      />
+                    </Field>
+                  )}
                   <p className="text-[11px] text-gray-400 italic">
                     Click a city or peak label to override its style or hide it.
                   </p>
@@ -711,6 +918,90 @@ export default function DesignSidebar({ onClose, categories = [] }: DesignSideba
                       onChange={(v) => set("sfLabelWrap", v)}
                     />
                   </Field>
+                  <Field label="Mobile Layout">
+                    <select
+                      value={design.sfMobileLayout}
+                      onChange={(e) => set("sfMobileLayout", e.target.value as SfMobileLayout)}
+                      className="w-full rounded-md border border-gray-300 bg-white px-2.5 py-1.5 text-xs text-gray-700"
+                    >
+                      <option value="drawer">Drawer (slide-in overlay)</option>
+                      <option value="below">Below (horizontal strip)</option>
+                      <option value="hidden">Hidden (auto-rotate only)</option>
+                    </select>
+                  </Field>
+                </>
+              )}
+            </div>
+          </AccordionSection>
+
+          {/* ── Instructions ── */}
+          <AccordionSection title="Instructions">
+            <div className="space-y-3">
+              <Field label="Show Toast Tips">
+                <ToggleSwitch
+                  checked={design.showInstructionalToasts}
+                  onChange={(v) => set("showInstructionalToasts", v)}
+                />
+              </Field>
+              <p className="text-xs text-gray-500 leading-relaxed">
+                Brief tips shown on first visit. Desktop and mobile messages are shown separately based on device type.
+              </p>
+              {design.showInstructionalToasts && (
+                <>
+                  <Field label="Desktop Tips">
+                    <div className="space-y-1.5">
+                      {design.toastMessagesDesktop.map((msg, i) => (
+                        <div key={i} className="flex gap-1.5">
+                          <input
+                            type="text"
+                            value={msg}
+                            onChange={(e) => {
+                              const next = [...design.toastMessagesDesktop];
+                              next[i] = e.target.value;
+                              set("toastMessagesDesktop", next);
+                            }}
+                            className="flex-1 min-w-0 rounded border border-gray-300 bg-white px-2 py-1 text-xs text-gray-700"
+                          />
+                          <button
+                            onClick={() => set("toastMessagesDesktop", design.toastMessagesDesktop.filter((_, j) => j !== i))}
+                            className="text-gray-400 hover:text-red-500 px-1 text-sm"
+                            aria-label="Remove tip"
+                          >×</button>
+                        </div>
+                      ))}
+                      <button
+                        onClick={() => set("toastMessagesDesktop", [...design.toastMessagesDesktop, ""])}
+                        className="text-xs text-blue-600 hover:text-blue-800"
+                      >+ Add tip</button>
+                    </div>
+                  </Field>
+                  <Field label="Mobile Tips">
+                    <div className="space-y-1.5">
+                      {design.toastMessagesMobile.map((msg, i) => (
+                        <div key={i} className="flex gap-1.5">
+                          <input
+                            type="text"
+                            value={msg}
+                            onChange={(e) => {
+                              const next = [...design.toastMessagesMobile];
+                              next[i] = e.target.value;
+                              set("toastMessagesMobile", next);
+                            }}
+                            className="flex-1 min-w-0 rounded border border-gray-300 bg-white px-2 py-1 text-xs text-gray-700"
+                          />
+                          <button
+                            onClick={() => set("toastMessagesMobile", design.toastMessagesMobile.filter((_, j) => j !== i))}
+                            className="text-gray-400 hover:text-red-500 px-1 text-sm"
+                            aria-label="Remove tip"
+                          >×</button>
+                        </div>
+                      ))}
+                      <button
+                        onClick={() => set("toastMessagesMobile", [...design.toastMessagesMobile, ""])}
+                        className="text-xs text-blue-600 hover:text-blue-800"
+                      >+ Add tip</button>
+                    </div>
+                  </Field>
                 </>
               )}
             </div>
@@ -874,6 +1165,48 @@ export default function DesignSidebar({ onClose, categories = [] }: DesignSideba
                   </Field>
                 </>
               )}
+            </div>
+          </AccordionSection>
+
+          {/* ── Zoom & Bounds ── */}
+          <AccordionSection title="Zoom &amp; Bounds">
+            <div className="space-y-3">
+              <Field label="Default Zoom">
+                <Slider
+                  min={5}
+                  max={14}
+                  step={1}
+                  value={design.mapDefaultZoom}
+                  onChange={(v) => set("mapDefaultZoom", v)}
+                />
+              </Field>
+              <Field label="Min Zoom">
+                <Slider
+                  min={4}
+                  max={12}
+                  step={1}
+                  value={design.mapMinZoom}
+                  onChange={(v) => set("mapMinZoom", v)}
+                />
+              </Field>
+              <Field label="Max Zoom">
+                <Slider
+                  min={10}
+                  max={20}
+                  step={1}
+                  value={design.mapMaxZoom}
+                  onChange={(v) => set("mapMaxZoom", v)}
+                />
+              </Field>
+              <button
+                onClick={() => set("fitBoundsSignal", design.fitBoundsSignal + 1)}
+                className="w-full rounded-md border border-gray-300 bg-white px-3 py-1.5 text-xs font-medium text-gray-700 hover:bg-gray-50 transition-colors"
+              >
+                Fit Colorado
+              </button>
+              <p className="text-[11px] text-gray-400 italic">
+                "Fit Colorado" sets the default zoom to fit the state border. Adjust sliders above to fine-tune.
+              </p>
             </div>
           </AccordionSection>
 

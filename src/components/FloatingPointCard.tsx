@@ -3,13 +3,16 @@ import type { Map as LeafletMap } from "leaflet";
 import type { PointData, CardConnectorPreset } from "../types";
 import PointPopup from "./PointPopup";
 
-const CARD_WIDTH = 280;
-const STEM_LENGTH = 40; // distance from marker center to near card edge
+const DESKTOP_CARD_WIDTH = 280;
+const MOBILE_CARD_WIDTH = 220;
+const DESKTOP_STEM = 40; // distance from marker center to near card edge
+const MOBILE_STEM = 20;
 const EDGE_PAD = 8; // min distance from card edge to container edge
 
 interface FloatingPointCardProps {
   point: PointData;
   map: LeafletMap;
+  onDismiss?: () => void;
   onZoomIn?: () => void;
   onPrev?: () => void;
   onNext?: () => void;
@@ -35,7 +38,8 @@ interface Layout {
   cardLeft: number;
   cardTop: number;
   cardHeight: number;
-  placement: "left" | "right";
+  cardWidth: number;
+  placement: "left" | "right" | "above";
 }
 
 /**
@@ -62,6 +66,7 @@ function adjustColor(hex: string, amount: number): string {
 export default function FloatingPointCard({
   point,
   map,
+  onDismiss,
   onZoomIn,
   onPrev,
   onNext,
@@ -88,6 +93,16 @@ export default function FloatingPointCard({
   const [measured, setMeasured] = useState(false);
   const cardHeightRef = useRef<number>(0);
 
+  // Escape key to dismiss
+  useEffect(() => {
+    if (!onDismiss) return;
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") onDismiss();
+    };
+    document.addEventListener("keydown", handleKeyDown);
+    return () => document.removeEventListener("keydown", handleKeyDown);
+  }, [onDismiss]);
+
   // Phase 1: measure the card content off-screen before showing anything
   useEffect(() => {
     setMeasured(false);
@@ -107,22 +122,32 @@ export default function FloatingPointCard({
     if (!measured) return;
     const containerSize = map.getSize();
     const px = map.latLngToContainerPoint([point.lat, point.lng]);
+    const isMobile = containerSize.x < 400;
+    const cardWidth = isMobile ? MOBILE_CARD_WIDTH : DESKTOP_CARD_WIDTH;
+    const stemLength = isMobile ? MOBILE_STEM : DESKTOP_STEM;
 
-    const placement: "left" | "right" = px.x > containerSize.x / 2 ? "left" : "right";
-
-    const cardLeft =
-      placement === "right"
-        ? px.x + STEM_LENGTH
-        : px.x - STEM_LENGTH - CARD_WIDTH;
+    const placement: "left" | "right" | "above" = isMobile
+      ? "above"
+      : px.x > containerSize.x / 2 ? "left" : "right";
 
     const cardHeight = cardHeightRef.current || 200;
 
-    let cardTop = px.y - cardHeight / 2;
-    cardTop = Math.max(EDGE_PAD, Math.min(containerSize.y - cardHeight - EDGE_PAD, cardTop));
+    let cardLeft: number, cardTop: number;
+    if (placement === "above") {
+      cardLeft = px.x - cardWidth / 2;
+      cardTop = Math.max(EDGE_PAD, px.y - cardHeight - stemLength);
+    } else {
+      cardLeft = placement === "right"
+        ? px.x + stemLength
+        : px.x - stemLength - cardWidth;
+      let ct = px.y - cardHeight / 2;
+      ct = Math.max(EDGE_PAD, Math.min(containerSize.y - cardHeight - EDGE_PAD, ct));
+      cardTop = ct;
+    }
 
     const clampedLeft = Math.max(
       EDGE_PAD,
-      Math.min(containerSize.x - CARD_WIDTH - EDGE_PAD, cardLeft),
+      Math.min(containerSize.x - cardWidth - EDGE_PAD, cardLeft),
     );
 
     setLayout({
@@ -131,6 +156,7 @@ export default function FloatingPointCard({
       cardLeft: clampedLeft,
       cardTop,
       cardHeight,
+      cardWidth,
       placement,
     });
   }, [map, point.lat, point.lng, measured]);
@@ -158,6 +184,7 @@ export default function FloatingPointCard({
   }, [layout !== null, point.id]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Card content (shared between measure div and real card)
+  const isMobileLayout = map.getSize().x < 400;
   const cardContent = (
     <div className="p-3">
       <PointPopup
@@ -166,6 +193,7 @@ export default function FloatingPointCard({
         onPrev={onPrev}
         onNext={onNext}
         navLabel={navLabel}
+        compact={isMobileLayout}
       />
     </div>
   );
@@ -179,7 +207,7 @@ export default function FloatingPointCard({
       style={{
         position: "absolute",
         visibility: "hidden",
-        width: CARD_WIDTH,
+        width: isMobileLayout ? MOBILE_CARD_WIDTH : DESKTOP_CARD_WIDTH,
         top: -9999,
         left: -9999,
         borderRadius: cardBorderRadius,
@@ -194,14 +222,16 @@ export default function FloatingPointCard({
   // Card corner coordinates
   const cL = layout.cardLeft;
   const cT = layout.cardTop;
-  const cR = cL + CARD_WIDTH;
+  const cR = cL + layout.cardWidth;
   const cB = cT + layout.cardHeight;
   const pX = layout.pointX;
   const pY = layout.pointY;
 
   // Near card edge midpoint (for simple connector)
-  const nearEdgeX = layout.placement === "right" ? cL : cR;
-  const nearEdgeY = cT + layout.cardHeight / 2;
+  const nearEdgeX = layout.placement === "above"
+    ? cL + layout.cardWidth / 2
+    : (layout.placement === "right" ? cL : cR);
+  const nearEdgeY = layout.placement === "above" ? cB : cT + layout.cardHeight / 2;
 
   // Transform-origin for card: the marker point relative to the card's top-left
   const originX = pX - cL;
@@ -255,7 +285,7 @@ export default function FloatingPointCard({
         <rect
           x={cL}
           y={cT}
-          width={CARD_WIDTH}
+          width={layout.cardWidth}
           height={layout.cardHeight}
           rx={cardBorderRadius}
           ry={cardBorderRadius}
@@ -266,11 +296,14 @@ export default function FloatingPointCard({
       {/* Card content — fades in after connector has mostly finished growing */}
       <div
         ref={cardRef}
+        role="dialog"
+        aria-label={`Details: ${point.title}`}
+        aria-modal="true"
         className="absolute pointer-events-auto ring-1 ring-black/5"
         style={{
           left: layout.cardLeft,
           top: layout.cardTop,
-          width: CARD_WIDTH,
+          width: layout.cardWidth,
           borderRadius: cardBorderRadius,
           backgroundColor: "transparent",
           boxShadow: cardShadow && visible ? "0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1)" : "none",

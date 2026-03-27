@@ -90,6 +90,17 @@ Update ROADMAP.md: change L1 status from 🔲 to ✅.## After completion3. Visua
 | L2 — Sidebar Reorganization | ✅ | Move Roads/Waterways/Parks/Lakes + Lock View into Customize tab behind "Under Development" banner; keep Tiles, Labels, Regions, Points, Cities & Peaks, State Border in Settings |
 | L3 — Tile Prefetching | ✅ | Prefetch tiles for CO bounding box at common zoom levels on embed load for snappy UX |
 
+### Sprint 10 — CO150 Production Features
+
+| Phase | Status | Focus |
+|-------|--------|-------|
+| P1 — Smart City Label Repositioning | 🔲 | Collision-aware city labels that reposition with leader lines to avoid dense point clusters |
+| P2 — Active/Upcoming Data Status | 🔲 | "status" column role (active/upcoming); upcoming points faded + non-interactive, category badge counts |
+| P3 — Dot → Marker on Category Filter | 🔲 | Auto-upgrade dot markers to full shaped markers when a category filter is active |
+| P4 — Responsive Sidebar Filter | 🔲 | Mobile layout modes: drawer / below / hidden; swipe gestures; mobile-aware FloatingPointCard |
+| P5 — Instructional Toast Messages | 🔲 | Device-aware onboarding toasts (arrow keys / pinch to zoom); editable in DesignSidebar |
+| P6 — Accessibility & ARIA | 🔲 | Screen-reader support, focus management, ARIA roles/labels across all embed components |
+
 ### Deferred / Post-Launch
 
 | Item | Status | Notes |
@@ -178,6 +189,115 @@ Update ROADMAP.md: change L1 status from 🔲 to ✅.## After completion3. Visua
 - OSM attribution: ODbL notice on all published maps
 
 **Relevant Files**: `src/pages/EmbedPage.tsx`, `src/pages/MapEditorPage.tsx`, `src/components/MapEditorContent.tsx`, `src/components/layers/PrimaryElementsLayer.tsx`, `src/types.ts`, `worker/src/index.ts`
+
+---
+
+## Sprint 10 — CO150 Production Features
+
+### P1 — Smart City Label Repositioning
+
+**Goal**: CityLayer labels intelligently reposition away from dense point clusters (and each other) with smooth animation and leader-line connectors. Raster LabelLayer is turned OFF for CO150-style maps — CityLayer is the sole label source.
+
+**Behavior**: On `moveend`/`zoomend` (debounced 100ms), compute screen-space bounding boxes for all visible data points and city labels using `map.latLngToContainerPoint()`. For each city label, if overlap is detected, try candidate positions in order: right → left → above → below → diagonals (12px padding buffer). Pick first clear position, animate label (~200ms CSS transition). Draw a thin dashed leader line back to the city dot using the existing `ConnectorStyle` system. Larger cities take priority; if all positions overlap, fall back to reduced opacity at natural position.
+
+**Always-on** when CityLayer is active. No new DesignState params.
+
+**Files**: `src/components/layers/CityLayer.tsx`, `src/components/MapView.tsx`
+
+---
+
+### P2 — Active/Upcoming Data Status
+
+**Goal**: Weekly-batch publishing for CO150. A `status` column controls whether data points are fully interactive ("active") or faded + non-interactive ("upcoming").
+
+**Column role**: New `"status"` value for `ColumnRole`. Recognized cell values: `"active"` (default when missing/empty) or `"upcoming"`.
+
+**Rendering**:
+- Upcoming points render at `upcomingOpacity` (default 0.3) with grayscale filter, `pointer-events: none` — no click, no popup
+- Upcoming points excluded from auto-rotate rotation
+- Upcoming points excluded from filtered set when a category is active
+
+**Category buttons** (sidebar-filter layout):
+- All upcoming → button gets disabled/faded style
+- Mixed (some active, some upcoming) → button shows active count badge: "Dining (3/8)"
+- All active → normal display
+
+**New DesignState params**: `showUpcoming: boolean` (default `true`), `upcomingOpacity: number` (default `0.3`)
+
+**New types**: `PointStatus = "active" | "upcoming"`, `status?: PointStatus` on `PointData`
+
+**Files**: `src/types.ts`, `src/config.ts`, `src/lib/starterData.ts`, `src/pages/MapEditorPage.tsx`, `src/components/MapView.tsx`, `src/components/MarkerIcon.tsx`, `src/components/SidebarFilterLayout.tsx`, `src/components/DataTable.tsx`, `src/components/DesignSidebar.tsx`, `src/hooks/useAutoRotate.ts`, `src/components/DataSidebar.tsx`
+
+---
+
+### P3 — Dot → Marker on Category Filter
+
+**Goal**: When a user clicks a sidebar category button, filtered points auto-upgrade from simple dots to full shaped markers (icon, shape, connector) for better visibility.
+
+**Behavior**: Automatic when `embedLayout === "sidebar-filter"` and a category is active. Reverts to dots when "All" is selected. Uses existing 300ms CSS transitions for smooth morph. No new DesignState params.
+
+**Files**: `src/components/MapView.tsx`, `src/components/SidebarFilterLayout.tsx`
+
+---
+
+### P4 — Responsive Sidebar Filter
+
+**Goal**: Make the sidebar-filter template fully responsive with selectable mobile layout modes and touch-friendly interactivity.
+
+**Mobile layout modes** (`sfMobileLayout`):
+- `"drawer"` (default) — Sidebar slides in from left as overlay; toggle button fixed in corner; swipe-to-dismiss
+- `"below"` — Category buttons as horizontal strip below the map (full-width)
+- `"hidden"` — No category UI on mobile; auto-rotate only
+
+**Touch interactivity**: Swipe left/right to advance/go back through categories; tap to pause auto-rotate. FloatingPointCard renders as bottom sheet on small screens.
+
+**New DesignState param**: `sfMobileLayout: "drawer" | "below" | "hidden"` (default `"drawer"`)
+
+**Files**: `src/types.ts`, `src/config.ts`, `src/components/SidebarFilterLayout.tsx`, `src/components/DesignSidebar.tsx`, `src/components/FloatingPointCard.tsx`
+
+---
+
+### P5 — Instructional Toast Messages
+
+**Goal**: Show device-aware instructional toasts on first embed load. Editable in DesignSidebar.
+
+**Behavior**:
+- Detects device type via `matchMedia("(pointer: coarse)")`
+- Desktop defaults: "Use arrow keys to navigate between points", "Click a category to filter"
+- Mobile defaults: "Pinch to zoom · Swipe to explore", "Tap a category to filter"
+- Staggered display (1s, 3.5s), auto-dismiss after 5s
+- `localStorage` key `co-map-toast-{id}` prevents re-showing on return visits
+- Toasts inherit map `fontFamily` from DesignState
+
+**Library**: `sonner` (lightweight, accessible, no heavy dependencies)
+
+**New DesignState params**: `showInstructionalToasts: boolean`, `toastMessagesDesktop: string[]`, `toastMessagesMobile: string[]`
+
+**New file**: `src/components/InstructionalToasts.tsx`
+
+**Files**: `src/types.ts`, `src/config.ts`, `src/pages/EmbedPage.tsx`, `src/components/DesignSidebar.tsx`
+
+---
+
+### P6 — Accessibility & ARIA
+
+**Goal**: Comprehensive screen-reader support across all embed-facing components. WCAG AA target.
+
+**Key changes**:
+- `SidebarFilterLayout`: `role="toolbar"` on button container, `aria-pressed` on category buttons, `aria-live="polite"` region for filtered count announcements
+- `FloatingPointCard`: `role="dialog"`, `aria-label="{point title}"`, focus trap when open, Escape to close
+- `MapView`: `aria-label="Interactive map of Colorado"` on container, live region for point count changes
+- `DataTable`: `<th scope="col">`, `role="grid"` for interactive table
+- `AutoRotateDemo`: `aria-live="polite"` for category change announcements, `aria-label` on pause/resume
+- Category buttons: `aria-pressed`, `aria-disabled` for upcoming-only categories (from P2)
+- Skip-to-content link for keyboard users
+- Focus rings: visible `focus-visible:ring-2` on all interactive elements
+- Color contrast audit on category buttons (WCAG AA 4.5:1)
+- Sonner toasts (P5) provide `aria-live` automatically
+
+**Lighthouse target**: ≥ 90 on embed page
+
+**Files**: `src/components/SidebarFilterLayout.tsx`, `src/components/MapView.tsx`, `src/components/FloatingPointCard.tsx`, `src/components/DataTable.tsx`, `src/components/AutoRotateDemo.tsx`, `src/styles/index.css`
 
 ---
 

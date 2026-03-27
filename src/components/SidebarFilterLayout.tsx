@@ -1,6 +1,6 @@
-import { useState, useEffect, useCallback, useMemo } from "react";
+import { useState, useEffect, useCallback, useMemo, useRef, useLayoutEffect } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faLayerGroup } from "@fortawesome/free-solid-svg-icons";
+import { faLayerGroup, faBars, faXmark } from "@fortawesome/free-solid-svg-icons";
 import MapView from "./MapView";
 import DataTable from "./DataTable";
 import PointPopup from "./PointPopup";
@@ -125,6 +125,22 @@ export default function SidebarFilterLayout({
     return Array.from(cats).sort();
   }, [points]);
 
+  // ── Per-category upcoming awareness ─────────────────────────
+  const categoryCounts = useMemo(() => {
+    const counts: Record<string, { active: number; total: number }> = {};
+    for (const p of points) {
+      if (!counts[p.category]) counts[p.category] = { active: 0, total: 0 };
+      counts[p.category].total++;
+      if (p.status !== "upcoming") counts[p.category].active++;
+    }
+    return counts;
+  }, [points]);
+
+  const activePointsCount = useMemo(
+    () => points.filter((p) => p.status !== "upcoming").length,
+    [points],
+  );
+
   // ── Filtering ───────────────────────────────────────────────
   const [activeCategory, setActiveCategory] = useState<string | null>(null);
 
@@ -151,7 +167,8 @@ export default function SidebarFilterLayout({
     if (!activeCategory) return points;
     // In by-point mode, keep all points visible
     if (demoMode && rotation.demoState === "running" && design.demoRotationMode === "by-point") return points;
-    return points.filter((p) => p.category === activeCategory);
+    // When a category is active, only show active (not upcoming) points for that category
+    return points.filter((p) => p.category === activeCategory && p.status !== "upcoming");
   }, [points, activeCategory, demoMode, rotation.demoState, design.demoRotationMode]);
 
   // ── Dim-mode state ──────────────────────────────────────────
@@ -218,10 +235,99 @@ export default function SidebarFilterLayout({
 
   const demoState = rotation.demoState;
 
-  // ── Render ──────────────────────────────────────────────────
+  // ── Mobile drawer ──────────────────────────────────────
+  const [mobileDrawerOpen, setMobileDrawerOpen] = useState(false);
+
+  // ── Container-width mobile detection (fixes preview iframe issue) ──────
+  const containerRef = useRef<HTMLDivElement>(null);
+  const [isMobileView, setIsMobileView] = useState(false);
+  useLayoutEffect(() => {
+    const el = containerRef.current;
+    if (!el) return;
+    setIsMobileView(el.clientWidth < 768);
+    const ro = new ResizeObserver((entries) => {
+      setIsMobileView(entries[0].contentRect.width < 768);
+    });
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
+
+  // Emit a resize signal when mobile/desktop mode flips so MapView can
+  // re-invalidate tile layout and reset to the default zoom level.
+  const [resizeSignal, setResizeSignal] = useState(0);
+  const isMobileViewPrevRef = useRef(isMobileView);
+  useEffect(() => {
+    if (isMobileViewPrevRef.current !== isMobileView) {
+      isMobileViewPrevRef.current = isMobileView;
+      setResizeSignal((s) => s + 1);
+    }
+  }, [isMobileView]);
+
+  const drawerButtons = (
+    <>
+      <button
+        onClick={() => { handleCategoryClick(null); setMobileDrawerOpen(false); }}
+        className="sf-cat-btn"
+        style={{
+          backgroundColor: !activeCategory ? "#1f2937" : "#f3f4f6",
+          color: !activeCategory ? "#ffffff" : "#374151",
+          "--glow-color": "31, 41, 55",
+        } as React.CSSProperties}
+      >
+        <FontAwesomeIcon icon={faLayerGroup} className="sf-cat-icon" />
+        <span className="sf-cat-label">All</span>
+        <span className="sf-cat-count">
+          {activePointsCount < points.length ? `${activePointsCount}/${points.length}` : points.length}
+        </span>
+      </button>
+      {categories.map((cat) => {
+        const info = getCategoryInfo(cat);
+        const catColor = design.categoryColors[cat] || info.color;
+        const btnColor = design.sfBtnPreset === "filled" && design.sfBtnFillMode === "single" ? design.sfBtnFillColor : catColor;
+        const catIcon = design.categoryIcons[cat] || info.icon;
+        const isActive = activeCategory === cat;
+        const isDemoGlow = demoMode && demoState === "running" && isActive;
+        const isButtonDimmed = isDimMode && activeCategory !== null && !isActive;
+        const counts = categoryCounts[cat] ?? { active: 0, total: 0 };
+        const allUpcoming = counts.active === 0 && counts.total > 0;
+        const hasMixed = counts.active > 0 && counts.active < counts.total;
+        const btnStyles = getButtonStyles(design.sfBtnPreset, btnColor, isActive, isDemoGlow);
+        return (
+          <button
+            key={cat}
+            onClick={() => { if (!allUpcoming) { handleCategoryClick(cat); setMobileDrawerOpen(false); } }}
+            className={`sf-cat-btn ${btnStyles.className}`}
+            style={{
+              ...btnStyles.style,
+              ...(isButtonDimmed ? { opacity: 0.4, filter: "grayscale(30%)", transition: "opacity 300ms ease, filter 300ms ease" } : { transition: "opacity 300ms ease, filter 300ms ease" }),
+              ...(allUpcoming ? { backgroundColor: design.sfUpcomingColor + "33", color: design.sfUpcomingColor, borderColor: design.sfUpcomingColor + "66", cursor: "default", pointerEvents: "none" as const } : {}),
+            }}
+          >
+            <FaIconSvg name={catIcon} className="sf-cat-icon" />
+            <span className="sf-cat-label">{cat}</span>
+            <span className="sf-cat-count">
+              {hasMixed ? `${counts.active}/${counts.total}` : counts.total}
+            </span>
+          </button>
+        );
+      })}
+      {demoMode && demoState === "paused" && (
+        <button
+          onClick={(e) => { e.stopPropagation(); rotation.resume(); setMobileDrawerOpen(false); }}
+          className="mt-2 rounded-lg bg-gray-800 px-3 py-1.5 text-xs font-medium text-white hover:bg-gray-700"
+        >
+          Resume tour
+        </button>
+      )}
+    </>
+  );
+
+  // ── Render ──────────────────────────────────────────────
   return (
     <div
-      className="sf-layout"
+      ref={containerRef}
+      className={`sf-layout${isMobileView ? " is-mobile" : ""}`}
+      data-mobile-layout={design.sfMobileLayout}
       style={{
         ...(fillContainer ? { height: '100%' } : {}),
         '--sf-sidebar-w': design.sfSidebarWidth,
@@ -232,12 +338,53 @@ export default function SidebarFilterLayout({
         '--sf-label-wrap': design.sfLabelWrap ? 'normal' : 'nowrap',
       } as React.CSSProperties}
     >
+      {/* ── Drawer toggle strip (drawer mode only, mobile) ── */}
+      <div className="sf-drawer-topbar">
+        <button
+          className="sf-drawer-toggle"
+          onClick={() => setMobileDrawerOpen((o) => !o)}
+          aria-label={mobileDrawerOpen ? "Close filter menu" : "Open filter menu"}
+        >
+          <FontAwesomeIcon icon={mobileDrawerOpen ? faXmark : faBars} className="h-4 w-4" />
+          <span className="text-xs font-semibold ml-1.5">
+            {activeCategory ?? "All categories"}
+          </span>
+        </button>
+      </div>
+
+      {/* ── Drawer overlay (drawer mode only, mobile) ── */}
+      {mobileDrawerOpen && (
+        <div
+          className="sf-drawer-backdrop"
+          onClick={() => setMobileDrawerOpen(false)}
+          aria-hidden="true"
+        />
+      )}
+      <aside className={`sf-drawer ${mobileDrawerOpen ? "open" : ""}`}>
+        <div className="flex items-center justify-between mb-2 pb-2 border-b border-gray-100">
+          <span className="text-xs font-bold text-gray-500 uppercase tracking-wide">Filter</span>
+          <button
+            onClick={() => setMobileDrawerOpen(false)}
+            className="text-gray-400 hover:text-gray-600 p-1 -mr-1"
+            aria-label="Close filter menu"
+          >
+            <FontAwesomeIcon icon={faXmark} className="h-4 w-4" />
+          </button>
+        </div>
+        {drawerButtons}
+      </aside>
+
       {/* ── Desktop left sidebar ── */}
-      <aside className="sf-sidebar">
+      <aside className="sf-sidebar" role="navigation" aria-label="Filter by category">
+        {/* Live region for screen reader filter feedback */}
+        <div aria-live="polite" aria-atomic="true" className="sr-only">
+          {activeCategory ? `Showing ${filteredPoints.length} ${activeCategory} location${filteredPoints.length !== 1 ? "s" : ""}` : `Showing all ${activePointsCount} locations`}
+        </div>
         {/* All button */}
         <button
           onClick={() => handleCategoryClick(null)}
           className="sf-cat-btn"
+          aria-pressed={!activeCategory}
           style={{
             backgroundColor: !activeCategory ? "#1f2937" : "#f3f4f6",
             color: !activeCategory ? "#ffffff" : "#374151",
@@ -246,7 +393,9 @@ export default function SidebarFilterLayout({
         >
           <FontAwesomeIcon icon={faLayerGroup} className="sf-cat-icon" />
           <span className="sf-cat-label">All</span>
-          <span className="sf-cat-count">{points.length}</span>
+          <span className="sf-cat-count">
+            {activePointsCount < points.length ? `${activePointsCount}/${points.length}` : points.length}
+          </span>
         </button>
 
         {categories.map((cat) => {
@@ -257,21 +406,28 @@ export default function SidebarFilterLayout({
           const isActive = activeCategory === cat;
           const isDemoGlow = demoMode && demoState === "running" && isActive;
           const isButtonDimmed = isDimMode && activeCategory !== null && !isActive;
-          const count = points.filter((p) => p.category === cat).length;
+          const counts = categoryCounts[cat] ?? { active: 0, total: 0 };
+          const allUpcoming = counts.active === 0 && counts.total > 0;
+          const hasMixed = counts.active > 0 && counts.active < counts.total;
           const btnStyles = getButtonStyles(design.sfBtnPreset, btnColor, isActive, isDemoGlow);
           return (
             <button
               key={cat}
-              onClick={() => handleCategoryClick(cat)}
+              onClick={() => !allUpcoming && handleCategoryClick(cat)}
               className={`sf-cat-btn ${btnStyles.className}`}
+              aria-pressed={isActive}
+              aria-disabled={allUpcoming || undefined}
               style={{
                 ...btnStyles.style,
                 ...(isButtonDimmed ? { opacity: 0.4, filter: "grayscale(30%)", transition: "opacity 300ms ease, filter 300ms ease" } : { transition: "opacity 300ms ease, filter 300ms ease" }),
+                ...(allUpcoming ? { backgroundColor: design.sfUpcomingColor + "33", color: design.sfUpcomingColor, borderColor: design.sfUpcomingColor + "66", cursor: "default", pointerEvents: "none" as const } : {}),
               }}
             >
               <FaIconSvg name={catIcon} className="sf-cat-icon" />
               <span className="sf-cat-label">{cat}</span>
-              <span className="sf-cat-count">{count}</span>
+              <span className="sf-cat-count">
+                {hasMixed ? `${counts.active}/${counts.total}` : counts.total}
+              </span>
             </button>
           );
         })}
@@ -350,6 +506,8 @@ export default function SidebarFilterLayout({
             dimActive={isDimMode}
             dimOpacity={design.demoDimOpacity}
             autoRotateActive={demoMode && rotation.demoState === "running"}
+            activeCategory={activeCategory}
+            resizeSignal={resizeSignal}
           />
         </div>
 
@@ -386,11 +544,32 @@ export default function SidebarFilterLayout({
           height: 85vh;
           overflow: hidden;
           font-family: inherit;
+          position: relative;
         }
 
         /* ── Desktop sidebar (hidden on mobile) ── */
         .sf-sidebar {
           display: none;
+        }
+
+        /* ── Drawer overlay (mobile, drawer mode) ── */
+        .sf-drawer {
+          display: none;
+        }
+        .sf-drawer-backdrop {
+          display: none;
+        }
+        .sf-drawer-topbar {
+          display: none;
+        }
+        .sf-drawer-toggle {
+          display: flex;
+          align-items: center;
+          background: none;
+          border: none;
+          cursor: pointer;
+          color: #374151;
+          padding: 4px 2px;
         }
 
         /* ── Mobile horizontal bar ── */
@@ -405,16 +584,11 @@ export default function SidebarFilterLayout({
         }
         .sf-mobile-scroll {
           display: flex;
+          flex-wrap: wrap;
           gap: 6px;
-          overflow-x: auto;
-          -webkit-overflow-scrolling: touch;
-          scrollbar-width: none;
           flex: 1;
-          mask-image: linear-gradient(to right, transparent 0, black 8px, black calc(100% - 24px), transparent 100%);
-          -webkit-mask-image: linear-gradient(to right, transparent 0, black 8px, black calc(100% - 24px), transparent 100%);
-          padding-right: 16px;
+          padding: 2px 0;
         }
-        .sf-mobile-scroll::-webkit-scrollbar { display: none; }
         .sf-mobile-btn {
           display: flex;
           align-items: center;
@@ -447,40 +621,83 @@ export default function SidebarFilterLayout({
           display: none;
         }
 
-        /* ── Desktop (≥768px) ── */
-        @media (min-width: 768px) {
-          .sf-layout {
-            flex-direction: row;
-            height: 75vh;
-          }
-          .sf-sidebar {
-            display: flex;
-            flex-direction: column;
-            width: var(--sf-sidebar-w, 200px);
-            flex-shrink: 0;
-            gap: var(--sf-btn-gap, 4px);
-            padding: 8px;
-            background: #ffffff;
-            border-right: 1px solid #e5e7eb;
-            overflow-y: auto;
-            scrollbar-width: thin;
-          }
-          .sf-mobile-bar {
-            display: none;
-          }
-          .sf-content {
-            flex: 1;
-          }
-          .sf-map {
-            flex: ${design.showDataPanel ? '3' : '1'};
-          }
-          .sf-table {
-            display: flex;
-            flex-direction: column;
-            flex: 2;
-            border-top: 1px solid #e5e7eb;
-            overflow: hidden;
-          }
+        /* ── Mobile layout modes (activated by .is-mobile class via ResizeObserver) ── */
+        .sf-layout.is-mobile[data-mobile-layout="drawer"] .sf-drawer-topbar {
+          display: flex;
+          align-items: center;
+          padding: 6px 10px;
+          background: #ffffff;
+          border-bottom: 1px solid #e5e7eb;
+          flex-shrink: 0;
+        }
+        .sf-layout.is-mobile[data-mobile-layout="drawer"] .sf-mobile-bar {
+          display: none;
+        }
+        .sf-layout.is-mobile[data-mobile-layout="drawer"] .sf-drawer {
+          display: flex;
+          flex-direction: column;
+          gap: var(--sf-btn-gap, 4px);
+          padding: 10px 8px;
+          position: fixed;
+          top: 0;
+          left: 0;
+          height: 100%;
+          width: min(var(--sf-sidebar-w, 200px), 85vw);
+          background: #ffffff;
+          border-right: 1px solid #e5e7eb;
+          z-index: 1001;
+          overflow-y: auto;
+          box-shadow: 4px 0 16px rgba(0,0,0,0.12);
+          transform: translateX(-110%);
+          transition: transform 250ms cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        .sf-layout.is-mobile[data-mobile-layout="drawer"] .sf-drawer.open {
+          transform: translateX(0);
+        }
+        .sf-layout.is-mobile[data-mobile-layout="drawer"] .sf-drawer-backdrop {
+          display: block;
+          position: fixed;
+          inset: 0;
+          background: rgba(0,0,0,0.35);
+          z-index: 1000;
+        }
+        /* Hidden mode */
+        .sf-layout.is-mobile[data-mobile-layout="hidden"] .sf-mobile-bar {
+          display: none;
+        }
+
+        /* ── Desktop (container ≥768px) ── */
+        .sf-layout:not(.is-mobile) {
+          flex-direction: row;
+          height: 75vh;
+        }
+        .sf-layout:not(.is-mobile) .sf-sidebar {
+          display: flex;
+          flex-direction: column;
+          width: var(--sf-sidebar-w, 200px);
+          flex-shrink: 0;
+          gap: var(--sf-btn-gap, 4px);
+          padding: 8px;
+          background: #ffffff;
+          border-right: 1px solid #e5e7eb;
+          overflow-y: auto;
+          scrollbar-width: thin;
+        }
+        .sf-layout:not(.is-mobile) .sf-mobile-bar {
+          display: none;
+        }
+        .sf-layout:not(.is-mobile) .sf-content {
+          flex: 1;
+        }
+        .sf-layout:not(.is-mobile) .sf-map {
+          flex: ${design.showDataPanel ? '3' : '1'};
+        }
+        .sf-layout:not(.is-mobile) .sf-table {
+          display: flex;
+          flex-direction: column;
+          flex: 2;
+          border-top: 1px solid #e5e7eb;
+          overflow: hidden;
         }
 
         /* ── Category button (desktop sidebar) ── */

@@ -69,27 +69,31 @@ export default function DataTable({ points, selectedId, onSelectPoint, activePoi
 
   return (
     <div className="custom-scrollbar h-full overflow-y-auto">
-      <table className="w-full text-left text-sm">
+      <table className="w-full text-left text-sm" role="grid" aria-label="Location data">
         <thead className="sticky top-0 z-10 bg-gray-50 text-xs font-semibold uppercase tracking-wider text-gray-500">
-          <tr>
-            <th className="px-4 py-3 w-14"></th>
-            <th className="px-4 py-3">Name</th>
-            <th className="hidden px-4 py-3 md:table-cell">Category</th>
-            <th className="hidden px-4 py-3 lg:table-cell">Address</th>
-            <th className="px-4 py-3 w-12"></th>
+          <tr role="row">
+            <th scope="col" className="px-4 py-3 w-14"></th>
+            <th scope="col" className="px-4 py-3">Name</th>
+            <th scope="col" className="hidden px-4 py-3 md:table-cell">Category</th>
+            <th scope="col" className="hidden px-4 py-3 lg:table-cell">Address</th>
+            <th scope="col" className="px-4 py-3 w-12"></th>
           </tr>
         </thead>
         <tbody className="divide-y divide-gray-100">
           {points.map((point) => {
             const isSelected = point.id === selectedId;
             const isRowDimmed = dimActive && activePointIds != null && !activePointIds.has(point.id);
+            const isUpcoming = point.status === "upcoming";
             const catInfo = getCategoryInfo(point.category);
             return (
               <tr
+                role="row"
+                aria-selected={isSelected}
                 key={point.id}
                 ref={setRowRef(point.id)}
-                onClick={() => onSelectPoint(point.id)}
-                className={`cursor-pointer transition-colors hover:bg-gray-50
+                onClick={() => !isUpcoming && onSelectPoint(point.id)}
+                className={`transition-colors
+                  ${isUpcoming ? "cursor-default opacity-40 grayscale" : "cursor-pointer hover:bg-gray-50"}
                   ${isSelected ? "bg-blue-50 ring-2 ring-inset ring-blue-300" : ""}`}
                 style={isRowDimmed ? {
                   opacity: dimOpacity ?? 0.3,

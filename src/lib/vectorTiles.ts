@@ -246,6 +246,7 @@ export const COLORADO_CITIES: CityFeature[] = [
   { id: "breckenridge", name: "Breckenridge", lat: 39.4819, lng: -106.0484, elevation_m: 2926, population: 4540, type: "city" },
   { id: "leadville", name: "Leadville", lat: 39.2508, lng: -106.2925, elevation_m: 3094, population: 2602, type: "city" },
   { id: "salida", name: "Salida", lat: 38.5347, lng: -105.9988, elevation_m: 2235, population: 5236, type: "city" },
+  { id: "trinidad", name: "Trinidad", lat: 37.1695, lng: -104.4966, elevation_m: 1836, population: 8444, type: "city" },
   // Notable peaks (elevation in meters)
   { id: "mount-elbert", name: "Mt. Elbert", lat: 39.1178, lng: -106.4453, elevation_m: 4401, type: "peak" },
   { id: "mount-massive", name: "Mt. Massive", lat: 39.1875, lng: -106.4756, elevation_m: 4396, type: "peak" },

@@ -15,9 +15,11 @@ interface Props {
   onNext?: () => void;
   /** "3 of 150" style label */
   navLabel?: string;
+  /** Compact mode for narrow mobile cards */
+  compact?: boolean;
 }
 
-export default function PointPopup({ point, onZoomIn, onPrev, onNext, navLabel }: Props) {
+export default function PointPopup({ point, onZoomIn, onPrev, onNext, navLabel, compact }: Props) {
   const { design } = useDesign();
   const catInfo = getCategoryInfo(point.category);
   const displayColor = design.categoryColors[point.category] || catInfo.color;
@@ -34,14 +36,14 @@ export default function PointPopup({ point, onZoomIn, onPrev, onNext, navLabel }
   }, [onPrev, onNext]);
 
   return (
-    <div className="min-w-[220px] max-w-[280px]">
+    <div className={compact ? "w-full" : "min-w-[220px] max-w-[280px]"}>
       {/* Thumbnail (from image column or legacy imageUrl) */}
       {point.imageUrl && (
         <div className="mb-2 overflow-hidden rounded-lg">
           <img
             src={point.imageUrl}
             alt={point.title}
-            className="h-32 w-full object-cover"
+            className={`${compact ? "h-24" : "h-32"} w-full object-cover`}
             loading="lazy"
             decoding="async"
             sizes="280px"

@@ -1,3 +1,6 @@
+/** Whether a data point is published (active) or upcoming */
+export type PointStatus = "active" | "upcoming";
+
 export interface PointData {
   id: string;
   title: string;
@@ -10,6 +13,8 @@ export interface PointData {
   lng: number;
   /** FontAwesome icon name override (from "icon" column role) */
   icon?: string;
+  /** Publication status — "upcoming" renders faded and non-interactive */
+  status?: PointStatus;
 }
 
 // ── Drawing & Sketching ──────────────────────────────────────
@@ -65,6 +70,7 @@ export type MarkerShape = "pin" | "rounded-square" | "circle" | "stadium" | "sof
 export type MarkerConnector = "stem" | "dot" | "none";
 export type MarkerPadding = "compact" | "normal" | "spacious";
 export type SfBtnPreset = "filled" | "outlined" | "ghost" | "pill" | "minimal";
+export type SfMobileLayout = "drawer" | "below" | "hidden";
 export type DemoHighlightStyle = "filter" | "dim";
 export type DemoRotationMode = "by-category" | "by-point";
 export type DemoRotationOrder = "sequential" | "shuffled";
@@ -90,7 +96,7 @@ export type TilePreset =
 // ── Data Tab Types ──────────────────────────────────────────
 
 /** Roles a column can be assigned to in the data editor */
-export type ColumnRole = "geometry" | "name" | "label" | "value" | "group" | "icon" | "image" | "address" | "url" | "metadata" | "none";
+export type ColumnRole = "geometry" | "name" | "label" | "value" | "group" | "icon" | "image" | "address" | "url" | "metadata" | "status" | "none";
 
 /** Maps a column name to a visualization role */
 export type ColumnMappings = Record<string, ColumnRole>;
@@ -300,6 +306,7 @@ export interface DesignState {
   sfBtnPreset: SfBtnPreset;
   sfBtnFillColor: string;
   sfBtnFillMode: SfBtnFillMode;
+  sfMobileLayout: SfMobileLayout;
   // Map interaction
   flyToZoom: number;
   // Category display in data table
@@ -339,4 +346,39 @@ export interface DesignState {
   cardEdgeWidth: number;
   cardEdgeOpacity: number;
   cardConnectorInset: number;
+  // Active/upcoming data status
+  showUpcoming: boolean;
+  upcomingOpacity: number;
+  /** Color used for sidebar buttons when all points in a category are upcoming */
+  sfUpcomingColor: string;
+  /** Tooltip text shown when an upcoming marker is clicked */
+  upcomingTooltipText: string;
+  upcomingTooltipOpacity: number;
+  // Instructional toasts
+  showInstructionalToasts: boolean;
+  toastMessagesDesktop: string[];
+  toastMessagesMobile: string[];
+  // City label styles
+  cityLabelBgColor: string;
+  cityLabelBgOpacity: number;
+  cityLabelPaddingH: number;
+  cityLabelPaddingV: number;
+  cityConnectorColor: string;
+  cityConnectorWeight: number;
+  cityConnectorOpacity: number;
+  cityConnectorDash: "solid" | "dashed" | "dotted";
+  cityLabelOffset: number;
+  cityLabelBaselineX: number;
+  cityLabelBaselineY: number;
+  cityLabelBorderRadius: number;
+  cityLabelShadow: boolean;
+  cityDotShow: boolean;
+  cityDotRadius: number;
+  cityConnectorStyle: "straight" | "jointed";
+  // Map zoom constraints
+  mapMinZoom: number;
+  mapMaxZoom: number;
+  mapDefaultZoom: number;
+  // Transient signals (not serialized)
+  fitBoundsSignal: number;
 }

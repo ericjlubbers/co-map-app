@@ -3,6 +3,7 @@ import { useParams, useSearchParams } from "react-router-dom";
 import { getMap, type MapDetail } from "../lib/api";
 import { DesignProvider, useDesign } from "../context/DesignContext";
 import MapEditorContent from "../components/MapEditorContent";
+import InstructionalToasts from "../components/InstructionalToasts";
 import { layerDataToPoints } from "../lib/starterData";
 import { prefetchTiles } from "../lib/tilePrefetch";
 import { getTileConfig, MAP_MAX_BOUNDS } from "../config";
@@ -89,6 +90,7 @@ export default function EmbedPage() {
   return (
     <DesignProvider initialDesignState={mapData.design_state} embedMode>
       <TilePrefetcher />
+      <InstructionalToasts mapId={id!} />
       <div className="h-dvh w-dvw">
         <MapEditorContent
           embedMode

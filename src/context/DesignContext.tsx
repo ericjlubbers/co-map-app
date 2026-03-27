@@ -6,7 +6,7 @@ import {
   useCallback,
   type ReactNode,
 } from "react";
-import type { DesignState, ClusterStyle, ClusterPlugin, PlacementStrategy, FontFamily, TilePreset, SfBtnPreset, SfBtnFillMode, DemoHighlightStyle, DemoRotationMode, DemoRotationOrder, MarkerShape, MarkerConnector, MarkerPadding } from "../types";
+import type { DesignState, ClusterStyle, ClusterPlugin, PlacementStrategy, FontFamily, TilePreset, SfBtnPreset, SfBtnFillMode, SfMobileLayout, DemoHighlightStyle, DemoRotationMode, DemoRotationOrder, MarkerShape, MarkerConnector, MarkerPadding } from "../types";
 import { DEFAULT_DESIGN } from "../config";
 
 // ── URL param keys ──────────────────────────────────────────
@@ -127,6 +127,34 @@ const PARAM_MAP: Record<keyof DesignState, string> = {
   cardEdgeWidth: "ceW",
   cardEdgeOpacity: "ceOp",
   cardConnectorInset: "ccIn",
+  showUpcoming: "suUp",
+  upcomingOpacity: "uOp",
+  sfUpcomingColor: "sfUC",
+  upcomingTooltipText: "uTip",
+  upcomingTooltipOpacity: "uTipO",
+  showInstructionalToasts: "iToast",
+  toastMessagesDesktop: "tmd",
+  toastMessagesMobile: "tmm",
+  sfMobileLayout: "sfMl",
+  mapMinZoom: "mMinZ",
+  mapMaxZoom: "mMaxZ",
+  mapDefaultZoom: "mDZ",
+  cityLabelBgColor: "clBg",
+  cityLabelBgOpacity: "clBgO",
+  cityLabelPaddingH: "clPH",
+  cityLabelPaddingV: "clPV",
+  cityConnectorColor: "ccCol",
+  cityConnectorWeight: "ccW",
+  cityConnectorOpacity: "ccO",
+  cityConnectorDash: "cCD",
+  cityLabelOffset: "clOff",
+  cityLabelBaselineX: "clBX",
+  cityLabelBaselineY: "clBY",
+  cityLabelBorderRadius: "clBR",
+  cityLabelShadow: "clSh",
+  cityDotShow: "cdSh",
+  cityDotRadius: "cdR",
+  cityConnectorStyle: "cCS",
 };
 
 // ── Font shorthand mapping ──────────────────────────────────
@@ -458,6 +486,70 @@ function parseFromURL(): Partial<DesignState> {
   const ccIn = params.get(PARAM_MAP.cardConnectorInset);
   if (ccIn) partial.cardConnectorInset = parseFloat(ccIn);
 
+  const suUp = params.get(PARAM_MAP.showUpcoming);
+  if (suUp) partial.showUpcoming = suUp === "1";
+  const uOp = params.get(PARAM_MAP.upcomingOpacity);
+  if (uOp) partial.upcomingOpacity = parseFloat(uOp);
+  const iToast = params.get(PARAM_MAP.showInstructionalToasts);
+  if (iToast) partial.showInstructionalToasts = iToast === "1";
+  const tmd = params.get(PARAM_MAP.toastMessagesDesktop);
+  if (tmd) {
+    try { partial.toastMessagesDesktop = JSON.parse(decodeURIComponent(tmd)); } catch { /* skip */ }
+  }
+  const tmm = params.get(PARAM_MAP.toastMessagesMobile);
+  if (tmm) {
+    try { partial.toastMessagesMobile = JSON.parse(decodeURIComponent(tmm)); } catch { /* skip */ }
+  }
+  const sfMl = params.get(PARAM_MAP.sfMobileLayout);
+  const SF_MOBILE_LAYOUTS: SfMobileLayout[] = ["drawer", "below", "hidden"];
+  if (sfMl && SF_MOBILE_LAYOUTS.includes(sfMl as SfMobileLayout))
+    partial.sfMobileLayout = sfMl as SfMobileLayout;
+
+  const sfUC = params.get(PARAM_MAP.sfUpcomingColor);
+  if (sfUC) partial.sfUpcomingColor = `#${sfUC}`;
+  const uTip = params.get(PARAM_MAP.upcomingTooltipText);
+  if (uTip) partial.upcomingTooltipText = decodeURIComponent(uTip);
+  const uTipO = params.get(PARAM_MAP.upcomingTooltipOpacity);
+  if (uTipO) partial.upcomingTooltipOpacity = parseFloat(uTipO);
+  const mMinZ = params.get(PARAM_MAP.mapMinZoom);
+  if (mMinZ) partial.mapMinZoom = parseInt(mMinZ, 10);
+  const mMaxZ = params.get(PARAM_MAP.mapMaxZoom);
+  if (mMaxZ) partial.mapMaxZoom = parseInt(mMaxZ, 10);
+  const mDZ = params.get(PARAM_MAP.mapDefaultZoom);
+  if (mDZ) partial.mapDefaultZoom = parseInt(mDZ, 10);
+  const clBg = params.get(PARAM_MAP.cityLabelBgColor);
+  if (clBg) partial.cityLabelBgColor = `#${clBg}`;
+  const clBgO = params.get(PARAM_MAP.cityLabelBgOpacity);
+  if (clBgO) partial.cityLabelBgOpacity = parseFloat(clBgO);
+  const clPH = params.get(PARAM_MAP.cityLabelPaddingH);
+  if (clPH) partial.cityLabelPaddingH = parseInt(clPH, 10);
+  const clPV = params.get(PARAM_MAP.cityLabelPaddingV);
+  if (clPV) partial.cityLabelPaddingV = parseInt(clPV, 10);
+  const ccCol = params.get(PARAM_MAP.cityConnectorColor);
+  if (ccCol) partial.cityConnectorColor = `#${ccCol}`;
+  const cityCcW = params.get(PARAM_MAP.cityConnectorWeight);
+  if (cityCcW) partial.cityConnectorWeight = parseFloat(cityCcW);
+  const cityCcO = params.get(PARAM_MAP.cityConnectorOpacity);
+  if (cityCcO) partial.cityConnectorOpacity = parseFloat(cityCcO);
+  const cCD = params.get(PARAM_MAP.cityConnectorDash);
+  if (cCD) partial.cityConnectorDash = cCD as DesignState["cityConnectorDash"];
+  const clOff = params.get(PARAM_MAP.cityLabelOffset);
+  if (clOff) partial.cityLabelOffset = parseInt(clOff, 10);
+  const clBX = params.get(PARAM_MAP.cityLabelBaselineX);
+  if (clBX) partial.cityLabelBaselineX = parseInt(clBX, 10);
+  const clBY = params.get(PARAM_MAP.cityLabelBaselineY);
+  if (clBY) partial.cityLabelBaselineY = parseInt(clBY, 10);
+  const clBR = params.get(PARAM_MAP.cityLabelBorderRadius);
+  if (clBR) partial.cityLabelBorderRadius = parseInt(clBR, 10);
+  const clSh = params.get(PARAM_MAP.cityLabelShadow);
+  if (clSh) partial.cityLabelShadow = clSh === "1";
+  const cdSh = params.get(PARAM_MAP.cityDotShow);
+  if (cdSh) partial.cityDotShow = cdSh === "1";
+  const cdR = params.get(PARAM_MAP.cityDotRadius);
+  if (cdR) partial.cityDotRadius = parseInt(cdR, 10);
+  const cCS = params.get(PARAM_MAP.cityConnectorStyle);
+  if (cCS) partial.cityConnectorStyle = cCS as DesignState["cityConnectorStyle"];
+
   return partial;
 }
 
@@ -704,6 +796,63 @@ function serializeToURL(state: DesignState, includeDesignMode: boolean): string 
     params.set(PARAM_MAP.cardEdgeOpacity, String(state.cardEdgeOpacity));
   if (state.cardConnectorInset !== DEFAULT_DESIGN.cardConnectorInset)
     params.set(PARAM_MAP.cardConnectorInset, String(state.cardConnectorInset));
+
+  if (state.showUpcoming !== DEFAULT_DESIGN.showUpcoming)
+    params.set(PARAM_MAP.showUpcoming, state.showUpcoming ? "1" : "0");
+  if (state.upcomingOpacity !== DEFAULT_DESIGN.upcomingOpacity)
+    params.set(PARAM_MAP.upcomingOpacity, String(state.upcomingOpacity));
+  if (state.showInstructionalToasts !== DEFAULT_DESIGN.showInstructionalToasts)
+    params.set(PARAM_MAP.showInstructionalToasts, state.showInstructionalToasts ? "1" : "0");
+  if (JSON.stringify(state.toastMessagesDesktop) !== JSON.stringify(DEFAULT_DESIGN.toastMessagesDesktop))
+    params.set(PARAM_MAP.toastMessagesDesktop, encodeURIComponent(JSON.stringify(state.toastMessagesDesktop)));
+  if (JSON.stringify(state.toastMessagesMobile) !== JSON.stringify(DEFAULT_DESIGN.toastMessagesMobile))
+    params.set(PARAM_MAP.toastMessagesMobile, encodeURIComponent(JSON.stringify(state.toastMessagesMobile)));
+  if (state.sfMobileLayout !== DEFAULT_DESIGN.sfMobileLayout)
+    params.set(PARAM_MAP.sfMobileLayout, state.sfMobileLayout);
+  if (state.sfUpcomingColor !== DEFAULT_DESIGN.sfUpcomingColor)
+    params.set(PARAM_MAP.sfUpcomingColor, state.sfUpcomingColor.replace("#", ""));
+  if (state.upcomingTooltipText !== DEFAULT_DESIGN.upcomingTooltipText)
+    params.set(PARAM_MAP.upcomingTooltipText, encodeURIComponent(state.upcomingTooltipText));
+  if (state.upcomingTooltipOpacity !== DEFAULT_DESIGN.upcomingTooltipOpacity)
+    params.set(PARAM_MAP.upcomingTooltipOpacity, String(state.upcomingTooltipOpacity));
+  if (state.mapMinZoom !== DEFAULT_DESIGN.mapMinZoom)
+    params.set(PARAM_MAP.mapMinZoom, String(state.mapMinZoom));
+  if (state.mapMaxZoom !== DEFAULT_DESIGN.mapMaxZoom)
+    params.set(PARAM_MAP.mapMaxZoom, String(state.mapMaxZoom));
+  if (state.mapDefaultZoom !== DEFAULT_DESIGN.mapDefaultZoom)
+    params.set(PARAM_MAP.mapDefaultZoom, String(state.mapDefaultZoom));
+  if (state.cityLabelBgColor !== DEFAULT_DESIGN.cityLabelBgColor)
+    params.set(PARAM_MAP.cityLabelBgColor, state.cityLabelBgColor.replace("#", ""));
+  if (state.cityLabelBgOpacity !== DEFAULT_DESIGN.cityLabelBgOpacity)
+    params.set(PARAM_MAP.cityLabelBgOpacity, String(state.cityLabelBgOpacity));
+  if (state.cityLabelPaddingH !== DEFAULT_DESIGN.cityLabelPaddingH)
+    params.set(PARAM_MAP.cityLabelPaddingH, String(state.cityLabelPaddingH));
+  if (state.cityLabelPaddingV !== DEFAULT_DESIGN.cityLabelPaddingV)
+    params.set(PARAM_MAP.cityLabelPaddingV, String(state.cityLabelPaddingV));
+  if (state.cityConnectorColor !== DEFAULT_DESIGN.cityConnectorColor)
+    params.set(PARAM_MAP.cityConnectorColor, state.cityConnectorColor.replace("#", ""));
+  if (state.cityConnectorWeight !== DEFAULT_DESIGN.cityConnectorWeight)
+    params.set(PARAM_MAP.cityConnectorWeight, String(state.cityConnectorWeight));
+  if (state.cityConnectorOpacity !== DEFAULT_DESIGN.cityConnectorOpacity)
+    params.set(PARAM_MAP.cityConnectorOpacity, String(state.cityConnectorOpacity));
+  if (state.cityConnectorDash !== DEFAULT_DESIGN.cityConnectorDash)
+    params.set(PARAM_MAP.cityConnectorDash, state.cityConnectorDash);
+  if (state.cityLabelOffset !== DEFAULT_DESIGN.cityLabelOffset)
+    params.set(PARAM_MAP.cityLabelOffset, String(state.cityLabelOffset));
+  if (state.cityLabelBaselineX !== DEFAULT_DESIGN.cityLabelBaselineX)
+    params.set(PARAM_MAP.cityLabelBaselineX, String(state.cityLabelBaselineX));
+  if (state.cityLabelBaselineY !== DEFAULT_DESIGN.cityLabelBaselineY)
+    params.set(PARAM_MAP.cityLabelBaselineY, String(state.cityLabelBaselineY));
+  if (state.cityLabelBorderRadius !== DEFAULT_DESIGN.cityLabelBorderRadius)
+    params.set(PARAM_MAP.cityLabelBorderRadius, String(state.cityLabelBorderRadius));
+  if (state.cityLabelShadow !== DEFAULT_DESIGN.cityLabelShadow)
+    params.set(PARAM_MAP.cityLabelShadow, state.cityLabelShadow ? "1" : "0");
+  if (state.cityDotShow !== DEFAULT_DESIGN.cityDotShow)
+    params.set(PARAM_MAP.cityDotShow, state.cityDotShow ? "1" : "0");
+  if (state.cityDotRadius !== DEFAULT_DESIGN.cityDotRadius)
+    params.set(PARAM_MAP.cityDotRadius, String(state.cityDotRadius));
+  if (state.cityConnectorStyle !== DEFAULT_DESIGN.cityConnectorStyle)
+    params.set(PARAM_MAP.cityConnectorStyle, state.cityConnectorStyle);
 
   if (includeDesignMode) params.set("design", "1");
 
