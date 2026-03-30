@@ -129,19 +129,19 @@ export function useAutoRotate({
     if (mode === "by-category") {
       return categories[resolvedIndex] ?? null;
     }
-    // by-point: derive category from the point
-    const pt = points[resolvedIndex];
+    // by-point: derive category from the filtered items array (excludes upcoming)
+    const pt = (items as PointData[])[resolvedIndex];
     return pt?.category ?? null;
-  }, [enabled, itemCount, demoState, mode, categories, points, resolvedIndex]);
+  }, [enabled, itemCount, demoState, mode, categories, items, resolvedIndex]);
 
   const activePointId = useMemo(() => {
     if (!enabled || itemCount === 0 || demoState !== "running") return null;
     if (mode === "by-point") {
-      const pt = points[resolvedIndex];
+      const pt = (items as PointData[])[resolvedIndex];
       return pt?.id ?? null;
     }
     return null;
-  }, [enabled, itemCount, demoState, mode, points, resolvedIndex]);
+  }, [enabled, itemCount, demoState, mode, items, resolvedIndex]);
 
   // Current interval depends on mode
   const intervalMs = mode === "by-category" ? categoryIntervalMs : pointIntervalMs;
