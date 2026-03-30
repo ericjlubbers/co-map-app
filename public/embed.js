@@ -43,6 +43,9 @@
       var heightUnit = iframe.getAttribute("data-height-unit") || "auto";
       var heightVal = parseFloat(iframe.getAttribute("data-height")) || 600;
 
+      // Ensure block layout so no inline-element baseline gap appears below the iframe
+      iframe.style.display = "block";
+
       if (heightUnit === "px") {
         iframe.style.height = heightVal + "px";
       } else if (heightUnit === "vh") {

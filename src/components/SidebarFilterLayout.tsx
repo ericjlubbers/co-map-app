@@ -541,7 +541,7 @@ export default function SidebarFilterLayout({
           display: flex;
           flex-direction: column;
           width: 100%;
-          height: 85vh;
+          height: 100%;
           overflow: hidden;
           font-family: inherit;
           position: relative;
@@ -669,7 +669,7 @@ export default function SidebarFilterLayout({
         /* ── Desktop (container ≥768px) ── */
         .sf-layout:not(.is-mobile) {
           flex-direction: row;
-          height: 75vh;
+          height: 100%;
         }
         .sf-layout:not(.is-mobile) .sf-sidebar {
           display: flex;

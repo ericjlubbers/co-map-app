@@ -32,13 +32,16 @@ export default function EmbedCodeBanner({
       : []),
   ].join(" ");
 
-  // Fallback height for browsers/contexts where script doesn't load
-  const fallbackHeight =
-    design.embedHeightUnit === "vh"
-      ? `${design.embedHeight}vh`
-      : `${design.embedHeight}px`;
+  // Fallback height for browsers/contexts where script doesn't load.
+  // The HTML `height` attribute must be a plain integer (pixels) — vh is not valid HTML here.
+  // embed.js will override this with the correct vh/ratio height once it runs.
+  const fallbackHeightPx = design.embedHeightUnit === "auto"
+    ? "600"
+    : design.embedHeightUnit === "vh"
+      ? String(Math.round((parseFloat(design.embedHeight) / 100) * 800)) // ~800px screen estimate
+      : design.embedHeight;
 
-  const iframeTag = `<iframe src="${embedUrl}" ${dataAttrs} width="100%" height="${fallbackHeight}" frameborder="0" style="border:0" allowfullscreen></iframe>`;
+  const iframeTag = `<iframe src="${embedUrl}" ${dataAttrs} width="100%" height="${fallbackHeightPx}" frameborder="0" style="border:0;display:block" allowfullscreen></iframe>`;
 
   const embedCode = `${iframeTag}\n<script src="${scriptUrl}" defer><\/script>`;
 
