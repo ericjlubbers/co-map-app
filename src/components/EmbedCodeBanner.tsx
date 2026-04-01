@@ -26,23 +26,18 @@ export default function EmbedCodeBanner({
     `data-ratio-mobile="${design.embedMobileAspectRatio}"`,
     `data-height="${design.embedHeight}"`,
     `data-height-unit="${design.embedHeightUnit}"`,
-    // Sidebar-filter template uses separate desktop/mobile vh heights
     ...(design.embedLayout === "sidebar-filter" && design.embedHeightUnit === "vh"
       ? [`data-vh-desktop="75"`, `data-vh-mobile="85"`]
       : []),
   ].join(" ");
 
-  // Fallback height for browsers/contexts where script doesn't load.
-  // The HTML `height` attribute must be a plain integer (pixels) — vh is not valid HTML here.
-  // embed.js will override this with the correct vh/ratio height once it runs.
   const fallbackHeightPx = design.embedHeightUnit === "auto"
     ? "600"
     : design.embedHeightUnit === "vh"
-      ? String(Math.round((parseFloat(design.embedHeight) / 100) * 800)) // ~800px screen estimate
+      ? String(Math.round((parseFloat(design.embedHeight) / 100) * 800))
       : design.embedHeight;
 
   const iframeTag = `<iframe src="${embedUrl}" ${dataAttrs} width="100%" height="${fallbackHeightPx}" frameborder="0" style="border:0;display:block" allowfullscreen></iframe>`;
-
   const embedCode = `${iframeTag}\n<script src="${scriptUrl}" defer><\/script>`;
 
   const handleCopy = () => {

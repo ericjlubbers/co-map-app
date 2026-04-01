@@ -1,6 +1,6 @@
 # Colorado Map App
 
-An interactive map of Colorado locations built with React, Leaflet, and Tailwind CSS. Features categorized markers with clustering, filtering, text search, a synced data table, geographic overlays (county boundaries, state border, outside-state fade), and a live **Design Mode** for collaboratively tweaking every visual option. Embedded maps prefetch tiles for the Colorado region at multiple zoom levels for instant pan/zoom performance.
+Internal mapping platform for The Colorado Sun. React + Leaflet frontend, Cloudflare Workers + D1 backend. Supports multiple maps per account with per-map design customization, embeddable iframes, auto-rotate category tours, and focus/category embed URLs for deep-linking to individual points or filtered views.
 
 Deployed automatically to Cloudflare Workers on push to `main`.
 
@@ -11,6 +11,8 @@ Deployed automatically to Cloudflare Workers on push to `main`.
 - **react-leaflet-cluster** for marker clustering
 - **Tailwind CSS v4** for styling
 - **Font Awesome** for category icons
+- **Hono** for Cloudflare Worker routes
+- **Cloudflare D1** (SQLite) for map + user data
 
 ## Getting Started
 
@@ -31,34 +33,34 @@ This key is required for tile layers served by Stadia Maps (Watercolor, Toner, A
 
 ## Design Mode
 
-A live toolbar for adjusting every visual option without touching code. Changes are reflected instantly.
+A live sidebar for adjusting every visual option. Changes auto-save with a 1-second debounce — no manual save button needed.
 
-**Activate:** Add `?design=1` to the URL, or press `Ctrl+Shift+D` (`Cmd` on Mac).
+**Activate:** Click the **Design** button in the editor toolbar.
 
-### Controls
+### Embed Layouts
 
-| Control            | Options                                                                 |
-| ------------------ | ----------------------------------------------------------------------- |
-| **Tiles**          | 10 basemap presets (see below)                                          |
-| **Labels**         | Toggle labels overlay (auto-added for tiles that lack built-in labels)  |
-| **Font**           | Libre Franklin, Atkinson Hyperlegible, Plus Jakarta Sans                |
-| **Clusters**       | Donut, Gradient, Minimal                                                |
-| **Map/Table**      | Grid ratio (3fr 2fr, 1fr 1fr, 2fr 3fr, 2fr 1fr, 4fr 1fr)              |
-| **Radius**         | Global border-radius slider (0–24px)                                    |
-| **Markers**        | Marker pin size slider (20–60px)                                        |
-| **Border**         | Toggle CO150 triple border frame                                        |
-| **Colors**         | Panel background, page background, text color, muted text color pickers |
-| **Counties**       | Toggle county boundary lines + color, width, opacity controls           |
-| **State Border**   | Toggle thick Colorado state border + color and width controls           |
-| **Outside Fade**   | Toggle a dark mask outside Colorado + opacity control                   |
+| Layout | Description |
+| --- | --- |
+| `standard` | Map + optional data table side-by-side |
+| `sidebar-filter` | Category filter sidebar + map — recommended for multi-category maps |
 
-### Sharing
+### Sharing & Embeds
 
-- **Share** — copies a URL with your design choices baked in; recipients see the finalized map (no toolbar)
-- **Share + Editor** — copies a URL that also shows the toolbar so collaborators can keep tweaking
-- **Reset** — returns everything to the defaults from `config.ts`
+- **Embed** button — copies a full `<iframe>` snippet for the map at its current design
+- **Focus embed** — copy icon on each row in the data panel copies a snippet zoomed to that single point (1:1 square aspect ratio)
+- **Category embed** — hover the category pills in the filter bar to copy a snippet pre-filtered to that category
 
-All state lives in URL search params — no backend or localStorage needed.
+#### Embed URL Parameters
+
+| Parameter | Description |
+| --- | --- |
+| `?focus=<pointId>` | Opens the map zoomed to that point, card open, all others dimmed |
+| `?category=<name>` | Opens the map pre-filtered to that category |
+| `?demo=1` | Starts the auto-rotate category tour immediately |
+
+### Auto-Rotate Tour
+
+Click the **▶** play button to start an automatic category-by-category tour. Any interaction (mouse, touch, scroll, keyboard) permanently stops the tour — there is no auto-resume.
 
 ## Configuration
 
@@ -111,7 +113,7 @@ Category appearance is defined in the `CATEGORY_DEFINITIONS` map inside `src/con
 
 ## Data Source
 
-Location data is currently loaded from static seed data in `src/data/seedLocations.ts`. The `useLocationData` hook in `src/hooks/useLocationData.ts` abstracts the data source and can be swapped to fetch from a live source (e.g. Google Sheets CSV) without changing any components.
+Location data is loaded from a Google Sheet (or static seed data for development) via the `useLocationData` hook. The worker stores map configuration and point data in Cloudflare D1.
 
 ## Deployment
 
@@ -181,22 +183,24 @@ src/
   config.ts              All configurable defaults
   types.ts               Shared TypeScript types
   context/
-    DesignContext.tsx     Design state provider, URL serialization, useDesign() hook
+    DesignContext.tsx     Design state provider, auto-save debounce, useDesign() hook
+    AuthContext.tsx       Authentication state
   components/
-    DesignSidebar.tsx    Accordion design controls sidebar (right panel)
-    AccordionSection.tsx Collapsible section used by DesignSidebar
-    MapView.tsx           Leaflet map with clustering & labels overlay
-    DataTable.tsx         Searchable/filterable data table
-    FilterBar.tsx         Category filter pills
-    ClusterIcon.tsx       Custom cluster icon renderer
-    MarkerIcon.tsx        Custom marker icon renderer
-    PointPopup.tsx        Map popup content
-  data/
-    seedLocations.ts     Static location dataset
-    coloradoCounties.ts  64 Colorado county boundary polygons (GeoJSON)
-    coloradoBorder.ts    State border polygon + outside-state fade mask
+    DesignSidebar.tsx    Accordion design controls sidebar
+    MapView.tsx           Leaflet map with clustering, overlays, FloatingPointCard
+    FloatingPointCard.tsx Animated card attached to selected marker (includes focus embed copy)
+    DataTable.tsx         Synced data table with per-row focus embed copy
+    FilterBar.tsx         Category filter pills with per-category embed copy
+    SidebarFilterLayout.tsx Sidebar-filter embed layout
+    MapEditorContent.tsx  Main editor layout — map + data panel
+  lib/
+    embedSnippet.ts      Shared iframe snippet generators (focus + category embeds)
+    api.ts               All API calls to the worker
   hooks/
-    useLocationData.ts   Data-fetching hook
+    useAutoRotate.ts     Auto-rotate tour logic (stops permanently on any interaction)
+  pages/
+    MapEditorPage.tsx    Full editor page
+    EmbedPage.tsx        Embed-only view (parses ?focus, ?category, ?demo)
   styles/
     index.css            Global styles / Tailwind entry
 ```

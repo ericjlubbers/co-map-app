@@ -1,8 +1,7 @@
 import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import type { PointData, DemoRotationMode, DemoRotationOrder } from "../types";
 
-/** Milliseconds of inactivity before the demo auto-resumes after a pause */
-const AUTO_RESUME_DELAY_MS = 10_000;
+
 
 export interface UseAutoRotateOptions {
   /** All available categories */
@@ -193,14 +192,11 @@ export function useAutoRotate({
     return () => { if (timerRef.current) clearTimeout(timerRef.current); };
   }, [enabled, demoState, stepIndex, intervalMs, itemCount, advance]);
 
-  // Pause on interaction, auto-resume after 10s
+  // Permanently stop on any user interaction
   const handleInteraction = useCallback(() => {
     if (!enabled || demoState !== "running") return;
     clearTimers();
     setDemoState("paused");
-    resumeTimerRef.current = setTimeout(() => {
-      setDemoState("running");
-    }, AUTO_RESUME_DELAY_MS);
   }, [enabled, demoState, clearTimers]);
 
   const pause = useCallback(() => {

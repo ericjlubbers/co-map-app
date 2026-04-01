@@ -1,9 +1,14 @@
+import { useState, useCallback } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
   faFilter,
   faMagnifyingGlass,
   faXmark,
+  faCopy,
+  faCheck,
 } from "@fortawesome/free-solid-svg-icons";
+import { useDesign } from "../context/DesignContext";
+import { buildCategoryEmbedSnippet } from "../lib/embedSnippet";
 
 interface Props {
   categories: string[];
@@ -19,6 +24,8 @@ interface Props {
   /** When "by-category", use categoryColors map instead of single pointColor */
   pointColorMode?: "single" | "by-category";
   categoryColors?: Record<string, string>;
+  /** Map ID — when provided, shows per-category embed copy buttons */
+  mapId?: string;
 }
 
 export default function FilterBar({
@@ -33,8 +40,21 @@ export default function FilterBar({
   pointColor = "#2563eb",
   pointColorMode = "single",
   categoryColors = {},
+  mapId,
 }: Props) {
+  const { design } = useDesign();
   const allActive = activeCategories.size === 0;
+  const [copiedCat, setCopiedCat] = useState<string | null>(null);
+
+  const handleCopyCategoryEmbed = useCallback((e: React.MouseEvent, cat: string) => {
+    e.stopPropagation();
+    if (!mapId) return;
+    const snippet = buildCategoryEmbedSnippet(mapId, cat, window.location.origin, design);
+    navigator.clipboard.writeText(snippet).then(() => {
+      setCopiedCat(cat);
+      setTimeout(() => setCopiedCat(null), 1800);
+    });
+  }, [mapId, design]);
 
   return (
     <div className="border-b border-gray-200 bg-white px-4 py-3">
@@ -84,18 +104,31 @@ export default function FilterBar({
           const color = pointColorMode === "by-category" && categoryColors[cat]
             ? categoryColors[cat]
             : pointColor;
+          const isCopied = copiedCat === cat;
           return (
-            <button
-              key={cat}
-              onClick={() => onToggleCategory(cat)}
-              className="rounded-full px-3 py-1 text-xs font-medium transition"
-              style={{
-                backgroundColor: isActive ? color : `${color}18`,
-                color: isActive ? "white" : color,
-              }}
-            >
-              {cat}
-            </button>
+            <div key={cat} className="group flex items-center gap-0.5">
+              <button
+                onClick={() => onToggleCategory(cat)}
+                className="rounded-full px-3 py-1 text-xs font-medium transition"
+                style={{
+                  backgroundColor: isActive ? color : `${color}18`,
+                  color: isActive ? "white" : color,
+                }}
+              >
+                {cat}
+              </button>
+              {mapId && (
+                <button
+                  onClick={(e) => handleCopyCategoryEmbed(e, cat)}
+                  className={`rounded p-1 text-[10px] transition-colors opacity-0 group-hover:opacity-100 focus:opacity-100 ${
+                    isCopied ? "text-green-500" : "text-gray-400 hover:text-blue-500"
+                  }`}
+                  title={isCopied ? "Copied!" : `Copy embed code for "${cat}"`}
+                >
+                  <FontAwesomeIcon icon={isCopied ? faCheck : faCopy} />
+                </button>
+              )}
+            </div>
           );
         })}
       </div>

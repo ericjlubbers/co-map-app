@@ -282,9 +282,7 @@ export const DEFAULT_DESIGN: DesignState = {
   sfUpcomingColor: "#9ca3af",
   upcomingTooltipText: "Coming soon!",
   upcomingTooltipOpacity: 0.75,
-  showInstructionalToasts: true,
-  toastMessagesDesktop: ["Use arrow keys to navigate between points", "Click a category to filter"],
-  toastMessagesMobile: ["Pinch to zoom · Swipe to explore", "Tap a category to filter"],
+
   cityLabelBgColor: "#ffffff",
   cityLabelBgOpacity: 0.85,
   cityLabelPaddingH: 5,

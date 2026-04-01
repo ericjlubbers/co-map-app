@@ -3,7 +3,6 @@ import { useParams, useSearchParams } from "react-router-dom";
 import { getMap, type MapDetail } from "../lib/api";
 import { DesignProvider, useDesign } from "../context/DesignContext";
 import MapEditorContent from "../components/MapEditorContent";
-import InstructionalToasts from "../components/InstructionalToasts";
 import { layerDataToPoints } from "../lib/starterData";
 import { prefetchTiles } from "../lib/tilePrefetch";
 import { getTileConfig, MAP_MAX_BOUNDS } from "../config";
@@ -19,20 +18,13 @@ function TilePrefetcher() {
   const { design } = useDesign();
   useEffect(() => {
     const tileConfig = getTileConfig(design.tilePreset);
-    const doPrefetch = () => {
-      prefetchTiles({
-        tileUrl: tileConfig.url,
-        labelsUrl: design.showLabels ? tileConfig.labelsUrl : undefined,
-        bounds: [MAP_MAX_BOUNDS[0][0], MAP_MAX_BOUNDS[0][1], MAP_MAX_BOUNDS[1][0], MAP_MAX_BOUNDS[1][1]],
-        zoomLevels: [6, 7, 8, 9],
-        concurrency: 4,
-      });
-    };
-    if ("requestIdleCallback" in window) {
-      (window as Window).requestIdleCallback(doPrefetch);
-    } else {
-      setTimeout(doPrefetch, 2000);
-    }
+    prefetchTiles({
+      tileUrl: tileConfig.url,
+      labelsUrl: design.showLabels ? tileConfig.labelsUrl : undefined,
+      bounds: [MAP_MAX_BOUNDS[0][0], MAP_MAX_BOUNDS[0][1], MAP_MAX_BOUNDS[1][0], MAP_MAX_BOUNDS[1][1]],
+      zoomLevels: [6, 7, 8, 9],
+      concurrency: 6,
+    });
   }, [design.tilePreset, design.showLabels]);
   return null;
 }
@@ -41,6 +33,9 @@ export default function EmbedPage() {
   const { id } = useParams<{ id: string }>();
   const [searchParams] = useSearchParams();
   const demoOverride = searchParams.get("demo") === "1";
+  const focusPointId = searchParams.get("focus") ?? undefined;
+  const focusCategoryRaw = searchParams.get("category");
+  const focusCategory = focusCategoryRaw ? decodeURIComponent(focusCategoryRaw) : undefined;
   const [mapData, setMapData] = useState<MapDetail | null>(null);
   const [error, setError] = useState<string | null>(null);
 
@@ -90,7 +85,6 @@ export default function EmbedPage() {
   return (
     <DesignProvider initialDesignState={mapData.design_state} embedMode>
       <TilePrefetcher />
-      <InstructionalToasts mapId={id!} />
       <div className="h-dvh w-dvw">
         <MapEditorContent
           embedMode
@@ -98,6 +92,8 @@ export default function EmbedPage() {
           points={points}
           viewCuration={viewCuration}
           viewLocked={!!viewCuration}
+          focusPointId={focusPointId}
+          focusCategory={focusCategory}
         />
       </div>
     </DesignProvider>

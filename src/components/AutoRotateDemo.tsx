@@ -41,15 +41,17 @@ export default function AutoRotateDemo({
     transitionSpeed: design.transitionSpeed,
   });
 
-  // Attach interaction listeners
+  // Attach interaction listeners — covers all user input methods
   useEffect(() => {
     const opts = { passive: true };
-    window.addEventListener("click", rotation.handleInteraction, opts);
+    window.addEventListener("mousedown", rotation.handleInteraction, opts);
+    window.addEventListener("pointerdown", rotation.handleInteraction, opts);
     window.addEventListener("touchstart", rotation.handleInteraction, opts);
     window.addEventListener("wheel", rotation.handleInteraction, opts);
     window.addEventListener("keydown", rotation.handleInteraction);
     return () => {
-      window.removeEventListener("click", rotation.handleInteraction);
+      window.removeEventListener("mousedown", rotation.handleInteraction);
+      window.removeEventListener("pointerdown", rotation.handleInteraction);
       window.removeEventListener("touchstart", rotation.handleInteraction);
       window.removeEventListener("wheel", rotation.handleInteraction);
       window.removeEventListener("keydown", rotation.handleInteraction);
@@ -148,23 +150,10 @@ export default function AutoRotateDemo({
           </div>
         )}
 
-        {/* Pause indicator / Resume button */}
-        {rotation.demoState === "paused" ? (
-          <button
-            onClick={(e) => {
-              e.stopPropagation();
-              rotation.resume();
-            }}
-            className="ml-1 rounded-full px-2.5 py-0.5 text-xs font-medium text-white transition-opacity hover:opacity-80"
-            style={{ backgroundColor: info.color }}
-          >
-            Resume
-          </button>
-        ) : (
-          <span className="ml-1 text-xs" style={{ color: info.color, opacity: 0.6 }}>
-            ▶
-          </span>
-        )}
+        {/* Play indicator */}
+        <span className="ml-1 text-xs" style={{ color: info.color, opacity: 0.6 }}>
+          ▶
+        </span>
       </div>
     </div>
   );

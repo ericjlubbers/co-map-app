@@ -92,6 +92,10 @@ interface SidebarFilterLayoutProps {
   viewLocked?: boolean;
   /** When true, fill parent container instead of using fixed vh height */
   fillContainer?: boolean;
+  /** Pre-select this category on initial load (from ?category= embed param) */
+  initialCategory?: string;
+  /** Map ID — when provided, shows copy-embed-code button per row in DataTable */
+  mapId?: string;
 }
 
 /** Render an FA icon as inline SVG using getFaIconSvg */
@@ -116,6 +120,8 @@ export default function SidebarFilterLayout({
   viewCuration,
   viewLocked = false,
   fillContainer = false,
+  initialCategory,
+  mapId,
 }: SidebarFilterLayoutProps) {
   const { design } = useDesign();
 
@@ -142,7 +148,7 @@ export default function SidebarFilterLayout({
   );
 
   // ── Filtering ───────────────────────────────────────────────
-  const [activeCategory, setActiveCategory] = useState<string | null>(null);
+  const [activeCategory, setActiveCategory] = useState<string | null>(initialCategory ?? null);
 
   // ── Auto-rotate demo ───────────────────────────────────────
   const rotation = useAutoRotate({
@@ -198,16 +204,18 @@ export default function SidebarFilterLayout({
     }
   }, [demoMode, rotation.demoState, rotation.activePointId]);
 
-  // Attach interaction listeners for demo mode
+  // Attach interaction listeners for demo mode — covers all user input methods
   useEffect(() => {
     if (!demoMode) return;
     const opts: AddEventListenerOptions = { passive: true };
-    window.addEventListener("click", rotation.handleInteraction, opts);
+    window.addEventListener("mousedown", rotation.handleInteraction, opts);
+    window.addEventListener("pointerdown", rotation.handleInteraction, opts);
     window.addEventListener("touchstart", rotation.handleInteraction, opts);
     window.addEventListener("wheel", rotation.handleInteraction, opts);
     window.addEventListener("keydown", rotation.handleInteraction);
     return () => {
-      window.removeEventListener("click", rotation.handleInteraction);
+      window.removeEventListener("mousedown", rotation.handleInteraction);
+      window.removeEventListener("pointerdown", rotation.handleInteraction);
       window.removeEventListener("touchstart", rotation.handleInteraction);
       window.removeEventListener("wheel", rotation.handleInteraction);
       window.removeEventListener("keydown", rotation.handleInteraction);
@@ -311,14 +319,7 @@ export default function SidebarFilterLayout({
           </button>
         );
       })}
-      {demoMode && demoState === "paused" && (
-        <button
-          onClick={(e) => { e.stopPropagation(); rotation.resume(); setMobileDrawerOpen(false); }}
-          className="mt-2 rounded-lg bg-gray-800 px-3 py-1.5 text-xs font-medium text-white hover:bg-gray-700"
-        >
-          Resume tour
-        </button>
-      )}
+
     </>
   );
 
@@ -432,14 +433,7 @@ export default function SidebarFilterLayout({
           );
         })}
 
-        {demoMode && demoState === "paused" && (
-          <button
-            onClick={(e) => { e.stopPropagation(); rotation.resume(); }}
-            className="mt-2 rounded-lg bg-gray-800 px-3 py-1.5 text-xs font-medium text-white hover:bg-gray-700"
-          >
-            Resume tour
-          </button>
-        )}
+
       </aside>
 
       {/* ── Mobile horizontal buttons ── */}
@@ -482,14 +476,7 @@ export default function SidebarFilterLayout({
           })}
         </div>
 
-        {demoMode && demoState === "paused" && (
-          <button
-            onClick={(e) => { e.stopPropagation(); rotation.resume(); }}
-            className="ml-1 shrink-0 rounded-full bg-gray-800 px-2.5 py-1 text-[10px] font-medium text-white"
-          >
-            Resume
-          </button>
-        )}
+
       </div>
 
       {/* ── Right column: map + table ── */}
@@ -521,6 +508,7 @@ export default function SidebarFilterLayout({
               activePointIds={activePointIds}
               dimActive={isDimMode && design.demoDimTable}
               dimOpacity={design.demoDimOpacity}
+              mapId={mapId}
             />
           </div>
         )}

@@ -354,10 +354,6 @@ export interface DesignState {
   /** Tooltip text shown when an upcoming marker is clicked */
   upcomingTooltipText: string;
   upcomingTooltipOpacity: number;
-  // Instructional toasts
-  showInstructionalToasts: boolean;
-  toastMessagesDesktop: string[];
-  toastMessagesMobile: string[];
   // City label styles
   cityLabelBgColor: string;
   cityLabelBgOpacity: number;

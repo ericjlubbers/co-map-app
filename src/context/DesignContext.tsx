@@ -132,9 +132,6 @@ const PARAM_MAP: Record<keyof DesignState, string> = {
   sfUpcomingColor: "sfUC",
   upcomingTooltipText: "uTip",
   upcomingTooltipOpacity: "uTipO",
-  showInstructionalToasts: "iToast",
-  toastMessagesDesktop: "tmd",
-  toastMessagesMobile: "tmm",
   sfMobileLayout: "sfMl",
   mapMinZoom: "mMinZ",
   mapMaxZoom: "mMaxZ",
@@ -490,16 +487,6 @@ function parseFromURL(): Partial<DesignState> {
   if (suUp) partial.showUpcoming = suUp === "1";
   const uOp = params.get(PARAM_MAP.upcomingOpacity);
   if (uOp) partial.upcomingOpacity = parseFloat(uOp);
-  const iToast = params.get(PARAM_MAP.showInstructionalToasts);
-  if (iToast) partial.showInstructionalToasts = iToast === "1";
-  const tmd = params.get(PARAM_MAP.toastMessagesDesktop);
-  if (tmd) {
-    try { partial.toastMessagesDesktop = JSON.parse(decodeURIComponent(tmd)); } catch { /* skip */ }
-  }
-  const tmm = params.get(PARAM_MAP.toastMessagesMobile);
-  if (tmm) {
-    try { partial.toastMessagesMobile = JSON.parse(decodeURIComponent(tmm)); } catch { /* skip */ }
-  }
   const sfMl = params.get(PARAM_MAP.sfMobileLayout);
   const SF_MOBILE_LAYOUTS: SfMobileLayout[] = ["drawer", "below", "hidden"];
   if (sfMl && SF_MOBILE_LAYOUTS.includes(sfMl as SfMobileLayout))
@@ -801,12 +788,6 @@ function serializeToURL(state: DesignState, includeDesignMode: boolean): string 
     params.set(PARAM_MAP.showUpcoming, state.showUpcoming ? "1" : "0");
   if (state.upcomingOpacity !== DEFAULT_DESIGN.upcomingOpacity)
     params.set(PARAM_MAP.upcomingOpacity, String(state.upcomingOpacity));
-  if (state.showInstructionalToasts !== DEFAULT_DESIGN.showInstructionalToasts)
-    params.set(PARAM_MAP.showInstructionalToasts, state.showInstructionalToasts ? "1" : "0");
-  if (JSON.stringify(state.toastMessagesDesktop) !== JSON.stringify(DEFAULT_DESIGN.toastMessagesDesktop))
-    params.set(PARAM_MAP.toastMessagesDesktop, encodeURIComponent(JSON.stringify(state.toastMessagesDesktop)));
-  if (JSON.stringify(state.toastMessagesMobile) !== JSON.stringify(DEFAULT_DESIGN.toastMessagesMobile))
-    params.set(PARAM_MAP.toastMessagesMobile, encodeURIComponent(JSON.stringify(state.toastMessagesMobile)));
   if (state.sfMobileLayout !== DEFAULT_DESIGN.sfMobileLayout)
     params.set(PARAM_MAP.sfMobileLayout, state.sfMobileLayout);
   if (state.sfUpcomingColor !== DEFAULT_DESIGN.sfUpcomingColor)

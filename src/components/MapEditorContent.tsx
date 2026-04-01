@@ -81,6 +81,10 @@ interface MapEditorContentProps {
   onUnlockView?: () => void;
   /** Clear all curation */
   onClearCuration?: () => void;
+  /** Single-point focus: pre-select and zoom to this point ID (from ?focus= embed param) */
+  focusPointId?: string;
+  /** Pre-filter to this category (from ?category= embed param) */
+  focusCategory?: string;
 }
 
 type DataTab = "points" | "drawn";
@@ -108,20 +112,33 @@ export default function MapEditorContent({
   onLockView,
   onUnlockView,
   onClearCuration,
+  focusPointId,
+  focusCategory,
+  mapId,
 }: MapEditorContentProps) {
   const { design, designMode } = useDesign();
   const data = externalPoints ?? [];
-  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [selectedId, setSelectedId] = useState<string | null>(focusPointId ?? null);
   const [sidebarOpen, setSidebarOpen] = useState(designMode);
 
   // ── Local map ref for flyTo ────────────────────────────────
   const localMapRef = useRef<import("leaflet").Map | null>(null);
+  const flewToFocusRef = useRef(false);
   const handleMapRefLocal = useCallback(
     (map: import("leaflet").Map | null) => {
       localMapRef.current = map;
       onMapRef?.(map);
+      // On first map mount, immediately center on focusPointId (no animation
+      // so the correct tiles load right away)
+      if (map && focusPointId && !flewToFocusRef.current) {
+        const pt = (externalPoints ?? []).find((p) => p.id === focusPointId);
+        if (pt) {
+          flewToFocusRef.current = true;
+          map.setView([pt.lat, pt.lng], 13, { animate: false });
+        }
+      }
     },
-    [onMapRef],
+    [onMapRef, focusPointId, externalPoints],
   );
 
   const handleFlyTo = useCallback((lat: number, lng: number, zoom?: number) => {
@@ -189,7 +206,9 @@ export default function MapEditorContent({
   }, [designMode]);
 
   // ── Filtering ──────────────────────────────────────────────
-  const [activeCategories, setActiveCategories] = useState<Set<string>>(new Set());
+  const [activeCategories, setActiveCategories] = useState<Set<string>>(() =>
+    focusCategory ? new Set([focusCategory]) : new Set()
+  );
   // Demo mode: current spotlighted category (null = show all)
   const [demoCategoryFilter, setDemoCategoryFilter] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
@@ -362,11 +381,13 @@ export default function MapEditorContent({
           demoMode={demoMode}
           viewCuration={viewCuration}
           viewLocked={viewLocked}
+          initialCategory={focusCategory}
         />
       );
     }
 
     // Standard embed template: map only + optional auto-rotate overlay
+    const focusActivePointIds = focusPointId ? new Set([focusPointId]) : undefined;
     return (
       <div className="relative h-full w-full" style={{ backgroundColor: design.pageBg }}>
         <MapView
@@ -378,6 +399,10 @@ export default function MapEditorContent({
           viewLocked={viewLocked}
           onHideFeature={onHideFeature}
           onMapRef={handleMapRefLocal}
+          activePointIds={focusActivePointIds}
+          dimActive={!!focusPointId}
+          dimOpacity={design.demoDimOpacity}
+          mapId={mapId}
         />
         {demoMode && categories.length > 0 && (
           <AutoRotateDemo
@@ -440,6 +465,7 @@ export default function MapEditorContent({
               viewCuration={viewCuration}
               viewLocked={viewLocked}
               fillContainer
+              mapId={mapId}
             />
           ) : (
           <div
@@ -472,6 +498,7 @@ export default function MapEditorContent({
                 onUpdatePrimaryElement={onUpdatePrimaryElement}
                 publicationBounds={publicationBounds}
                 onUpdatePublicationBounds={onUpdatePublicationBounds}
+                mapId={mapId}
 
               />
 
@@ -554,6 +581,7 @@ export default function MapEditorContent({
                     pointColor={design.pointColor}
                     pointColorMode={design.pointColorMode}
                     categoryColors={design.categoryColors}
+                    mapId={mapId}
                   />
                   {data.length > 0 && onClearPoints && (
                     <div className="flex justify-end px-3 pb-1">
@@ -598,6 +626,7 @@ export default function MapEditorContent({
                         points={filteredPoints}
                         selectedId={selectedId}
                         onSelectPoint={handleSelectPoint}
+                        mapId={mapId}
                       />
                     )}
                   </div>

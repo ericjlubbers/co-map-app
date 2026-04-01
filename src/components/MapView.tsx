@@ -97,6 +97,8 @@ interface Props {
   activeCategory?: string | null;
   /** Incremented when the container is resized — triggers invalidateSize + zoom reset */
   resizeSignal?: number;
+  /** Map ID — passed to FloatingPointCard for embed link generation */
+  mapId?: string;
 }
 
 // ── FitBoundsHandler ─────────────────────────────────────────
@@ -367,6 +369,7 @@ export default function MapView({
   autoRotateActive = false,
   activeCategory,
   resizeSignal = 0,
+  mapId,
 }: Props) {
   const { design } = useDesign();
   const tileConfig = getTileConfig(design.tilePreset);
@@ -499,7 +502,7 @@ export default function MapView({
         aria-label="Interactive map of Colorado"
         role="application"
       >
-        <TileLayer key={design.tilePreset} url={tileConfig.url} attribution={tileConfig.attribution} maxZoom={tileConfig.maxZoom} keepBuffer={4} />
+        <TileLayer key={design.tilePreset} url={tileConfig.url} attribution={tileConfig.attribution} maxZoom={tileConfig.maxZoom} keepBuffer={4} updateWhenIdle={false} />
         {design.showLabels && tileConfig.labelsUrl && (
           <TileLayer
             key={`${design.tilePreset}-labels`}
@@ -816,6 +819,7 @@ export default function MapView({
           edgeWidth={design.cardEdgeWidth}
           edgeOpacity={design.cardEdgeOpacity}
           connectorInset={design.cardConnectorInset}
+          mapId={mapId}
         />
       )}
     </div>

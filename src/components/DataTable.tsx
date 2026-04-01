@@ -1,14 +1,16 @@
-import { useEffect, useRef, useCallback } from "react";
+import { useEffect, useRef, useCallback, useState } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
   faMapMarkerAlt,
   faArrowUpRightFromSquare,
   faImage,
+  faCopy,
 } from "@fortawesome/free-solid-svg-icons";
 import type { PointData } from "../types";
 import { getCategoryInfo } from "../config";
 import { useDesign } from "../context/DesignContext";
 import { getFaIconSvg } from "../lib/faIcons";
+import { buildFocusEmbedSnippet } from "../lib/embedSnippet";
 
 interface Props {
   points: PointData[];
@@ -20,11 +22,24 @@ interface Props {
   dimActive?: boolean;
   /** Opacity for dimmed rows */
   dimOpacity?: number;
+  /** Map ID — when provided, shows a copy-embed-URL button per row */
+  mapId?: string;
 }
 
-export default function DataTable({ points, selectedId, onSelectPoint, activePointIds, dimActive, dimOpacity }: Props) {
+export default function DataTable({ points, selectedId, onSelectPoint, activePointIds, dimActive, dimOpacity, mapId }: Props) {
   const { design } = useDesign();
   const rowRefs = useRef<Record<string, HTMLTableRowElement | null>>({});
+  const [copiedId, setCopiedId] = useState<string | null>(null);
+
+  const handleCopyEmbedUrl = useCallback((e: React.MouseEvent, pointId: string) => {
+    e.stopPropagation();
+    if (!mapId) return;
+    const snippet = buildFocusEmbedSnippet(mapId, pointId, window.location.origin);
+    navigator.clipboard.writeText(snippet).then(() => {
+      setCopiedId(pointId);
+      setTimeout(() => setCopiedId(null), 1800);
+    });
+  }, [mapId]);
 
   // Scroll selected row into view
   useEffect(() => {
@@ -177,20 +192,36 @@ export default function DataTable({ points, selectedId, onSelectPoint, activePoi
 
                 {/* Link */}
                 <td className="px-4 py-3">
-                  {point.url && (
-                    <a
-                      href={point.url}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      onClick={(e) => e.stopPropagation()}
-                      className="text-gray-400 hover:text-blue-600"
-                    >
-                      <FontAwesomeIcon
-                        icon={faArrowUpRightFromSquare}
-                        className="text-xs"
-                      />
-                    </a>
-                  )}
+                  <div className="flex items-center gap-2">
+                    {point.url && (
+                      <a
+                        href={point.url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        onClick={(e) => e.stopPropagation()}
+                        className="text-gray-400 hover:text-blue-600"
+                        title="Open external link"
+                      >
+                        <FontAwesomeIcon
+                          icon={faArrowUpRightFromSquare}
+                          className="text-xs"
+                        />
+                      </a>
+                    )}
+                    {mapId && !isUpcoming && (
+                      <button
+                        onClick={(e) => handleCopyEmbedUrl(e, point.id)}
+                        className={`transition-colors ${
+                          copiedId === point.id
+                            ? "text-green-500"
+                            : "text-gray-300 hover:text-blue-500"
+                        }`}
+                        title={copiedId === point.id ? "Copied!" : "Copy focus embed code"}
+                      >
+                        <FontAwesomeIcon icon={faCopy} className="text-xs" />
+                      </button>
+                    )}
+                  </div>
                 </td>
               </tr>
             );
