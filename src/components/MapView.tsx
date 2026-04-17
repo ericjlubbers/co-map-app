@@ -99,6 +99,8 @@ interface Props {
   resizeSignal?: number;
   /** Map ID — passed to FloatingPointCard for embed link generation */
   mapId?: string;
+  /** Category to fit bounds to on initial load (from ?category= embed param, standard layout) */
+  focusCategory?: string;
 }
 
 // ── FitBoundsHandler ─────────────────────────────────────────
@@ -112,6 +114,31 @@ function FitBoundsHandler({ signal }: { signal: number }) {
     if (isFirstRef.current) { isFirstRef.current = false; return; }
     map.fitBounds(CO_BOUNDS, { padding: [20, 20], animate: true });
   }, [signal, map]);
+  return null;
+}
+
+// ── FitCategoryBoundsHandler ─────────────────────────────────
+// On first render, fits bounds to all points matching a category.
+function FitCategoryBoundsHandler({ category, points }: { category: string; points: PointData[] }) {
+  const map = useMap();
+  const fittedRef = useRef(false);
+  useEffect(() => {
+    if (fittedRef.current) return;
+    const catPoints = points.filter((p) => p.category === category);
+    if (catPoints.length === 0) return;
+    fittedRef.current = true;
+    if (catPoints.length === 1) {
+      map.setView([catPoints[0].lat, catPoints[0].lng], 12, { animate: false });
+    } else {
+      const lats = catPoints.map((p) => p.lat);
+      const lngs = catPoints.map((p) => p.lng);
+      const bounds: [[number, number], [number, number]] = [
+        [Math.min(...lats), Math.min(...lngs)],
+        [Math.max(...lats), Math.max(...lngs)],
+      ];
+      map.fitBounds(bounds, { padding: [40, 40], animate: false });
+    }
+  }, [category, points, map]);
   return null;
 }
 
@@ -370,6 +397,7 @@ export default function MapView({
   activeCategory,
   resizeSignal = 0,
   mapId,
+  focusCategory,
 }: Props) {
   const { design } = useDesign();
   const tileConfig = getTileConfig(design.tilePreset);
@@ -556,6 +584,7 @@ export default function MapView({
           flyToZoom={design.flyToZoom}
         />
         <FitBoundsHandler signal={design.fitBoundsSignal} />
+        {focusCategory && <FitCategoryBoundsHandler category={focusCategory} points={points} />}
         <MapResizeHandler resizeSignal={resizeSignal} defaultZoom={design.mapDefaultZoom} />
         <MapClickDeselect onSelectPoint={onSelectPoint} drawingMode={drawingMode ?? null} />
 

@@ -3,6 +3,15 @@ import { COLORADO_COUNTIES } from "../data/coloradoCounties";
 
 // ── Convert LayerData rows → PointData[] for map display ─────
 
+/** Ensure every row has a stable UUID in _rowId. Mutates rows in place. */
+export function ensureRowUUIDs(rows: DataRow[]): void {
+  for (const row of rows) {
+    if (!row._rowId || !row._rowId.includes("-")) {
+      row._rowId = crypto.randomUUID();
+    }
+  }
+}
+
 export function layerDataToPoints(layer: LayerData): PointData[] {
   if (layer.rows.length === 0 || layer.columns.length === 0) return [];
 

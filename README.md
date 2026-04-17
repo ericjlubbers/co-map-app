@@ -54,9 +54,26 @@ A live sidebar for adjusting every visual option. Changes auto-save with a 1-sec
 
 | Parameter | Description |
 | --- | --- |
-| `?focus=<pointId>` | Opens the map zoomed to that point, card open, all others dimmed |
-| `?category=<name>` | Opens the map pre-filtered to that category |
+| `?focus=<uuid>` | Opens the map zoomed to that point, card open, all others dimmed |
+| `?focus=<uuid>&locked=1` | Same as above, but the map is non-interactive (no pan/zoom) |
+| `?focus=<uuid>&locked=1&zoom=14` | Locked single-point view at a specific zoom level |
+| `?category=<name>` | Opens the map pre-filtered to that category with fit-bounds view |
 | `?demo=1` | Starts the auto-rotate category tour immediately |
+
+Point IDs are stable UUIDs generated on import/sync and stored in `_rowId`. They persist across data refreshes.
+
+### Category Button Sorting
+
+In the **Template** section of Design Mode (when embed layout is `sidebar-filter`), the **Category Sort** dropdown controls the order of the category filter buttons:
+
+| Sort Mode | Description |
+| --- | --- |
+| A → Z | Alphabetical (default) |
+| Z → A | Reverse alphabetical |
+| By Count | Most points first |
+| Custom | Drag-and-drop reorder, saved to design state |
+
+Custom sort order is auto-saved and persists in the design state like all other settings.
 
 ### Auto-Rotate Tour
 
@@ -200,7 +217,7 @@ src/
     useAutoRotate.ts     Auto-rotate tour logic (stops permanently on any interaction)
   pages/
     MapEditorPage.tsx    Full editor page
-    EmbedPage.tsx        Embed-only view (parses ?focus, ?category, ?demo)
+    EmbedPage.tsx        Embed-only view (parses ?focus, ?category, ?locked, ?zoom, ?demo)
   styles/
     index.css            Global styles / Tailwind entry
 ```

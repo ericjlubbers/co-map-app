@@ -249,6 +249,8 @@ export const DEFAULT_DESIGN: DesignState = {
   sfBtnFillColor: "#2563eb",
   sfBtnFillMode: "by-category",
   sfMobileLayout: "drawer" as SfMobileLayout,
+  sfCategorySortMode: "a-z",
+  sfCategoryCustomOrder: [] as string[],
   flyToZoom: 14,
   categoryDisplayMode: "text",
   dotMode: false,

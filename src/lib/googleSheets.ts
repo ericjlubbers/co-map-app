@@ -71,7 +71,7 @@ export function parseCsv(csv: string): { columns: string[]; rows: DataRow[] } {
   for (let i = 1; i < lines.length; i++) {
     const cells = parseCsvRow(lines[i]);
     if (cells.length === 0 || cells.every((c) => c === "")) continue; // skip blank rows
-    const row: DataRow = {};
+    const row: DataRow = { _rowId: crypto.randomUUID() };
     columns.forEach((col, idx) => {
       row[col] = cells[idx] ?? "";
     });

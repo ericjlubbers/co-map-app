@@ -71,6 +71,7 @@ export type MarkerConnector = "stem" | "dot" | "none";
 export type MarkerPadding = "compact" | "normal" | "spacious";
 export type SfBtnPreset = "filled" | "outlined" | "ghost" | "pill" | "minimal";
 export type SfMobileLayout = "drawer" | "below" | "hidden";
+export type SfCategorySortMode = "a-z" | "z-a" | "count" | "custom";
 export type DemoHighlightStyle = "filter" | "dim";
 export type DemoRotationMode = "by-category" | "by-point";
 export type DemoRotationOrder = "sequential" | "shuffled";
@@ -307,6 +308,8 @@ export interface DesignState {
   sfBtnFillColor: string;
   sfBtnFillMode: SfBtnFillMode;
   sfMobileLayout: SfMobileLayout;
+  sfCategorySortMode: SfCategorySortMode;
+  sfCategoryCustomOrder: string[];
   // Map interaction
   flyToZoom: number;
   // Category display in data table

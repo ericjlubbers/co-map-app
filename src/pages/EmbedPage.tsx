@@ -3,7 +3,7 @@ import { useParams, useSearchParams } from "react-router-dom";
 import { getMap, type MapDetail } from "../lib/api";
 import { DesignProvider, useDesign } from "../context/DesignContext";
 import MapEditorContent from "../components/MapEditorContent";
-import { layerDataToPoints } from "../lib/starterData";
+import { layerDataToPoints, ensureRowUUIDs } from "../lib/starterData";
 import { prefetchTiles } from "../lib/tilePrefetch";
 import { getTileConfig, MAP_MAX_BOUNDS } from "../config";
 import type { ViewCuration, LayerData, PointData } from "../types";
@@ -36,6 +36,9 @@ export default function EmbedPage() {
   const focusPointId = searchParams.get("focus") ?? undefined;
   const focusCategoryRaw = searchParams.get("category");
   const focusCategory = focusCategoryRaw ? decodeURIComponent(focusCategoryRaw) : undefined;
+  const focusLocked = searchParams.get("locked") === "1";
+  const focusZoomRaw = searchParams.get("zoom");
+  const focusZoom = focusZoomRaw ? parseInt(focusZoomRaw, 10) : undefined;
   const [mapData, setMapData] = useState<MapDetail | null>(null);
   const [error, setError] = useState<string | null>(null);
 
@@ -61,7 +64,9 @@ export default function EmbedPage() {
     if (!mapData?.data_config) return [];
     const raw = mapData.data_config as Record<string, unknown>;
     if (raw.points && typeof raw.points === "object") {
-      return layerDataToPoints(raw.points as LayerData);
+      const ld = raw.points as LayerData;
+      ensureRowUUIDs(ld.rows);
+      return layerDataToPoints(ld);
     }
     return [];
   }, [mapData]);
@@ -91,9 +96,11 @@ export default function EmbedPage() {
           demoMode={demoOverride || !!(mapData.design_state as Record<string, unknown>)?.enableDemoMode}
           points={points}
           viewCuration={viewCuration}
-          viewLocked={!!viewCuration}
+          viewLocked={!!viewCuration || focusLocked}
           focusPointId={focusPointId}
           focusCategory={focusCategory}
+          focusLocked={focusLocked}
+          focusZoom={focusZoom}
         />
       </div>
     </DesignProvider>

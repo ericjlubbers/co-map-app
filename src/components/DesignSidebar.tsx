@@ -1,4 +1,4 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback, useRef, useMemo } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
   faRotateLeft,
@@ -7,9 +7,10 @@ import {
   faLink,
   faTimes,
   faChevronRight,
+  faGripVertical,
 } from "@fortawesome/free-solid-svg-icons";
 import { useDesign } from "../context/DesignContext";
-import type { DesignState, FontFamily, ClusterStyle, ClusterPlugin, PlacementStrategy, TilePreset, SfBtnPreset, SfBtnFillMode, SfMobileLayout, DemoRotationMode, DemoRotationOrder, MarkerShape, MarkerConnector, MarkerPadding, CardConnectorPreset } from "../types";
+import type { DesignState, FontFamily, ClusterStyle, ClusterPlugin, PlacementStrategy, TilePreset, SfBtnPreset, SfBtnFillMode, SfMobileLayout, SfCategorySortMode, DemoRotationMode, DemoRotationOrder, MarkerShape, MarkerConnector, MarkerPadding, CardConnectorPreset } from "../types";
 import AccordionSection from "./AccordionSection";
 import SidebarGroup from "./SidebarGroup";
 import ColorPicker, { CARBON_CATEGORICAL } from "./ColorPicker";
@@ -125,6 +126,73 @@ const BTN_PRESETS: { value: SfBtnPreset; label: string }[] = [
   { value: "pill", label: "Pill" },
   { value: "minimal", label: "Minimal" },
 ];
+
+// ── Category drag-and-drop reorder list ─────────────────────
+
+function CategoryDragList({
+  categories,
+  order,
+  onChange,
+}: {
+  categories: string[];
+  order: string[];
+  onChange: (newOrder: string[]) => void;
+}) {
+  // Merge: start with items in order that still exist, then append new ones
+  const merged = useMemo(() => {
+    const catSet = new Set(categories);
+    const existing = order.filter((c) => catSet.has(c));
+    const existingSet = new Set(existing);
+    const newCats = categories.filter((c) => !existingSet.has(c)).sort();
+    return [...existing, ...newCats];
+  }, [categories, order]);
+
+  const dragItem = useRef<number | null>(null);
+  const dragOverItem = useRef<number | null>(null);
+  const [dragIdx, setDragIdx] = useState<number | null>(null);
+
+  const handleDragStart = (idx: number) => {
+    dragItem.current = idx;
+    setDragIdx(idx);
+  };
+
+  const handleDragEnter = (idx: number) => {
+    dragOverItem.current = idx;
+  };
+
+  const handleDragEnd = () => {
+    if (dragItem.current !== null && dragOverItem.current !== null && dragItem.current !== dragOverItem.current) {
+      const items = [...merged];
+      const [removed] = items.splice(dragItem.current, 1);
+      items.splice(dragOverItem.current, 0, removed);
+      onChange(items);
+    }
+    dragItem.current = null;
+    dragOverItem.current = null;
+    setDragIdx(null);
+  };
+
+  return (
+    <div className="space-y-0.5">
+      {merged.map((cat, idx) => (
+        <div
+          key={cat}
+          draggable
+          onDragStart={() => handleDragStart(idx)}
+          onDragEnter={() => handleDragEnter(idx)}
+          onDragEnd={handleDragEnd}
+          onDragOver={(e) => e.preventDefault()}
+          className={`flex items-center gap-1.5 rounded px-1.5 py-1 text-xs cursor-grab select-none ${
+            dragIdx === idx ? "opacity-50 bg-blue-50" : "bg-gray-50 hover:bg-gray-100"
+          }`}
+        >
+          <FontAwesomeIcon icon={faGripVertical} className="h-3 w-3 text-gray-400" />
+          <span className="truncate">{cat}</span>
+        </div>
+      ))}
+    </div>
+  );
+}
 
 // ── Main Component ──────────────────────────────────────────
 
@@ -929,6 +997,34 @@ export default function DesignSidebar({ onClose, categories = [] }: DesignSideba
                       <option value="hidden">Hidden (auto-rotate only)</option>
                     </select>
                   </Field>
+                  <Field label="Category Sort">
+                    <select
+                      value={design.sfCategorySortMode}
+                      onChange={(e) => {
+                        const mode = e.target.value as SfCategorySortMode;
+                        set("sfCategorySortMode", mode);
+                        // Auto-populate custom order from current alphabetical if switching to custom
+                        if (mode === "custom" && design.sfCategoryCustomOrder.length === 0 && categories.length > 0) {
+                          set("sfCategoryCustomOrder", [...categories].sort());
+                        }
+                      }}
+                      className="w-full rounded-md border border-gray-300 bg-white px-2.5 py-1.5 text-xs text-gray-700"
+                    >
+                      <option value="a-z">A → Z</option>
+                      <option value="z-a">Z → A</option>
+                      <option value="count">By Count (most first)</option>
+                      <option value="custom">Custom Order</option>
+                    </select>
+                  </Field>
+                  {design.sfCategorySortMode === "custom" && categories.length > 0 && (
+                    <Field label="Drag to Reorder">
+                      <CategoryDragList
+                        categories={categories}
+                        order={design.sfCategoryCustomOrder.length > 0 ? design.sfCategoryCustomOrder : categories}
+                        onChange={(newOrder) => set("sfCategoryCustomOrder", newOrder)}
+                      />
+                    </Field>
+                  )}
                 </>
               )}
             </div>

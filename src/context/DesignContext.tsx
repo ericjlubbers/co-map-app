@@ -6,7 +6,7 @@ import {
   useCallback,
   type ReactNode,
 } from "react";
-import type { DesignState, ClusterStyle, ClusterPlugin, PlacementStrategy, FontFamily, TilePreset, SfBtnPreset, SfBtnFillMode, SfMobileLayout, DemoHighlightStyle, DemoRotationMode, DemoRotationOrder, MarkerShape, MarkerConnector, MarkerPadding } from "../types";
+import type { DesignState, ClusterStyle, ClusterPlugin, PlacementStrategy, FontFamily, TilePreset, SfBtnPreset, SfBtnFillMode, SfMobileLayout, SfCategorySortMode, DemoHighlightStyle, DemoRotationMode, DemoRotationOrder, MarkerShape, MarkerConnector, MarkerPadding } from "../types";
 import { DEFAULT_DESIGN } from "../config";
 
 // ── URL param keys ──────────────────────────────────────────
@@ -133,6 +133,8 @@ const PARAM_MAP: Record<keyof DesignState, string> = {
   upcomingTooltipText: "uTip",
   upcomingTooltipOpacity: "uTipO",
   sfMobileLayout: "sfMl",
+  sfCategorySortMode: "sfSort",
+  sfCategoryCustomOrder: "sfCustOrd",
   mapMinZoom: "mMinZ",
   mapMaxZoom: "mMaxZ",
   mapDefaultZoom: "mDZ",
@@ -492,6 +494,15 @@ function parseFromURL(): Partial<DesignState> {
   if (sfMl && SF_MOBILE_LAYOUTS.includes(sfMl as SfMobileLayout))
     partial.sfMobileLayout = sfMl as SfMobileLayout;
 
+  const sfSort = params.get(PARAM_MAP.sfCategorySortMode);
+  const SF_SORT_MODES: SfCategorySortMode[] = ["a-z", "z-a", "count", "custom"];
+  if (sfSort && SF_SORT_MODES.includes(sfSort as SfCategorySortMode))
+    partial.sfCategorySortMode = sfSort as SfCategorySortMode;
+  const sfCustOrd = params.get(PARAM_MAP.sfCategoryCustomOrder);
+  if (sfCustOrd) {
+    try { partial.sfCategoryCustomOrder = JSON.parse(decodeURIComponent(sfCustOrd)); } catch { /* ignore */ }
+  }
+
   const sfUC = params.get(PARAM_MAP.sfUpcomingColor);
   if (sfUC) partial.sfUpcomingColor = `#${sfUC}`;
   const uTip = params.get(PARAM_MAP.upcomingTooltipText);
@@ -790,6 +801,10 @@ function serializeToURL(state: DesignState, includeDesignMode: boolean): string 
     params.set(PARAM_MAP.upcomingOpacity, String(state.upcomingOpacity));
   if (state.sfMobileLayout !== DEFAULT_DESIGN.sfMobileLayout)
     params.set(PARAM_MAP.sfMobileLayout, state.sfMobileLayout);
+  if (state.sfCategorySortMode !== DEFAULT_DESIGN.sfCategorySortMode)
+    params.set(PARAM_MAP.sfCategorySortMode, state.sfCategorySortMode);
+  if (state.sfCategoryCustomOrder.length > 0)
+    params.set(PARAM_MAP.sfCategoryCustomOrder, encodeURIComponent(JSON.stringify(state.sfCategoryCustomOrder)));
   if (state.sfUpcomingColor !== DEFAULT_DESIGN.sfUpcomingColor)
     params.set(PARAM_MAP.sfUpcomingColor, state.sfUpcomingColor.replace("#", ""));
   if (state.upcomingTooltipText !== DEFAULT_DESIGN.upcomingTooltipText)

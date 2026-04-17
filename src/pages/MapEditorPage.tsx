@@ -29,6 +29,7 @@ import DataSidebar from "../components/DataSidebar";
 import { emptyCollection } from "../lib/drawing";
 import {
   layerDataToPoints,
+  ensureRowUUIDs,
   defaultCountyRegions,
   singlePointStarter,
   categorizedPointsStarter,
@@ -64,6 +65,8 @@ function parseDataConfig(raw: Record<string, unknown>): DataConfig {
   const points = (raw?.points as LayerData | undefined);
   const primaryElements = (raw?.primaryElements as PrimaryElement[] | undefined);
   const publicationBounds = (raw?.publicationBounds as PublicationBounds | undefined);
+  // Retroactively assign stable UUIDs to any rows that lack them
+  if (points?.rows) ensureRowUUIDs(points.rows);
   return {
     // Pre-populate regions with county data when empty
     regions: (regions && regions.rows.length > 0) ? regions : defaultCountyRegions(),

@@ -126,7 +126,7 @@ export default function SidebarFilterLayout({
   const { design } = useDesign();
 
   // ── Categories ──────────────────────────────────────────────
-  const categories = useMemo(() => {
+  const rawCategories = useMemo(() => {
     const cats = new Set(points.map((p) => p.category));
     return Array.from(cats).sort();
   }, [points]);
@@ -141,6 +141,29 @@ export default function SidebarFilterLayout({
     }
     return counts;
   }, [points]);
+
+  // ── Sorted categories based on design sort mode ─────────────
+  const categories = useMemo(() => {
+    const mode = design.sfCategorySortMode;
+    if (mode === "z-a") return [...rawCategories].sort((a, b) => b.localeCompare(a));
+    if (mode === "count") {
+      return [...rawCategories].sort((a, b) => {
+        const ca = categoryCounts[a]?.total ?? 0;
+        const cb = categoryCounts[b]?.total ?? 0;
+        return cb - ca || a.localeCompare(b);
+      });
+    }
+    if (mode === "custom" && design.sfCategoryCustomOrder.length > 0) {
+      const order = design.sfCategoryCustomOrder;
+      const orderMap = new Map(order.map((c, i) => [c, i]));
+      return [...rawCategories].sort((a, b) => {
+        const ia = orderMap.get(a) ?? Infinity;
+        const ib = orderMap.get(b) ?? Infinity;
+        return ia - ib || a.localeCompare(b);
+      });
+    }
+    return rawCategories; // a-z (already sorted)
+  }, [rawCategories, categoryCounts, design.sfCategorySortMode, design.sfCategoryCustomOrder]);
 
   const activePointsCount = useMemo(
     () => points.filter((p) => p.status !== "upcoming").length,

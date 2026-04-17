@@ -4,14 +4,20 @@ const SCRIPT_PATH = "/embed.js";
 
 /**
  * Build a complete iframe + script embed snippet for a focus (single-point) embed.
- * Always uses a 1:1 square aspect ratio regardless of the map's configured ratios.
+ * When locked=true and zoom is provided, the map is non-interactive and centered at that zoom.
+ * Otherwise uses a 1:1 square aspect ratio.
  */
 export function buildFocusEmbedSnippet(
   mapId: string,
   pointId: string,
   origin: string,
+  options?: { locked?: boolean; zoom?: number },
 ): string {
-  const embedUrl = `${origin}/embed/${mapId}?focus=${encodeURIComponent(pointId)}`;
+  const params = new URLSearchParams();
+  params.set("focus", pointId);
+  if (options?.locked) params.set("locked", "1");
+  if (options?.zoom != null) params.set("zoom", String(options.zoom));
+  const embedUrl = `${origin}/embed/${mapId}?${params.toString()}`;
   const scriptUrl = `${origin}${SCRIPT_PATH}`;
 
   const iframeTag = [

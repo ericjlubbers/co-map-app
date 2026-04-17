@@ -85,6 +85,10 @@ interface MapEditorContentProps {
   focusPointId?: string;
   /** Pre-filter to this category (from ?category= embed param) */
   focusCategory?: string;
+  /** Lock the map (no pan/zoom) when focus point is active */
+  focusLocked?: boolean;
+  /** Override zoom level for focus point view */
+  focusZoom?: number;
 }
 
 type DataTab = "points" | "drawn";
@@ -114,6 +118,8 @@ export default function MapEditorContent({
   onClearCuration,
   focusPointId,
   focusCategory,
+  focusLocked = false,
+  focusZoom,
   mapId,
 }: MapEditorContentProps) {
   const { design, designMode } = useDesign();
@@ -134,11 +140,11 @@ export default function MapEditorContent({
         const pt = (externalPoints ?? []).find((p) => p.id === focusPointId);
         if (pt) {
           flewToFocusRef.current = true;
-          map.setView([pt.lat, pt.lng], 13, { animate: false });
+          map.setView([pt.lat, pt.lng], focusZoom ?? 13, { animate: false });
         }
       }
     },
-    [onMapRef, focusPointId, externalPoints],
+    [onMapRef, focusPointId, focusZoom, externalPoints],
   );
 
   const handleFlyTo = useCallback((lat: number, lng: number, zoom?: number) => {
@@ -388,6 +394,8 @@ export default function MapEditorContent({
 
     // Standard embed template: map only + optional auto-rotate overlay
     const focusActivePointIds = focusPointId ? new Set([focusPointId]) : undefined;
+    // Determine effective lock state: locked if viewCuration is locked OR focusLocked param
+    const effectiveLocked = viewLocked || focusLocked;
     return (
       <div className="relative h-full w-full" style={{ backgroundColor: design.pageBg }}>
         <MapView
@@ -396,13 +404,14 @@ export default function MapEditorContent({
           onSelectPoint={handleSelectPoint}
           drawnFeatures={drawnFeatures}
           viewCuration={viewCuration}
-          viewLocked={viewLocked}
+          viewLocked={effectiveLocked}
           onHideFeature={onHideFeature}
           onMapRef={handleMapRefLocal}
           activePointIds={focusActivePointIds}
           dimActive={!!focusPointId}
           dimOpacity={design.demoDimOpacity}
           mapId={mapId}
+          focusCategory={focusCategory}
         />
         {demoMode && categories.length > 0 && (
           <AutoRotateDemo
