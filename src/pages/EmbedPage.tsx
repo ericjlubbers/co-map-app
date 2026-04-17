@@ -33,7 +33,7 @@ export default function EmbedPage() {
   const { id } = useParams<{ id: string }>();
   const [searchParams] = useSearchParams();
   const demoOverride = searchParams.get("demo") === "1";
-  const focusPointId = searchParams.get("focus") ?? undefined;
+  const focusParam = searchParams.get("focus") ?? undefined;
   const focusCategoryRaw = searchParams.get("category");
   const focusCategory = focusCategoryRaw ? decodeURIComponent(focusCategoryRaw) : undefined;
   const focusLocked = searchParams.get("locked") === "1";
@@ -70,6 +70,17 @@ export default function EmbedPage() {
     }
     return [];
   }, [mapData]);
+
+  // Resolve ?focus= param: match by slug first, then by id (UUID)
+  const focusPointId = useMemo<string | undefined>(() => {
+    if (!focusParam || points.length === 0) return undefined;
+    const decoded = decodeURIComponent(focusParam);
+    const bySlug = points.find((p) => p.slug === decoded);
+    if (bySlug) return bySlug.id;
+    const byId = points.find((p) => p.id === decoded);
+    if (byId) return byId.id;
+    return undefined;
+  }, [focusParam, points]);
 
   if (error) {
     return (

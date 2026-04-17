@@ -33,6 +33,7 @@ const COLUMN_ROLES: { value: ColumnRole; label: string; description: string }[] 
   { value: "url", label: "URL", description: "Website link shown in popup" },
   { value: "metadata", label: "Metadata", description: "Extra info, shown in popup" },
   { value: "status", label: "Status", description: "\"active\" or \"upcoming\" — controls visibility & interactivity" },
+  { value: "slug", label: "Slug", description: "URL-friendly identifier for embed deep-linking" },
   { value: "none", label: "None", description: "Ignore this column" },
 ];
 

@@ -25,6 +25,7 @@ export function layerDataToPoints(layer: LayerData): PointData[] {
   const addressCol = columns.find((c) => columnMappings[c] === "address");
   const urlCol = columns.find((c) => columnMappings[c] === "url");
   const statusCol = columns.find((c) => columnMappings[c] === "status");
+  const slugCol = columns.find((c) => columnMappings[c] === "slug");
   const metaCols = columns.filter((c) => columnMappings[c] === "metadata");
   const geoCols = columns.filter((c) => columnMappings[c] === "geometry");
 
@@ -72,6 +73,7 @@ export function layerDataToPoints(layer: LayerData): PointData[] {
       status: statusCol
         ? ((row[statusCol] ?? "").trim().toLowerCase() === "upcoming" ? "upcoming" : "active") as PointStatus
         : undefined,
+      slug: slugCol ? (row[slugCol]?.trim() || undefined) : undefined,
     });
   }
 

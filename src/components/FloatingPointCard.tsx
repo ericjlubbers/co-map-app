@@ -102,12 +102,13 @@ export default function FloatingPointCard({
   const handleCopyEmbedUrl = useCallback((e: React.MouseEvent) => {
     e.stopPropagation();
     if (!mapId) return;
-    const snippet = buildFocusEmbedSnippet(mapId, point.id, window.location.origin);
+    const embedId = point.slug ?? point.id;
+    const snippet = buildFocusEmbedSnippet(mapId, embedId, window.location.origin);
     navigator.clipboard.writeText(snippet).then(() => {
       setEmbedCopied(true);
       setTimeout(() => setEmbedCopied(false), 1800);
     });
-  }, [mapId, point.id]);
+  }, [mapId, point.id, point.slug]);
 
   // Escape key to dismiss
   useEffect(() => {
@@ -216,12 +217,12 @@ export default function FloatingPointCard({
           <button
             onClick={handleCopyEmbedUrl}
             className="flex w-full items-center justify-center gap-1.5 rounded px-2 py-1 text-[11px] font-medium text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-600"
-            title="Copy focus embed code"
+            title={`Copy focus embed code (${point.slug ?? point.id})`}
           >
             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512" className="h-3 w-3 fill-current" aria-hidden="true">
               <path d="M384 336H192c-8.8 0-16-7.2-16-16V64c0-8.8 7.2-16 16-16l140.1 0L400 115.9V320c0 8.8-7.2 16-16 16zM192 384H384c35.3 0 64-28.7 64-64V115.9c0-17-6.7-33.3-18.7-45.3L366.1 18.7C354.1 6.7 337.8 0 320.9 0H192c-35.3 0-64 28.7-64 64V320c0 35.3 28.7 64 64 64zM64 128c-35.3 0-64 28.7-64 64V448c0 35.3 28.7 64 64 64H256c35.3 0 64-28.7 64-64V416H272v32c0 8.8-7.2 16-16 16H64c-8.8 0-16-7.2-16-16V192c0-8.8 7.2-16 16-16H96V128H64z"/>
             </svg>
-            {embedCopied ? "Copied!" : "Copy focus embed code"}
+            {embedCopied ? "Copied!" : `Embed: ${point.slug ?? point.id}`}
           </button>
         </div>
       )}

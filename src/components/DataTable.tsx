@@ -31,12 +31,13 @@ export default function DataTable({ points, selectedId, onSelectPoint, activePoi
   const rowRefs = useRef<Record<string, HTMLTableRowElement | null>>({});
   const [copiedId, setCopiedId] = useState<string | null>(null);
 
-  const handleCopyEmbedUrl = useCallback((e: React.MouseEvent, pointId: string) => {
+  const handleCopyEmbedUrl = useCallback((e: React.MouseEvent, point: PointData) => {
     e.stopPropagation();
     if (!mapId) return;
-    const snippet = buildFocusEmbedSnippet(mapId, pointId, window.location.origin);
+    const embedId = point.slug ?? point.id;
+    const snippet = buildFocusEmbedSnippet(mapId, embedId, window.location.origin);
     navigator.clipboard.writeText(snippet).then(() => {
-      setCopiedId(pointId);
+      setCopiedId(point.id);
       setTimeout(() => setCopiedId(null), 1800);
     });
   }, [mapId]);
@@ -210,13 +211,13 @@ export default function DataTable({ points, selectedId, onSelectPoint, activePoi
                     )}
                     {mapId && !isUpcoming && (
                       <button
-                        onClick={(e) => handleCopyEmbedUrl(e, point.id)}
+                        onClick={(e) => handleCopyEmbedUrl(e, point)}
                         className={`transition-colors ${
                           copiedId === point.id
                             ? "text-green-500"
                             : "text-gray-300 hover:text-blue-500"
                         }`}
-                        title={copiedId === point.id ? "Copied!" : "Copy focus embed code"}
+                        title={copiedId === point.id ? "Copied!" : `Copy focus embed code (${point.slug ?? point.id})`}
                       >
                         <FontAwesomeIcon icon={faCopy} className="text-xs" />
                       </button>

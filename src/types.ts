@@ -15,6 +15,8 @@ export interface PointData {
   icon?: string;
   /** Publication status — "upcoming" renders faded and non-interactive */
   status?: PointStatus;
+  /** URL-friendly slug for embed deep-linking (from "slug" column role) */
+  slug?: string;
 }
 
 // ── Drawing & Sketching ──────────────────────────────────────
@@ -97,7 +99,7 @@ export type TilePreset =
 // ── Data Tab Types ──────────────────────────────────────────
 
 /** Roles a column can be assigned to in the data editor */
-export type ColumnRole = "geometry" | "name" | "label" | "value" | "group" | "icon" | "image" | "address" | "url" | "metadata" | "status" | "none";
+export type ColumnRole = "geometry" | "name" | "label" | "value" | "group" | "icon" | "image" | "address" | "url" | "metadata" | "status" | "slug" | "none";
 
 /** Maps a column name to a visualization role */
 export type ColumnMappings = Record<string, ColumnRole>;
